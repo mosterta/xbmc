@@ -35,6 +35,7 @@
   #import <sys/sysctl.h>
 #else
   #import <Cocoa/Cocoa.h>
+  #import <CoreFoundation/CoreFoundation.h>
   #import <IOKit/ps/IOPowerSources.h>
   #import <IOKit/ps/IOPSKeys.h>
 #endif
@@ -390,6 +391,44 @@ void DarwinSetScheduling(int message)
     THREAD_EXTENDED_POLICY_COUNT);
 
   result = pthread_setschedparam(this_pthread_self, policy, &param );
+}
+
+bool DarwinCFStringRefToStringWithEncoding(CFStringRef source, std::string &destination, CFStringEncoding encoding)
+{
+  const char *cstr = CFStringGetCStringPtr(source, encoding);
+  if (!cstr)
+  {
+    CFIndex strLen = CFStringGetMaximumSizeForEncoding(CFStringGetLength(source) + 1,
+                                                       encoding);
+    char *allocStr = (char*)malloc(strLen);
+
+    if(!allocStr)
+      return false;
+
+    if(!CFStringGetCString(source, allocStr, strLen, encoding))
+    {
+      free((void*)allocStr);
+      return false;
+    }
+
+    destination = allocStr;
+    free((void*)allocStr);
+
+    return true;
+  }
+
+  destination = cstr;
+  return true;
+}
+
+bool DarwinCFStringRefToString(CFStringRef source, std::string &destination)
+{
+  return DarwinCFStringRefToStringWithEncoding(source, destination, CFStringGetSystemEncoding());
+}
+
+bool DarwinCFStringRefToUTF8String(CFStringRef source, std::string &destination)
+{
+  return DarwinCFStringRefToStringWithEncoding(source, destination, kCFStringEncodingUTF8);
 }
 
 #endif
