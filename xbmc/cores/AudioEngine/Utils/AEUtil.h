@@ -32,6 +32,8 @@
 
 #ifdef __SSE__
 #include <xmmintrin.h>
+#elif defined(__ARM_NEON__)
+#include <arm_neon.h>
 #else
 #define __m128 void
 #endif
@@ -49,7 +51,9 @@ private:
   #ifdef __SSE__
     static __m128i m_sseSeed;
   #endif
-
+  #if defined(__ARM_NEON__)
+    static int32x4_t m_neonSeed;
+  #endif
   static float SoftClamp(const float x);
 
 public:
@@ -71,19 +75,6 @@ public:
     return (value - 1)*db_range;
   }
 
-  /*! \brief convert a dB gain to volume percentage (as a proportion)
-   We assume a dB range of 60dB, i.e. assume that 0% volume corresponds
-   to a reduction of 60dB.
-   \param the corresponding gain in dB from -60dB .. 0dB.
-   \return value the volume from 0..1
-   \sa ScaleToGain
-   */
-  static inline const float GainToPercent(const float gain)
-  {
-    static const float db_range = 60.0f;
-    return 1+(gain/db_range);
-  }
-
   /*! \brief convert a dB gain to a scale factor for audio manipulation
    Inverts gain = 20 log_10(scale)
    \param dB the gain in decibels.
@@ -95,20 +86,13 @@ public:
     return pow(10.0f, dB/20);
   }
 
-  /*! \brief convert a scale factor to dB gain for audio manipulation
-   Inverts GainToScale result
-   \param the scale factor (equivalent to a voltage multiplier).
-   \return dB the gain in decibels.
-   \sa GainToScale
-   */
-  static inline const float ScaleToGain(const float scale)
-  {
-    return 20*log10(scale);
-  }
-
   #ifdef __SSE__
   static void SSEMulArray     (float *data, const float mul, uint32_t count);
   static void SSEMulAddArray  (float *data, float *add, const float mul, uint32_t count);
+  #endif
+  #if defined(__ARM_NEON__)
+  static void NEONMulArray     (float *data, const float mul, uint32_t count);
+  static void NEONMulAddArray  (float *data, float *add, const float mul, uint32_t count);
   #endif
   static void ClampArray(float *data, uint32_t count);
 
@@ -118,7 +102,11 @@ public:
     This is NOT safe for crypto work, but perfectly fine for audio usage (dithering)
   */
   static float FloatRand1(const float min, const float max);
+#if defined(__ARM_NEON__)
+  static void  FloatRand4(const float min, const float max, float result[4], float32x4_t *neonresult = NULL);
+#else
   static void  FloatRand4(const float min, const float max, float result[4], __m128 *sseresult = NULL);
+#endif
 
   static bool S16NeedsByteSwap(AEDataFormat in, AEDataFormat out);
 };

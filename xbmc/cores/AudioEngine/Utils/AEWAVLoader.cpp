@@ -252,7 +252,7 @@ bool CAEWAVLoader::Initialize(unsigned int resampleRate, CAEChannelInfo channelL
 #ifdef TARGET_DARWIN_IOS
     if (src_simple(&data, SRC_SINC_FASTEST, m_channels.Count()) != 0)
 #else
-    if (src_simple(&data, SRC_SINC_MEDIUM_QUALITY, m_channels.Count()) != 0)
+    if (src_simple(&data, SRC_SINC_FASTEST, m_channels.Count()) != 0)
 #endif
     {
       CLog::Log(LOGERROR, "CAEWAVLoader::Initialize - Failed to resample audio: %s", m_filename.c_str());

@@ -189,7 +189,7 @@ void CSoftAEStream::Initialize()
   if (m_resample)
   {
     int err;
-    m_ssrc                   = src_new(SRC_SINC_MEDIUM_QUALITY, m_initChannelLayout.Count(), &err);
+    m_ssrc                   = src_new(SRC_SINC_FASTEST, m_initChannelLayout.Count(), &err);
     m_ssrcData.data_in       = m_convertBuffer;
     m_internalRatio          = (double)AE.GetSampleRate() / (double)m_initSampleRate;
     m_ssrcData.src_ratio     = m_internalRatio;

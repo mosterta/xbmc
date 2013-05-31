@@ -85,7 +85,7 @@ CSoftAE::CSoftAE():
     // retry the enumeration
     CAESinkFactory::EnumerateEx(m_sinkInfoList, true);
   }
-  CLog::Log(LOGNOTICE, "Found %lu Lists of Devices", m_sinkInfoList.size());
+  CLog::Log(LOGNOTICE, "Found %u Lists of Devices", m_sinkInfoList.size());
   PrintSinks();
 }
 
@@ -1149,6 +1149,8 @@ unsigned int CSoftAE::MixSounds(float *buffer, unsigned int samples)
     unsigned int mixSamples = std::min(ss->sampleCount, samples);
     #ifdef __SSE__
       CAEUtil::SSEMulAddArray(out, ss->samples, volume, mixSamples);
+    #elif defined(__ARM_NEON__)
+      CAEUtil::NEONMulAddArray(out, ss->samples, volume, mixSamples);
     #else
       float *sample_buffer = ss->samples;
       for (unsigned int i = 0; i < mixSamples; ++i)
@@ -1184,6 +1186,8 @@ bool CSoftAE::FinalizeSamples(float *buffer, unsigned int samples, bool hasAudio
   {
     #ifdef __SSE__
       CAEUtil::SSEMulArray(buffer, m_volume, samples);
+    #elif defined(__ARM_NEON__)
+      CAEUtil::NEONMulArray(buffer, m_volume, samples);
     #else
       float *fbuffer = buffer;
       for (unsigned int i = 0; i < samples; i++)
@@ -1437,6 +1441,10 @@ unsigned int CSoftAE::RunStreamStage(unsigned int channelCount, void *out, bool 
     #ifdef __SSE__
     if (channelCount > 1)
       CAEUtil::SSEMulAddArray(dst, frame, volume, channelCount);
+    else
+    #elif defined(__ARM_NEON__)
+    if (channelCount > 1)
+      CAEUtil::NEONMulAddArray(dst, frame, volume, channelCount);
     else
     #endif
     {

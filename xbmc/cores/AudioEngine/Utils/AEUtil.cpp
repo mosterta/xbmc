@@ -25,14 +25,22 @@
 #include "AEUtil.h"
 #include "utils/log.h"
 #include "utils/TimeUtils.h"
+#if defined(__ARM_NEON__)
+#include "arm_neon.h"
+#include <limits.h>
+#endif
 
 using namespace std;
 
 /* declare the rng seed and initialize it */
-unsigned int CAEUtil::m_seed = (unsigned int)(CurrentHostCounter() / 1000.0f);
+unsigned int CAEUtil::m_seed = (unsigned int)((CurrentHostCounter() & 0x3ffffffffff) / 1000.0f);
 #ifdef __SSE__
   /* declare the SSE seed and initialize it */
   MEMALIGN(16, __m128i CAEUtil::m_sseSeed) = _mm_set_epi32(CAEUtil::m_seed, CAEUtil::m_seed+1, CAEUtil::m_seed, CAEUtil::m_seed+1);
+#endif
+#if defined(__ARM_NEON__)
+  int32x4_t CAEUtil::m_neonSeed = {CAEUtil::m_seed, CAEUtil::m_seed+1, CAEUtil::m_seed, CAEUtil::m_seed+1};
+//{CAEUtil::m_seed, CAEUtil::m_seed+1, CAEUtil::m_seed, CAEUtil::m_seed+1};
 #endif
 
 CAEChannelInfo CAEUtil::GuessChLayout(const unsigned int channels)
@@ -256,6 +264,125 @@ void CAEUtil::SSEMulAddArray(float *data, float *add, const float mul, uint32_t 
 }
 #endif
 
+#if defined(__ARM_NEON__)
+void CAEUtil::NEONMulArray(float *data, const float mul, uint32_t count)
+{
+  //const float32x4_t m = vdupq_n_f32(mul);
+  const float32_t m = mul;
+
+  /* work around invalid alignment */
+  while (((uintptr_t)data & 0xF) && count > 0)
+  {
+    data[0] *= mul;
+    ++data;
+    --count;
+  }
+
+  float32x4_t to;
+
+  uint32_t even = count & ~0x3;
+  for (uint32_t i = 0; i < even; i+=4, data+=4)
+  {
+    to      = vld1q_f32(data);
+    to      =  vmulq_n_f32(to, m);
+    vst1q_f32(data, to);
+  }
+
+  if (even != count)
+  {
+    uint32_t odd = count - even;
+    if (odd == 1)
+      data[0] *= mul;
+    else
+    {
+      float32x2_t to;
+      if (odd == 2)
+      {
+        to = vld1_f32(data);
+        to = vmul_n_f32(to, m);
+        vst1_f32(data, to);
+      }
+      else
+      {
+	data[0] *= mul;
+	data++;
+
+        to = vld1_f32(data);
+        to = vmul_n_f32(to, m);
+        vst1_f32(data, to);
+      }
+    }
+  }
+}
+
+void CAEUtil::NEONMulAddArray(float *data, float *add, const float mul, uint32_t count)
+{
+  //const float32x4_t m = vdupq_n_f32(mul);
+  const float32_t m = mul;
+
+#if 0
+  /* work around invalid alignment, but only if there is a chance to align 
+     data and add to a 128 bit aligned address. Otherwise the unaligned
+     access in arm is better than do it one by one */
+  if(((uintptr_t)data & 0xF) == ((uintptr_t)add & 0xF))
+  {
+    while ((((uintptr_t)data & 0xF) || ((uintptr_t)add & 0xF)) && count > 0)
+    {
+      data[0] += (add[0] * mul);
+      ++add;
+      ++data;
+      --count;
+    }
+  }
+#endif
+
+  float32x4_t to;
+  float32x4_t ad;
+
+  uint32_t even = count & ~0x3;
+  for (uint32_t i = 0; i < even; i+=4, data+=4, add+=4)
+  {
+    ad      = vld1q_f32(add);
+    to      = vld1q_f32(data);
+    ad      = vmulq_n_f32(ad, m);
+    to      = vaddq_f32(to, ad);
+    vst1q_f32(data, to);
+  }
+
+  if (even != count)
+  {
+    uint32_t odd = count - even;
+    if (odd == 1)
+      data[0] += (add[0] * mul);
+    else
+    {
+      float32x2_t to;
+      float32x2_t ad;
+      if (odd == 2)
+      {
+        ad = vld1_f32(add);
+        to = vld1_f32(data);
+        ad = vmul_n_f32(ad, m);
+        to = vadd_f32(to, ad);
+        vst1_f32(data, to);
+      }
+      else
+      {
+	data[0] += (add[0] * mul);
+	data++;
+	add++;
+
+	ad = vld1_f32(add);
+        to = vld1_f32(data);
+        to = vadd_f32(to, vmul_n_f32(ad, m));
+        vst1_f32(data, to);
+      }
+    }
+  }
+}
+#endif
+
+
 inline float CAEUtil::SoftClamp(const float x)
 {
 #if 1
@@ -316,10 +443,7 @@ void CAEUtil::ClampArray(float *data, uint32_t count)
     __m128 dt = _mm_load_ps(data);
     __m128 tmp     = _mm_mul_ps(dt, dt);
     *(__m128*)data = _mm_div_ps(
-      _mm_mul_ps(
-        dt,
-        _mm_add_ps(c1, tmp)
-      ),
+      _mm_mul_ps(dt, _mm_add_ps(c1, tmp)),
       _mm_add_ps(c2, tmp)
     );
   }
@@ -383,8 +507,11 @@ float CAEUtil::FloatRand1(const float min, const float max)
   const float factor = delta / (float)INT32_MAX;
   return ((float)(m_seed = (214013 * m_seed + 2531011)) * factor) - delta;
 }
-
+#if defined(__ARM_NEON__)
+void CAEUtil::FloatRand4(const float min, const float max, float result[4], float32x4_t *neonresult/* = NULL */)
+#else
 void CAEUtil::FloatRand4(const float min, const float max, float result[4], __m128 *sseresult/* = NULL */)
+#endif
 {
   #ifdef __SSE__
     /*
@@ -396,10 +523,7 @@ void CAEUtil::FloatRand4(const float min, const float max, float result[4], __m1
     MEMALIGN(16, static const __m128 int32max) = _mm_set_ps1((const float)INT32_MAX);
     MEMALIGN(16, __m128 f) = _mm_div_ps(
       _mm_mul_ps(
-        _mm_sub_ps(
-          _mm_set_ps1(max),
-          _mm_set_ps1(min)
-        ),
+        _mm_sub_ps( _mm_set_ps1(max), _mm_set_ps1(min)),
         point5
       ),
       int32max
@@ -441,18 +565,64 @@ void CAEUtil::FloatRand4(const float min, const float max, float result[4], __m1
       /* returning a float array, so cleanup */
       _mm_empty();
     }
+  #elif defined(__ARM_NEON__)
 
+    const float32x4_t _point5 = {0.5f, 0.5f, 0.5f, 0.5f};
+    //float _f = ((max - min) * _point5) / INT32_MAX;
+    const float32x4_t max4 = {max, max, max, max};
+    const float32x4_t min4 = {min, min, min, min};
+ 
+    float32x4_t f = vmulq_f32(
+       vmulq_f32( vsubq_f32(max4, min4), _point5), 
+       vrecpeq_f32(vdupq_n_f32((float)INT32_MAX))
+    );
+
+    int32x4_t mult = {214013, 17405, 214013, 69069};
+    const int32x4_t gadd = {2531011, 10395331, 13737667, 1};
+    //const int32x4_t mask = {0xFFFFFFFF, 0, 0xFFFFFFFF, 0};
+
+    int32x4_t cur_seed_split;
+    cur_seed_split  = vcombine_s32(vget_high_s32(m_neonSeed), vget_low_s32(m_neonSeed));
+
+    m_neonSeed      = vmulq_s32(m_neonSeed, mult);
+    mult            = vcombine_s32(vget_high_s32(mult), vget_low_s32(mult));
+    cur_seed_split  = vmulq_s32(cur_seed_split, mult);
+
+    //m_neonSeed      = vandq_u32(m_neonSeed, mask);
+    //cur_seed_split  = vandq_u32(cur_seed_split, mask);
+    cur_seed_split  = vcombine_s32(vget_high_s32(cur_seed_split), vget_low_s32(cur_seed_split));
+    m_neonSeed      = vorrq_s32(m_neonSeed, cur_seed_split);
+    m_neonSeed      = vaddq_s32(m_neonSeed, gadd);
+
+    float32x4_t res = vcvtq_f32_s32(m_neonSeed);
+    if(neonresult)
+       *neonresult = vmulq_f32(res, f);
+    else
+    {
+       res = vmulq_f32(res, f);
+       vst1q_f32(result, res);
+    }
   #else
     const float delta  = (max - min) / 2.0f;
     const float factor = delta / (float)INT32_MAX;
 
     /* cant return sseresult if we are not using SSE intrinsics */
-    ASSERT(result && !sseresult);
+    //ASSERT(result && !sseresult);
+    float tmpresult[4];
 
-    result[0] = ((float)(m_seed = (214013 * m_seed + 2531011)) * factor) - delta;
-    result[1] = ((float)(m_seed = (214013 * m_seed + 2531011)) * factor) - delta;
-    result[2] = ((float)(m_seed = (214013 * m_seed + 2531011)) * factor) - delta;
-    result[3] = ((float)(m_seed = (214013 * m_seed + 2531011)) * factor) - delta;
+    tmpresult[0] = ((float)(m_seed = (214013 * m_seed + 2531011)) * factor) - delta;
+    tmpresult[1] = ((float)(m_seed = (214013 * m_seed + 2531011)) * factor) - delta;
+    tmpresult[2] = ((float)(m_seed = (214013 * m_seed + 2531011)) * factor) - delta;
+    tmpresult[3] = ((float)(m_seed = (214013 * m_seed + 2531011)) * factor) - delta;
+    if(neonresult)
+    {
+    *neonresult = vld1q_lane_f32(&tmpresult[0], *neonresult, 0);
+    *neonresult = vld1q_lane_f32(&tmpresult[1], *neonresult, 1);
+    *neonresult = vld1q_lane_f32(&tmpresult[2], *neonresult, 2);
+    *neonresult = vld1q_lane_f32(&tmpresult[3], *neonresult, 3);
+    }
+    if(result)
+      memcpy(result, tmpresult, sizeof(tmpresult));
   #endif
 }
 

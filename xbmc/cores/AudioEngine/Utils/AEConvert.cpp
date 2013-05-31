@@ -25,6 +25,7 @@
 #include "AEUtil.h"
 #include "utils/MathUtils.h"
 #include "utils/EndianSwap.h"
+#include "utils/log.h"
 #include <stdint.h>
 
 #if defined(TARGET_WINDOWS)
@@ -78,7 +79,11 @@ CAEConvert::AEConvertToFn CAEConvert::ToFloat(enum AEDataFormat dataFormat)
     case AE_FMT_S24NE3: return &S24BE3_Float;
 #else
     case AE_FMT_S16NE : return &S16LE_Float;
+//#if defined(__ARM_NEON__)
+//    case AE_FMT_S32NE : return &S32LE_Float_Neon;
+//#else
     case AE_FMT_S32NE : return &S32LE_Float;
+//#endif
     case AE_FMT_S24NE4: return &S24LE4_Float;
     case AE_FMT_S24NE3: return &S24LE3_Float;
 #endif
@@ -622,9 +627,153 @@ unsigned int CAEConvert::Float_S16LE(float *data, const unsigned int samples, ui
 
   /* cleanup */
   _mm_empty();
+  
+  #elif defined (__ARM_NEON__)
 
-  #else /* no SSE */
+  unsigned int count     = samples;
+  unsigned int unaligned = (0x10 - ((uintptr_t)data & 0xF)) >> 2;
+  if (unaligned == 4)
+    unaligned = 0;
 
+  /*
+    if we are only out by one, dont use SSE to correct it.
+    this must run before we do any SSE work so that the FPU
+    is in a working state without having to first call
+    _mm_empty()
+  */
+
+  if (unaligned == 1)
+    dst[0] = Endian_SwapLE16(safeRound(data[0] * ((float)INT16_MAX + CAEUtil::FloatRand1(-0.5f, 0.5f))));
+
+  const float32x4_t mul = {(float)INT16_MAX, (float)INT16_MAX, (float)INT16_MAX, (float)INT16_MAX};
+  float32x4_t rand;
+  float32x4_t in;
+  int16x8_t con;
+  const float32x4_t null4 = {0.0, 0.0, 0.0, 0.0};
+  const float32x4_t rnd_off = {0.5, 0.5, 0.5, 0.5};
+  uint32x4_t comp_res;
+  float32x4_t comp_resf;
+  int32x4_t inu;
+  int16x4x2_t con_split;
+
+  if (unaligned > 1)
+  {
+    float32x2_t nil2 = {0.0, 0.0};
+    float32x2_t in2;
+
+    switch (unaligned)
+    {
+      case 2: 
+        in2 = vld1_f32(data);
+        break;
+      case 3: 
+        in2 = vld1_f32(data); 
+        nil2 = vld1_lane_f32(&data[2], nil2, 0);
+        break;
+    }
+    in = vcombine_f32(in2, nil2);
+
+    CAEUtil::FloatRand4(-0.5f, 0.5f, NULL, &rand);
+    in  = vmulq_f32(in, vaddq_f32(mul, rand));
+    comp_res = vcltq_f32(in, null4);
+    comp_resf = vcvtq_f32_s32(vreinterpretq_s32_u32 (comp_res));
+    in = vaddq_f32(in, vaddq_f32(comp_resf, rnd_off));
+    inu = vcvtq_s32_f32(in);
+    con = vreinterpretq_s16_s32(inu);
+
+    #ifdef __BIG_ENDIAN__
+    int8x16_t con_tmp = vreinterpretq_s8_s16(con);
+    con_tmp = vrev16_s8(con);
+    con = vreinterpretq_s16_s8(con_tmp);
+    #endif
+    
+    con_split = vuzp_s16(vget_low_s16(con), vget_high_s16(con));
+    vst1_lane_s16(&dst[0], con_split.val[0],0);
+    vst1_lane_s16(&dst[1], con_split.val[0],1);
+
+    if(unaligned == 3)
+    {
+      vst1_lane_s16(&dst[2], con_split.val[0], 2);
+    }
+  }
+    /* update our pointers and sample count */
+  data  += unaligned;
+  dst   += unaligned;
+  count -= unaligned;
+
+  const uint32_t even = count & ~0x3;
+  for (uint32_t i = 0; i < even; i += 4, data += 4, dst += 4)
+  {
+    /* random round to dither */
+    CAEUtil::FloatRand4(-0.5f, 0.5f, NULL, &rand);
+
+    in  = vmulq_f32(vld1q_f32(data), vaddq_f32(mul, rand));
+    comp_res = vcltq_f32(in, null4);
+    comp_resf = vcvtq_f32_s32(vreinterpretq_s32_u32 (comp_res));
+    in = vaddq_f32(in, vaddq_f32(comp_resf, rnd_off));
+    inu = vcvtq_s32_f32(in);
+    con = vreinterpretq_s16_s32(inu);
+
+    #ifdef __BIG_ENDIAN__
+    int8x16_t con_tmp = vreinterpretq_s8_s16(con);
+    con_tmp = vrev16_s8(con);
+    con = vreinterpretq_s16_s8(con_tmp);
+    #endif
+
+    con_split = vuzp_s16(vget_low_s16(con), vget_high_s16(con));
+    vst1_s16(dst, con_split.val[0]);
+
+  }
+
+  if (samples != even)
+  {
+    unaligned = samples - even;
+
+    if (unaligned == 1)
+      dst[0] = Endian_SwapLE16(safeRound(data[0] * ((float)INT16_MAX + CAEUtil::FloatRand1(-0.5f, 0.5f))));
+
+    if (unaligned > 1)
+    {
+      float32x2_t nil2 = {0.0, 0.0};
+      float32x2_t in2;
+
+      switch (unaligned)
+      {
+        case 2: 
+          in2 = vld1_f32(data);
+          break;
+        case 3: 
+          in2 = vld1_f32(data); 
+          nil2 = vld1_lane_f32(&data[2], nil2, 0);
+          break;
+      }
+      in = vcombine_f32(in2, nil2);
+
+      CAEUtil::FloatRand4(-0.5f, 0.5f, NULL, &rand);
+      in  = vmulq_f32(in, vaddq_f32(mul, rand));
+      comp_res = vcltq_f32(in, null4);
+      comp_resf = vcvtq_f32_s32(vreinterpretq_s32_u32 (comp_res));
+      in = vaddq_f32(in, vaddq_f32(comp_resf, rnd_off));
+      inu = vcvtq_s32_f32(in);
+      con = vreinterpretq_s16_s32(inu);
+
+      #ifdef __BIG_ENDIAN__
+      int8x16_t con_tmp = vreinterpretq_s8_s16(con);
+      con_tmp = vrev16_s8(con);
+      con = vreinterpretq_s16_s8(con_tmp);
+      #endif
+    
+      int16x4x2_t con_split = vuzp_s16(vget_high_s16(con), vget_low_s16(con));
+      vst1_lane_s16(&dst[0], con_split.val[0],0);
+      vst1_lane_s16(&dst[1], con_split.val[0],1);
+
+      if(unaligned == 3)
+      {
+        vst1_lane_s16(&dst[2], con_split.val[0], 2);
+      }
+    }
+  }
+  #else /* no SSE nor NEON */
   uint32_t i    = 0;
   uint32_t even = samples & ~0x3;
 

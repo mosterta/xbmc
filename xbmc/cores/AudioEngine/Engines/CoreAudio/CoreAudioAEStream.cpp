@@ -494,6 +494,8 @@ unsigned int CCoreAudioAEStream::GetFrames(uint8_t *buffer, unsigned int size)
     {
 #ifdef __SSE__
       CAEUtil::SSEMulArray(floatBuffer, m_volume, samples);
+#elif defined (__ARM_NEON__)
+      CAEUtil::NEONMulArray(floatBuffer, m_volume, samples);
 #else
       for(unsigned int i = 0; i < samples; i++)
         floatBuffer[i] *= m_volume;
@@ -511,6 +513,8 @@ unsigned int CCoreAudioAEStream::GetFrames(uint8_t *buffer, unsigned int size)
         float *frameStart = &floatBuffer[frameIdx];
 #ifdef __SSE___
         CAEUtil::SSEMulArray(frameStart, amplification, m_chLayoutCountOutput);
+#elif defined(__ARM_NEON__)
+        CAEUtil::NEONMulArray(frameStart, amplification, m_chLayoutCountOutput);
 #else
         for(unsigned int n = 0; n < m_chLayoutCountOutput; n++)
           frameStart[n] *= amplification;
