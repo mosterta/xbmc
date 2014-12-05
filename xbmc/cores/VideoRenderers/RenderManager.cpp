@@ -44,7 +44,11 @@
 #elif defined(HAS_MMAL)
   #include "MMALRenderer.h"
 #elif HAS_GLES == 2
+#ifdef ALLWINNERA10
+  #include "LinuxRendererA10.h"
+#else
   #include "LinuxRendererGLES.h"
+#endif
 #elif defined(HAS_DX)
   #include "WinRenderer.h"
 #elif defined(HAS_SDL)
@@ -451,7 +455,11 @@ unsigned int CXBMCRenderManager::PreInit()
 #elif defined(HAS_MMAL)
     m_pRenderer = new CMMALRenderer();
 #elif HAS_GLES == 2
+#ifdef ALLWINNERA10
+    m_pRenderer = new CLinuxRendererA10();
+#else
     m_pRenderer = new CLinuxRendererGLES();
+#endif
 #elif defined(HAS_DX)
     m_pRenderer = new CWinRenderer();
 #elif defined(HAS_SDL)
@@ -997,6 +1005,10 @@ int CXBMCRenderManager::AddVideoPicture(DVDVideoPicture& pic)
   else if(pic.format == RENDER_FMT_VDPAU
        || pic.format == RENDER_FMT_VDPAU_420)
     m_pRenderer->AddProcessor(pic.vdpau, index);
+#endif
+#ifdef ALLWINNERA10
+  else if (pic.format == RENDER_FMT_A10BUF)
+    m_pRenderer->AddProcessor(pic.a10buffer);
 #endif
 #ifdef HAVE_LIBOPENMAX
   else if(pic.format == RENDER_FMT_OMXEGL)

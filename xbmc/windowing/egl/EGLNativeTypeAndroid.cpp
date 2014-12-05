@@ -25,6 +25,10 @@
 #include "utils/log.h"
 #include "guilib/gui3d.h"
 #include "android/activity/XBMCApp.h"
+  #ifdef ALLWINNERA10
+    #include "cores/VideoRenderers/LinuxRendererA10.h"
+    static double g_refreshRate;
+  #endif
 #include "utils/StringUtils.h"
 #include "android/jni/SystemProperties.h"
 #include "android/jni/Display.h"
@@ -37,10 +41,17 @@
 CEGLNativeTypeAndroid::CEGLNativeTypeAndroid()
   : m_width(0), m_height(0)
 {
+#if defined(ALLWINNERA10) && defined(TARGET_ANDROID)
+  int width, height;
+  A10VLInit(width, height, g_refreshRate);
+#endif
 }
 
 CEGLNativeTypeAndroid::~CEGLNativeTypeAndroid()
 {
+#if defined(ALLWINNERA10) && defined(TARGET_ANDROID)
+  A10VLExit();
+#endif
 } 
 
 bool CEGLNativeTypeAndroid::CheckCompatibility()
@@ -178,7 +189,11 @@ bool CEGLNativeTypeAndroid::GetNativeResolution(RESOLUTION_INFO *res) const
     res->iHeight = m_height;
   }
 
+#ifdef ALLWINNERA10
+  res->fRefreshRate = g_refreshRate;
+#else
   res->fRefreshRate = currentRefreshRate();
+#endif
   res->dwFlags= D3DPRESENTFLAG_PROGRESSIVE;
   res->iScreen       = 0;
   res->bFullScreen   = true;
