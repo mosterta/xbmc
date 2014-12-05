@@ -46,6 +46,7 @@ class CMMALRenderer;
 class CLinuxRenderer;
 class CLinuxRendererGL;
 class CLinuxRendererGLES;
+class CLinuxRendererA10;
 
 class CXBMCRenderManager
 {
@@ -150,7 +151,11 @@ public:
 #elif defined(HAS_MMAL)
   CMMALRenderer       *m_pRenderer;
 #elif HAS_GLES == 2
+#ifdef ALLWINNERA10
+  CLinuxRendererA10   *m_pRenderer;
+#else
   CLinuxRendererGLES  *m_pRenderer;
+#endif
 #elif defined(HAS_DX)
   CWinRenderer        *m_pRenderer;
 #elif defined(HAS_SDL)

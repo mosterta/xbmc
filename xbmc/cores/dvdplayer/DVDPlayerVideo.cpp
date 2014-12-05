@@ -194,6 +194,11 @@ bool CDVDPlayerVideo::OpenStream( CDVDStreamInfo &hint )
   if(hint.flags & AV_DISPOSITION_ATTACHED_PIC)
     return false;
 
+#ifdef ALLWINNERA10
+  if (m_pVideoCodec && (strcmp(m_pVideoCodec->GetName(), "A10") == 0))
+    m_pVideoCodec->Dispose();
+#endif
+
   CLog::Log(LOGNOTICE, "Creating video codec with codec id: %i", hint.codec);
   CDVDVideoCodec* codec = CDVDFactoryCodec::CreateVideoCodec(hint, surfaces, formats);
   if(!codec)
@@ -1005,6 +1010,9 @@ static std::string GetRenderFormatName(ERenderFormat format)
     case RENDER_FMT_IMXMAP:    return "IMXMAP";
     case RENDER_FMT_MMAL:      return "MMAL";
     case RENDER_FMT_NONE:      return "NONE";
+#ifdef ALLWINNERA10
+    case RENDER_FMT_A10BUF:    return "A10BUF";
+#endif
   }
   return "UNKNOWN";
 }

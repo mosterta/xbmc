@@ -2254,6 +2254,15 @@ void CApplication::Render()
           singleFrameTime = 200;  // 5 fps, <=200 ms latency to wake up
       }
 
+#ifdef ALLWINNERA10
+      if (IsInScreenSaver())
+      {
+        //so the mk802 does not burn down the house when i'm sleeping :)
+        limitFrames = true;
+        singleFrameTime = 100;
+      }
+#endif
+
     }
   }
 
