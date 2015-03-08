@@ -33,6 +33,7 @@
 #include "guilib/GraphicContext.h"
 #include "BaseRenderer.h"
 #include "xbmc/cores/dvdplayer/DVDCodecs/Video/DVDVideoCodec.h"
+#include "xbmc/cores/dvdplayer/DVDCodecs/Video/VDPAU.h"
 
 class CRenderCapture;
 
@@ -84,6 +85,7 @@ enum RenderMethod
 {
   RENDER_GLSL   = 0x001,
   RENDER_SW     = 0x004,
+  RENDER_VDPAU  = 0x008,
   RENDER_POT    = 0x010,
   RENDER_OMXEGL = 0x040,
   RENDER_CVREF  = 0x080,
@@ -174,6 +176,9 @@ public:
 #ifdef HAS_IMXVPU
   virtual void         AddProcessor(CDVDVideoCodecIMXBuffer *codecinfo, int index);
 #endif
+#ifdef HAVE_LIBVDPAU
+  virtual void         AddProcessor(VDPAU::CVdpauRenderPicture* vdpau, int index);
+#endif
 
 protected:
   virtual void Render(DWORD flags, int index);
@@ -197,6 +202,15 @@ protected:
   void DeleteNV12Texture(int index);
   bool CreateNV12Texture(int index);
 
+  void UploadVDPAUTexture(int index);
+  void DeleteVDPAUTexture(int index);
+  bool CreateVDPAUTexture(int index);
+#if 0
+  bool UploadVDPAUTexture420(int index);
+  void DeleteVDPAUTexture420(int index);
+  bool CreateVDPAUTexture420(int index);
+#endif
+  
   void UploadCVRefTexture(int index);
   void DeleteCVRefTexture(int index);
   bool CreateCVRefTexture(int index);
@@ -232,6 +246,7 @@ protected:
   void RenderCoreVideoRef(int index, int field);  // CoreVideo reference
   void RenderSurfaceTexture(int index, int field);// MediaCodec rendering using SurfaceTexture
   void RenderIMXMAPTexture(int index, int field); // IMXMAP rendering
+  void RenderVDPAU(int index, int field);
 
   CFrameBufferObject m_fbo;
 
@@ -300,6 +315,9 @@ protected:
 #endif
 #ifdef HAS_IMXVPU
     CDVDVideoCodecIMXBuffer *IMXBuffer;
+#endif
+#ifdef HAVE_LIBVDPAU
+    VDPAU::CVdpauRenderPicture *vdpau;
 #endif
   };
 

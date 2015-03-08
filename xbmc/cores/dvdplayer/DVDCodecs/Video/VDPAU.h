@@ -42,10 +42,16 @@
 
 #include "DVDVideoCodec.h"
 #include "DVDVideoCodecFFmpeg.h"
+#include "libavcodec/vdpau.h"
+#if HAS_GL
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #define GLX_GLXEXT_PROTOTYPES
 #include <GL/glx.h>
+#endif
+#if HAS_GLES
+#include <EGL/egl.h>
+#endif
 
 #include "DVDVideoCodec.h"
 #include "DVDVideoCodecFFmpeg.h"
@@ -110,6 +116,15 @@ struct VDPAU_procs
   VdpDecoderQueryCapabilities *  vdp_decoder_query_caps;
 
   VdpPreemptionCallbackRegister * vdp_preemption_callback_register;
+  
+  VdpPresentationQueueTargetDestroy *           vdp_presentation_queue_target_destroy;
+  VdpPresentationQueueCreate *                  vdp_presentation_queue_create;
+  VdpPresentationQueueDestroy *                 vdp_presentation_queue_destroy;
+  VdpPresentationQueueDisplay *                 vdp_presentation_queue_display;
+  VdpPresentationQueueBlockUntilSurfaceIdle *   vdp_presentation_queue_block_until_surface_idle;
+  VdpPresentationQueueTargetCreateX11 *         vdp_presentation_queue_target_create_x11;
+  VdpPresentationQueueQuerySurfaceStatus *      vdp_presentation_queue_query_surface_status;
+  VdpPresentationQueueGetTime *                 vdp_presentation_queue_get_time;
 
 };
 
@@ -214,7 +229,11 @@ class CVdpauRenderPicture
   friend class COutput;
 public:
   CVdpauRenderPicture(CCriticalSection &section)
-    : refCount(0), renderPicSection(section) { fence = None; }
+    : refCount(0), renderPicSection(section) { 
+#if HAS_GL
+      fence = None;
+#endif
+    }
   void Sync();
   DVDVideoPicture DVDPic;
   int texWidth, texHeight;
@@ -228,7 +247,9 @@ public:
 private:
   void ReturnUnused();
   bool usefence;
+#if HAS_GL
   GLsync fence;
+#endif
   int refCount;
   CCriticalSection &renderPicSection;
 };
@@ -457,13 +478,18 @@ protected:
   CVdpauConfig m_config;
   VdpauBufferPool m_bufferPool;
   CMixer m_mixer;
+#if HAS_GL
   Display *m_Display;
   Window m_Window;
   GLXContext m_glContext;
   GLXWindow m_glWindow;
   Pixmap    m_pixmap;
   GLXPixmap m_glPixmap;
-
+#endif
+#if HAS_GLES
+  EGLDisplay m_Display;
+  EGLContext m_context;
+#endif
   // gl functions
 #ifdef GL_NV_vdpau_interop
   PFNGLVDPAUINITNVPROC glVDPAUInitNV;
@@ -515,6 +541,8 @@ public:
   bool Supports(VdpVideoMixerFeature feature);
   VdpVideoMixerFeature* GetFeatures();
   int GetFeatureCount();
+  VdpPresentationQueueTarget   m_vdpFlipTarget;
+  VdpPresentationQueue         m_vdpFlipQueue;
 private:
   CVDPAUContext();
   void Close();
@@ -523,6 +551,7 @@ private:
   void DestroyContext();
   void QueryProcs();
   void SpewHardwareAvailable();
+  bool CheckStatus(VdpStatus vdp_st, int line);
   static CVDPAUContext *m_context;
   static CCriticalSection m_section;
   static Display *m_display;
@@ -533,6 +562,7 @@ private:
   VdpDevice m_vdpDevice;
   VDPAU_procs m_vdpProcs;
   VdpStatus (*dl_vdp_device_create_x11)(Display* display, int screen, VdpDevice* device, VdpGetProcAddress **get_proc_address);
+
 };
 
 /**
@@ -540,7 +570,9 @@ private:
  */
 class CDecoder
  : public CDVDVideoCodecFFmpeg::IHardwareDecoder
+#if HAS_GL
  , public IDispResource
+#endif
 {
    friend class CVdpauRenderPicture;
 
@@ -581,7 +613,8 @@ public:
 
   virtual void OnLostDevice();
   virtual void OnResetDevice();
-
+  void Present(uint32_t surface);
+  
 protected:
   void SetWidthHeight(int width, int height);
   bool ConfigVDPAU(AVCodecContext *avctx, int ref_frames);

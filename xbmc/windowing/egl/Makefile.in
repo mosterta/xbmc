@@ -7,6 +7,7 @@ SRCS+= EGLNativeTypeRaspberryPI.cpp
 SRCS+= EGLNativeTypeWayland.cpp
 SRCS+= EGLNativeTypeIMX.cpp
 SRCS+= EGLWrapper.cpp
+SRCS+= EGLNativeTypeA10.cpp
 
 # Wayland specific detail
 ifeq (@USE_WAYLAND@,1)

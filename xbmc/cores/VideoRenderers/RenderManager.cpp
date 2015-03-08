@@ -45,7 +45,7 @@
 #elif defined(HAS_MMAL)
   #include "MMALRenderer.h"
 #elif HAS_GLES == 2
-#ifdef ALLWINNERA10
+#if defined(ALLWINNERA10) && not defined (HAVE_LIBVDPAU)
   #include "LinuxRendererA10.h"
 #else
   #include "LinuxRendererGLES.h"
@@ -435,11 +435,11 @@ unsigned int CXBMCRenderManager::PreInit()
 #elif defined(HAS_MMAL)
     m_pRenderer = new CMMALRenderer();
 #elif HAS_GLES == 2
-#ifdef ALLWINNERA10
-    m_pRenderer = new CLinuxRendererA10();
-#else
-    m_pRenderer = new CLinuxRendererGLES();
-#endif
+  #if defined( ALLWINNERA10) and not defined (HAVE_LIBVDPAU)
+    m_pRenderer = new CLinuxRenderA10();
+  #else 
+    m_pRenderer = new CLinuxRendererGLES(); 
+  #endif
 #elif defined(HAS_DX)
     m_pRenderer = new CWinRenderer();
 #elif defined(HAS_SDL)
@@ -948,7 +948,7 @@ int CXBMCRenderManager::AddVideoPicture(DVDVideoPicture& pic)
        || pic.format == RENDER_FMT_VDPAU_420)
     m_pRenderer->AddProcessor(pic.vdpau, index);
 #endif
-#ifdef ALLWINNERA10
+#if defined( ALLWINNERA10) and not defined (HAVE_LIBVDPAU) 
   else if (pic.format == RENDER_FMT_A10BUF)
     m_pRenderer->AddProcessor(pic.a10buffer);
 #endif
@@ -1093,8 +1093,8 @@ void CXBMCRenderManager::PrepareNextRender()
 
   /* see if any future queued frames are already due */
   std::deque<int>::reverse_iterator curr, prev;
-  int idx;
   curr = prev = m_queued.rbegin();
+  int idx=*curr;
   ++prev;
   while (prev != m_queued.rend())
   {
@@ -1104,6 +1104,9 @@ void CXBMCRenderManager::PrepareNextRender()
     ++curr;
     ++prev;
   }
+  CLog::Log(LOGDEBUG, "CRenderManager::%s - due %d frames; curr=%d, idx=%d", 
+            __FUNCTION__, *curr-idx, *curr, idx);
+  
   idx = *curr;
 
   /* in fullscreen we will block after render, but only for MAXPRESENTDELAY */
@@ -1115,12 +1118,15 @@ void CXBMCRenderManager::PrepareNextRender()
 
   if (next)
   {
+    int old_skip = m_QueueSkip;
     /* skip late frames */
     while(m_queued.front() != idx)
     {
       requeue(m_discard, m_queued);
       m_QueueSkip++;
     }
+    CLog::Log(LOGDEBUG, "CRenderManager::%s - skipped %d frames", 
+              __FUNCTION__, m_QueueSkip-old_skip);
 
     m_presentstep   = PRESENT_FLIP;
     m_discard.push_back(m_presentsource);

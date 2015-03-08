@@ -189,15 +189,17 @@ protected:
   void DeleteVDPAUTexture(int index);
   bool CreateVDPAUTexture(int index);
 
+#if 0
   bool UploadVDPAUTexture420(int index);
   void DeleteVDPAUTexture420(int index);
   bool CreateVDPAUTexture420(int index);
+#endif
 
   bool UploadVAAPITexture(int index);
   void DeleteVAAPITexture(int index);
   bool CreateVAAPITexture(int index);
 
-  bool UploadCVRefTexture(int index);
+  void UploadCVRefTexture(int index);
   void DeleteCVRefTexture(int index);
   bool CreateCVRefTexture(int index);
 

@@ -653,6 +653,9 @@ void CDVDPlayerVideo::Process()
             // validate picture timing,
             // if both dts/pts invalid, use pts calulated from picture.iDuration
             // if pts invalid use dts, else use picture.pts as passed
+            CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - picture: pts=%lf, dts=%lf",__FUNCTION__, 
+                     picture.pts, picture.dts);
+
             if (picture.dts == DVD_NOPTS_VALUE && picture.pts == DVD_NOPTS_VALUE)
               picture.pts = pts;
             else if (picture.pts == DVD_NOPTS_VALUE)

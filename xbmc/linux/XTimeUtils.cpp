@@ -61,10 +61,14 @@ void WINAPI Sleep(DWORD dwMilliSeconds)
 
 VOID GetLocalTime(LPSYSTEMTIME sysTime)
 {
-  const time_t t = time(NULL);
+#if 0
+   const time_t t = time(NULL);
+#endif
   struct tm now;
+  struct timespec utc_now;
+  clock_gettime(CLOCK_MONOTONIC, &utc_now);
 
-  localtime_r(&t, &now);
+  localtime_r(&utc_now.tv_sec, &now);
   sysTime->wYear = now.tm_year + 1900;
   sysTime->wMonth = now.tm_mon + 1;
   sysTime->wDayOfWeek = now.tm_wday;
@@ -72,7 +76,7 @@ VOID GetLocalTime(LPSYSTEMTIME sysTime)
   sysTime->wHour = now.tm_hour;
   sysTime->wMinute = now.tm_min;
   sysTime->wSecond = now.tm_sec;
-  sysTime->wMilliseconds = 0;
+  sysTime->wMilliseconds = utc_now.tv_nsec/1000000;
   // NOTE: localtime_r() is not required to set this, but we Assume that it's set here.
   g_timezone.m_IsDST = now.tm_isdst;
 }

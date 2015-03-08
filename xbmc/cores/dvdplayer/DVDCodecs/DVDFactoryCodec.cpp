@@ -304,7 +304,7 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, unsigne
   }
 
 #ifdef ALLWINNERA10
-  if ( (pCodec = OpenCodec(new CDVDVideoCodecA10(), hint, options)) ) return pCodec;
+//  if ( (pCodec = OpenCodec(new CDVDVideoCodecA10(), hint, options)) ) return pCodec;
 #endif
 
   // try to decide if we want to try halfres decoding

@@ -36,7 +36,7 @@
 #include "utils/GLUtils.h"
 #include "settings/Settings.h"
 #include "settings/AdvancedSettings.h"
-#include "settings/GUISettings.h"
+//#include "settings/GUISettings.h"
 #include "guilib/FrameBufferObject.h"
 #include "VideoShaders/YUV2RGBShader.h"
 #include "VideoShaders/VideoFilterShader.h"
@@ -50,6 +50,7 @@
 
 using namespace Shaders;
 
+#if !defined (HAVE_LIBVDPAU)
 CLinuxRendererA10::CLinuxRendererA10()
 {
   m_textureTarget = GL_TEXTURE_2D;
@@ -396,7 +397,9 @@ void CLinuxRendererA10::RenderUpdate(bool clear, DWORD flags, DWORD alpha)
     if (m_RenderUpdateCallBackFn)
       (*m_RenderUpdateCallBackFn)(m_RenderUpdateCallBackCtx, m_sourceRect, m_destRect);
 
+#if not defined (HAVE_LIBVDPAU)
     A10VLWaitVSYNC();
+#endif
 
     g_graphicsContext.BeginPaint();
 
@@ -415,6 +418,7 @@ void CLinuxRendererA10::RenderUpdate(bool clear, DWORD flags, DWORD alpha)
   int index = m_iYV12RenderBuffer;
   YUVBUFFER& buf =  m_buffers[index];
 
+#if !defined (HAVE_LIBVDPAU)
   if (m_renderMethod & RENDER_A10BUF)
   {
     A10VLDisplayQueueItem(buf.a10buffer, m_sourceRect, m_destRect);
@@ -422,6 +426,7 @@ void CLinuxRendererA10::RenderUpdate(bool clear, DWORD flags, DWORD alpha)
     VerifyGLState();
     return;
   }
+#endif
 
   if (!buf.fields[FIELD_FULL][0].id || !buf.image.flags) return;
 
@@ -649,7 +654,9 @@ void CLinuxRendererA10::UnInit()
   CLog::Log(LOGDEBUG, "LinuxRendererGL: Cleaning up GL resources");
   CSingleLock lock(g_graphicsContext);
 
+#if !defined (HAVE_LIBVDPAU)
   A10VLHide();
+#endif
 
   // YV12 textures
   for (int i = 0; i < NUM_BUFFERS; ++i)
@@ -1419,6 +1426,7 @@ void CLinuxRendererA10::AddProcessor(struct A10VLQueueItem *buffer)
 
   buf.a10buffer = buffer;
 }
+#endif
 
 /*
  * Video layer functions
@@ -1437,7 +1445,9 @@ static int             g_lastnr;
 static int             g_decnr;
 static int             g_wridx;
 static int             g_rdidx;
+#if !defined (HAVE_LIBVDPAU)
 static A10VLQueueItem  g_dispq[DISPQS];
+#endif
 static pthread_mutex_t g_dispq_mutex;
 
 static bool A10VLBlueScreenFix()
@@ -1601,8 +1611,10 @@ bool A10VLInit(int &width, int &height, double &refreshRate)
   g_rdidx  = 0;
   g_wridx  = 0;
 
+#if !defined(HAVE_LIBVDPAU)
   for (i = 0; i < DISPQS; i++)
     g_dispq[i].pict.id = -1;
+#endif
 
   return true;
 }
@@ -1679,6 +1691,7 @@ void A10VLWaitVSYNC()
   //ioctl(g_hfb, FBIO_WAITFORVSYNC, NULL);
 }
 
+#if !defined (HAVE_LIBVDPAU)
 A10VLQueueItem *A10VLPutQueue(A10VLCALLBACK     callback,
                               void             *callbackpriv,
                               void             *pictpriv,
@@ -1997,6 +2010,7 @@ int A10VLDisplayPicture(cedarv_picture_t &picture,
   args[3] = 0;
   return ioctl(g_hdisp, DISP_CMD_VIDEO_GET_FRAME_ID, args);
 }
+#endif
 
 #endif
 

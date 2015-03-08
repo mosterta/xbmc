@@ -151,7 +151,7 @@ public:
 #elif defined(HAS_MMAL)
   CMMALRenderer       *m_pRenderer;
 #elif HAS_GLES == 2
-#ifdef ALLWINNERA10
+#if defined( ALLWINNERA10 ) && not defined (HAVE_LIBVDPAU)
   CLinuxRendererA10   *m_pRenderer;
 #else
   CLinuxRendererGLES  *m_pRenderer;

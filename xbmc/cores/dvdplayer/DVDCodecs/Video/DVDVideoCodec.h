@@ -136,6 +136,7 @@ struct DVDVideoPicture
   unsigned int iDisplayHeight; // height of the picture without black bars
 
   ERenderFormat format;
+  unsigned int iPicNum;
 };
 
 struct DVDVideoUserData

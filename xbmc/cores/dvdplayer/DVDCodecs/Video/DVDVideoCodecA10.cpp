@@ -380,7 +380,10 @@ Error:
  */
 void CDVDVideoCodecA10::Dispose()
 {
+#if ! defined (HAVE_LIBVDPAU)
   A10VLFreeQueue();
+#endif
+
   if (m_hcedarv)
   {
     m_hcedarv->ioctrl(m_hcedarv, CEDARV_COMMAND_STOP, 0);
@@ -396,6 +399,7 @@ void CDVDVideoCodecA10::Dispose()
  * returns one or a combination of VC_ messages
  * pData and iSize can be NULL, this means we should flush the rest of the data.
  */
+#if ! defined(HAVE_LIBVDPAU)
 int CDVDVideoCodecA10::Decode(BYTE* pData, int iSize, double dts, double pts)
 {
   int                        status = 0;
@@ -478,7 +482,9 @@ int CDVDVideoCodecA10::Decode(BYTE* pData, int iSize, double dts, double pts)
       break;
     case CEDARV_RESULT_NO_FRAME_BUFFER:
       CLog::Log(LOGNOTICE, "A10: no frames. free queue.");
+#if ! defined(HAVE_LIBVDPAU)
       A10VLFreeQueue();
+#endif
       //ret = m_hcedarv->decode(m_hcedarv);
       break;
 
@@ -545,7 +551,9 @@ void CDVDVideoCodecA10::Reset()
 #endif
   while(m_hcedarv->display_request(m_hcedarv, &pict) == 0)
     m_hcedarv->display_release(m_hcedarv, pict.id);
+#if ! defined (HAVE_LIBVDPAU)
   A10VLFreeQueue();
+#endif
 }
 
 /*
@@ -580,3 +588,5 @@ void CDVDVideoCodecA10::FreePicture(void *pictpriv, cedarv_picture_t &pict)
 {
   m_hcedarv->display_release(m_hcedarv, pict.id);
 }
+#endif
+

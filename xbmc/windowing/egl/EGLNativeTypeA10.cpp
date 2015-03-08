@@ -19,12 +19,19 @@
  */
 #include "system.h"
 #include <EGL/egl.h>
+#include "EGL/eglplatform_fb.h"
 #include "EGLNativeTypeA10.h"
 #include "utils/log.h"
 #include "guilib/gui3d.h"
+#include "utils/StringUtils.h"
 
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
 #include "cores/VideoRenderers/LinuxRendererA10.h"
+struct mali_native_window {
+        unsigned short width;
+        unsigned short height;
+};
+
 static struct mali_native_window g_fbwin;
 static double       g_refreshRate;
 #endif
@@ -42,7 +49,7 @@ CEGLNativeTypeA10::CEGLNativeTypeA10()
 
 CEGLNativeTypeA10::~CEGLNativeTypeA10()
 {
-#if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
+#if defined(ALLWINNERA10) && !defined(TARGET_ANDROID) 
   A10VLExit();
 #endif
 } 
@@ -120,7 +127,7 @@ bool CEGLNativeTypeA10::GetNativeResolution(RESOLUTION_INFO *res) const
   res->fPixelRatio   = 1.0f;
   res->iScreenWidth  = res->iWidth;
   res->iScreenHeight = res->iHeight;
-  res->strMode.Format("%dx%d @ %.2f%s - Full Screen", res->iScreenWidth, res->iScreenHeight, res->fRefreshRate,
+  res->strMode       = StringUtils::Format("%dx%d @ %.2f%s - Full Screen", res->iScreenWidth, res->iScreenHeight, res->fRefreshRate,
   res->dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "");
   CLog::Log(LOGNOTICE,"Current resolution: %s\n",res->strMode.c_str());
   return true;

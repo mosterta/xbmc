@@ -32,10 +32,14 @@
 #include "guilib/GraphicContext.h"
 #include "BaseRenderer.h"
 #include "xbmc/cores/dvdplayer/DVDCodecs/Video/DVDVideoCodec.h"
+#if not defined (HAVE_LIBVDPAU)
 #include "xbmc/cores/dvdplayer/DVDCodecs/Video/DVDVideoCodecA10.h"
+#endif
 
 extern "C" {
-#include <libcedarv.h>
+#if not defined (HAVE_LIBVDPAU)
+  #include <libcedarv.h>
+#endif
 #include <drv_display_sun4i.h>
 #ifndef CEDARV_FRAME_HAS_PHY_ADDR
 #include <os_adapter.h>
@@ -272,6 +276,11 @@ inline int NP2( unsigned x )
 
 #define DISPQS 24
 
+bool A10VLInit(int &width, int &height, double &refreshRate);
+
+void A10VLExit();
+
+#if not defined (HAVE_LIBVDPAU)
 typedef void (*A10VLCALLBACK)(void *callbackpriv, void *pictpriv, cedarv_picture_t &pict); //cleanup function
 
 struct A10VLQueueItem
@@ -283,9 +292,6 @@ struct A10VLQueueItem
   cedarv_picture_t  pict;
 };
 
-bool A10VLInit(int &width, int &height, double &refreshRate);
-
-void A10VLExit();
 
 void A10VLHide();
 
@@ -301,5 +307,7 @@ void A10VLFreeQueue();
 void A10VLDisplayQueueItem(A10VLQueueItem *pItem, CRect &srcRect, CRect &dstRect);
 
 int  A10VLDisplayPicture(cedarv_picture_t &pict, int refnr, CRect &srcRect, CRect &dstRect);
+
+#endif
 
 #endif
