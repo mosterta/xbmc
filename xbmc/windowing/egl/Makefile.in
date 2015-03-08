@@ -14,6 +14,7 @@ ifeq (@USE_IMXVPU@,1)
 SRCS+= EGLNativeTypeIMX.cpp
 endif
 SRCS+= EGLWrapper.cpp
+SRCS+= EGLNativeTypeA10.cpp
 
 # Wayland specific detail
 ifeq (@USE_WAYLAND@,1)

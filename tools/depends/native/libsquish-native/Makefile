@@ -36,7 +36,7 @@ $(DYLIB): $(PLATFORM)
 	$(MAKE) -C $(PLATFORM)
 
 .installed-$(PLATFORM): $(DYLIB)
-	$(MAKE) -C $(PLATFORM) install
+	$(MAKE) -C $(PLATFORM) install INSTALL_DIR=../squish-install
 	touch $@
 
 clean:

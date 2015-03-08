@@ -116,6 +116,10 @@ CLinuxRendererGLES::YUVBUFFER::YUVBUFFER()
 #ifdef HAS_IMXVPU
   IMXBuffer = NULL;
 #endif
+#ifdef HAVE_LIBVDPAU
+  vdpau = NULL;
+#endif
+
 }
 
 CLinuxRendererGLES::YUVBUFFER::~YUVBUFFER()
@@ -193,6 +197,18 @@ CLinuxRendererGLES::~CLinuxRendererGLES()
   ReleaseShaders();
 }
 
+#ifdef HAVE_LIBVDPAU
+void CLinuxRendererGLES::AddProcessor(VDPAU::CVdpauRenderPicture* vdpau, int index)
+{
+   YUVBUFFER &buf = m_buffers[index];
+   VDPAU::CVdpauRenderPicture *pic = vdpau->Acquire();
+   SAFE_RELEASE(buf.vdpau);
+   buf.vdpau = pic;
+   CLog::Log(LOGDEBUG,"CLinuxRendererGLES::%s adding pic, index=%d, surface=%d, pts=%lf", 
+             __FUNCTION__, index, pic->sourceIdx, pic->DVDPic.pts);
+}
+#endif
+
 bool CLinuxRendererGLES::ValidateRenderTarget()
 {
   if (!m_bValidated)
@@ -219,6 +235,7 @@ bool CLinuxRendererGLES::ValidateRenderTarget()
 
 bool CLinuxRendererGLES::Configure(unsigned int width, unsigned int height, unsigned int d_width, unsigned int d_height, float fps, unsigned flags, ERenderFormat format, unsigned extended_format, unsigned int orientation)
 {
+  CLog::Log(LOGNOTICE, " (RenderGLES) %s", __FUNCTION__);
   m_sourceWidth = width;
   m_sourceHeight = height;
   m_renderOrientation = orientation;
@@ -312,6 +329,13 @@ int CLinuxRendererGLES::GetImage(YV12Image *image, int source, bool readonly)
   }
 #endif
 
+#ifdef HAVE_LIBVDPAU
+  if(m_renderMethod & RENDER_VDPAU)
+  {
+    return source;
+  }
+#endif
+  
   YV12Image &im = m_buffers[source].image;
 
   if ((im.flags&(~IMAGE_FLAG_READY)) != 0)
@@ -508,12 +532,19 @@ void CLinuxRendererGLES::Update()
 
 void CLinuxRendererGLES::RenderUpdate(bool clear, DWORD flags, DWORD alpha)
 {
-  if (!m_bConfigured)
+  CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate");
+  if (!m_bConfigured) 
+  {
+    CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate not configured");
     return;
+  }
 
   // if its first pass, just init textures and return
   if (ValidateRenderTarget())
+  {
+    CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate Render Target not valid");
     return;
+  }
 
   if (!IsGuiLayer())
   {
@@ -522,17 +553,30 @@ void CLinuxRendererGLES::RenderUpdate(bool clear, DWORD flags, DWORD alpha)
   }
 
   // this needs to be checked after texture validation
-  if (!m_bImageReady) return;
+  if (!m_bImageReady) 
+  {
+    CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate image not ready");
+    return;
+  }
 
   int index = m_iYV12RenderBuffer;
   YUVBUFFER& buf =  m_buffers[index];
 
-  if (m_format != RENDER_FMT_OMXEGL && m_format != RENDER_FMT_EGLIMG && m_format != RENDER_FMT_MEDIACODEC)
+  if (m_format != RENDER_FMT_OMXEGL && m_format != RENDER_FMT_EGLIMG && 
+      m_format != RENDER_FMT_MEDIACODEC && m_format != RENDER_FMT_VDPAU &&
+      m_format != RENDER_FMT_VDPAU_420)
   {
-    if (!buf.fields[FIELD_FULL][0].id) return;
+    if (!buf.fields[FIELD_FULL][0].id) 
+    {
+      CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate id==0");
+      return;
+    }
   }
   if (buf.image.flags==0)
+  {
+    CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate flags==0");
     return;
+  }
 
   ManageDisplay();
 
@@ -568,7 +612,13 @@ void CLinuxRendererGLES::RenderUpdate(bool clear, DWORD flags, DWORD alpha)
   if ((flags & RENDER_FLAG_TOP) && (flags & RENDER_FLAG_BOT))
     CLog::Log(LOGERROR, "GLES: Cannot render stipple!");
   else
+  {
     Render(flags, index);
+#ifdef HAVE_LIBVDPAU
+    if((m_renderMethod & RENDER_VDPAU) && m_buffers[index].vdpau)
+       m_buffers[index].vdpau->vdpau->Present(m_buffers[index].vdpau->sourceIdx);
+#endif
+  }
 
   VerifyGLState();
   glEnable(GL_BLEND);
@@ -684,6 +734,7 @@ void CLinuxRendererGLES::RenderUpdateVideo(bool clear, DWORD flags, DWORD alpha)
 
 void CLinuxRendererGLES::FlipPage(int source)
 {
+  static unsigned int picNum=0;
   if( source >= 0 && source < m_NumYV12Buffers )
     m_iYV12RenderBuffer = source;
   else
@@ -691,6 +742,18 @@ void CLinuxRendererGLES::FlipPage(int source)
 
   m_buffers[m_iYV12RenderBuffer].flipindex = ++m_flipindex;
 
+#ifdef HAVE_LIBVDPAU_0
+  if((m_renderMethod & RENDER_VDPAU) && m_buffers[m_iYV12RenderBuffer].vdpau)
+  {
+     m_buffers[m_iYV12RenderBuffer].vdpau->vdpau->Present(m_buffers[m_iYV12RenderBuffer].vdpau->sourceIdx);
+     CLog::Log(LOGERROR, "CLinuxRendererGLES::%s pic.pts=%lf picNum=%d order=%d", __FUNCTION__,
+               m_buffers[m_iYV12RenderBuffer].vdpau->DVDPic.pts,
+               m_buffers[m_iYV12RenderBuffer].vdpau->DVDPic.iPicNum,
+               picNum+1 == m_buffers[m_iYV12RenderBuffer].vdpau->DVDPic.iPicNum);
+     picNum = m_buffers[m_iYV12RenderBuffer].vdpau->DVDPic.iPicNum;
+  }
+#endif
+  
   return;
 }
 
@@ -705,7 +768,7 @@ unsigned int CLinuxRendererGLES::PreInit()
     m_resolution = RES_DESKTOP;
 
   m_iYV12RenderBuffer = 0;
-  m_NumYV12Buffers = 2;
+  m_NumYV12Buffers = NUM_BUFFERS - 1;
 
   m_formats.clear();
   m_formats.push_back(RENDER_FMT_YUV420P);
@@ -805,6 +868,12 @@ void CLinuxRendererGLES::LoadShaders(int field)
   CLog::Log(LOGDEBUG, "GL: Requested render method: %d", requestedMethod);
 
   ReleaseShaders();
+  if (m_format == RENDER_FMT_VDPAU)
+  {
+    CLog::Log(LOGNOTICE, "GL: Using VDPAU render method");
+    m_renderMethod = RENDER_VDPAU;
+  }
+  else
 
   switch(requestedMethod)
   {
@@ -859,7 +928,6 @@ void CLinuxRendererGLES::LoadShaders(int field)
       {
         // create regular scan shader
         CLog::Log(LOGNOTICE, "GL: Selecting Single Pass YUV 2 RGB shader");
-
         m_pYUVProgShader = new YUV2RGBProgressiveShader(false, m_iFlags, m_format);
         m_pYUVBobShader = new YUV2RGBBobShader(false, m_iFlags, m_format);
         if ((m_pYUVProgShader && m_pYUVProgShader->CompileAndLink())
@@ -891,6 +959,12 @@ void CLinuxRendererGLES::LoadShaders(int field)
     CLog::Log(LOGNOTICE, "GL: GL_ARB_texture_rectangle not supported and OpenGL version is not 2.x");
     CLog::Log(LOGNOTICE, "GL: Reverting to POT textures");
     m_renderMethod |= RENDER_POT;
+  }
+  else if (m_format == RENDER_FMT_VDPAU)
+  {
+    m_textureUpload = &CLinuxRendererGLES::UploadVDPAUTexture;
+    m_textureCreate = &CLinuxRendererGLES::CreateVDPAUTexture;
+    m_textureDelete = &CLinuxRendererGLES::DeleteVDPAUTexture;
   }
   else
     CLog::Log(LOGNOTICE, "GL: NPOT texture support detected");
@@ -972,7 +1046,7 @@ void CLinuxRendererGLES::ReleaseShaders()
 
 void CLinuxRendererGLES::UnInit()
 {
-  CLog::Log(LOGDEBUG, "LinuxRendererGL: Cleaning up GL resources");
+  CLog::Log(LOGDEBUG, "LinuxRendererGL: Cleaning up GLES resources");
   CSingleLock lock(g_graphicsContext);
 
   if (m_rgbBuffer != NULL)
@@ -1024,6 +1098,9 @@ inline void CLinuxRendererGLES::ReorderDrawPoints()
 void CLinuxRendererGLES::ReleaseBuffer(int idx)
 {
   YUVBUFFER &buf = m_buffers[idx];
+#ifdef HAVE_LIBVDPAU
+  SAFE_RELEASE(buf.vdpau);
+#endif
 #ifdef HAVE_VIDEOTOOLBOXDECODER
   if (m_renderMethod & RENDER_CVREF )
   {
@@ -1066,8 +1143,9 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
   else
     m_currentField = FIELD_FULL;
 
+#if 0
   (this->*m_textureUpload)(index);
-
+#endif
   if (m_renderMethod & RENDER_GLSL)
   {
     UpdateVideoFilter();
@@ -1090,6 +1168,13 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
       break;
     }
   }
+#ifdef HAVE_LIBVDPAU
+  else if (m_renderMethod & RENDER_VDPAU)
+  {
+    UpdateVideoFilter();
+    RenderVDPAU(index, m_currentField);
+  }
+#endif
   else if (m_renderMethod & RENDER_OMXEGL)
   {
     RenderOpenMax(index, m_currentField);
@@ -1119,6 +1204,17 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
     RenderSoftware(index, m_currentField);
     VerifyGLState();
   }
+#ifdef HAVE_LIBVDPAU
+  if (m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420)
+  {
+      YUVBUFFER &buf = m_buffers[index];
+      if (buf.vdpau)
+      {
+          buf.vdpau->Sync();
+      }
+  }
+#endif
+
 }
 
 void CLinuxRendererGLES::RenderSinglePass(int index, int field)
@@ -2411,6 +2507,205 @@ void CLinuxRendererGLES::DeleteNV12Texture(int index)
   }
 }
 
+void CLinuxRendererGLES::DeleteVDPAUTexture(int index)
+{
+#ifdef HAVE_LIBVDPAU
+  YUVPLANE &plane = m_buffers[index].fields[0][0];
+
+  SAFE_RELEASE(m_buffers[index].vdpau);
+
+  plane.id = 0;
+#endif
+}
+
+bool CLinuxRendererGLES::CreateVDPAUTexture(int index)
+{
+#ifdef HAVE_LIBVDPAU
+  YV12Image &im     = m_buffers[index].image;
+  YUVFIELDS &fields = m_buffers[index].fields;
+  YUVPLANE  &plane  = fields[FIELD_FULL][0];
+
+  DeleteVDPAUTexture(index);
+
+  memset(&im    , 0, sizeof(im));
+  memset(&fields, 0, sizeof(fields));
+  im.height = m_sourceHeight;
+  im.width  = m_sourceWidth;
+
+  plane.texwidth  = im.width;
+  plane.texheight = im.height;
+
+  plane.texwidth = 1;
+  plane.texheight = 1;
+
+#endif
+  return true;
+}
+
+void CLinuxRendererGLES::UploadVDPAUTexture(int index)
+{
+#ifdef HAVE_LIBVDPAU_0
+    VDPAU::CVdpauRenderPicture *vdpau = m_buffers[index].vdpau;
+
+    YV12Image &im     = m_buffers[index].image;
+    YUVFIELDS &fields = m_buffers[index].fields;
+    YUVPLANE &plane = fields[FIELD_FULL][0];
+
+    if (!vdpau || !vdpau->valid)
+    {
+        return;
+    }
+
+    plane.id = vdpau->texture[0];
+
+  // in stereoscopic mode sourceRect may only
+  // be a part of the source video surface
+    plane.rect = m_sourceRect;
+
+  // clip rect
+    if (vdpau->crop.x1 > plane.rect.x1)
+        plane.rect.x1 = vdpau->crop.x1;
+    if (vdpau->crop.x2 < plane.rect.x2)
+        plane.rect.x2 = vdpau->crop.x2;
+    if (vdpau->crop.y1 > plane.rect.y1)
+        plane.rect.y1 = vdpau->crop.y1;
+    if (vdpau->crop.y2 < plane.rect.y2)
+        plane.rect.y2 = vdpau->crop.y2;
+
+    plane.texheight = vdpau->texHeight;
+    plane.texwidth  = vdpau->texWidth;
+
+    if (m_textureTarget == GL_TEXTURE_2D)
+    {
+        plane.rect.y1 /= plane.texheight;
+        plane.rect.y2 /= plane.texheight;
+        plane.rect.x1 /= plane.texwidth;
+        plane.rect.x2 /= plane.texwidth;
+    }
+
+#endif
+}
+#if 0
+void CLinuxRendererGLES::DeleteVDPAUTexture420(int index)
+{
+#ifdef HAVE_LIBVDPAU
+    YUVFIELDS &fields = m_buffers[index].fields;
+
+    SAFE_RELEASE(m_buffers[index].vdpau);
+
+    fields[0][0].id = 0;
+    fields[1][0].id = 0;
+    fields[1][1].id = 0;
+    fields[2][0].id = 0;
+    fields[2][1].id = 0;
+
+#endif
+}
+
+
+bool CLinuxRendererGLES::CreateVDPAUTexture420(int index)
+{
+#ifdef HAVE_LIBVDPAU
+    YV12Image &im     = m_buffers[index].image;
+    YUVFIELDS &fields = m_buffers[index].fields;
+    YUVPLANE &plane = fields[0][0];
+    GLuint    *pbo    = m_buffers[index].pbo;
+
+    DeleteVDPAUTexture420(index);
+
+    memset(&im    , 0, sizeof(im));
+    memset(&fields, 0, sizeof(fields));
+
+    im.cshift_x = 1;
+    im.cshift_y = 1;
+
+    im.plane[0] = NULL;
+    im.plane[1] = NULL;
+    im.plane[2] = NULL;
+
+    for(int p=0; p<3; p++)
+    {
+        pbo[p] = None;
+    }
+
+    plane.id = 1;
+
+#endif
+    return true;
+}
+
+bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
+{
+#ifdef HAVE_LIBVDPAU
+    VDPAU::CVdpauRenderPicture *vdpau = m_buffers[index].vdpau;
+    YV12Image &im = m_buffers[index].image;
+
+    YUVFIELDS &fields = m_buffers[index].fields;
+
+    if (!vdpau || !vdpau->valid)
+    {
+        return false;
+    }
+
+    im.height = vdpau->texHeight;
+    im.width  = vdpau->texWidth;
+
+  // YUV
+    for (int f = FIELD_TOP; f<=FIELD_BOT ; f++)
+    {
+        YUVPLANES &planes = fields[f];
+
+        planes[0].texwidth  = im.width;
+        planes[0].texheight = im.height >> 1;
+
+        planes[1].texwidth  = planes[0].texwidth  >> im.cshift_x;
+        planes[1].texheight = planes[0].texheight >> im.cshift_y;
+        planes[2].texwidth  = planes[1].texwidth;
+        planes[2].texheight = planes[1].texheight;
+
+        for (int p = 0; p < 3; p++)
+        {
+            planes[p].pixpertex_x = 1;
+            planes[p].pixpertex_y = 1;
+        }
+    }
+  // crop
+//  m_sourceRect.x1 += vdpau->crop.x1;
+//  m_sourceRect.x2 -= vdpau->crop.x2;
+//  m_sourceRect.y1 += vdpau->crop.y1;
+//  m_sourceRect.y2 -= vdpau->crop.y2;
+
+  // set textures
+    fields[1][0].id = vdpau->texture[0];
+    fields[1][1].id = vdpau->texture[2];
+    fields[1][2].id = vdpau->texture[2];
+    fields[2][0].id = vdpau->texture[1];
+    fields[2][1].id = vdpau->texture[3];
+    fields[2][2].id = vdpau->texture[3];
+
+    glEnable(m_textureTarget);
+    for (int f = FIELD_TOP; f <= FIELD_BOT; f++)
+    {
+        for (int p=0; p<2; p++)
+        {
+            glBindTexture(m_textureTarget,fields[f][p].id);
+            glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            glBindTexture(m_textureTarget,0);
+            VerifyGLState();
+        }
+    }
+    CalculateTextureSourceRects(index, 3);
+    glDisable(m_textureTarget);
+
+#endif
+    return true;
+}
+#endif
+
 //********************************************************************************************************
 // CoreVideoRef Texture creation, deletion, copying + clearing
 //********************************************************************************************************
@@ -2931,8 +3226,16 @@ bool CLinuxRendererGLES::Supports(EINTERLACEMETHOD method)
 
   if(method == VS_INTERLACEMETHOD_AUTO)
     return true;
-
-  if(m_renderMethod & RENDER_IMXMAP)
+  if(m_renderMethod & RENDER_VDPAU)
+  {
+#ifdef HAVE_LIBVDPAU
+    VDPAU::CVdpauRenderPicture *vdpauPic = m_buffers[m_iYV12RenderBuffer].vdpau;
+    if(vdpauPic && vdpauPic->vdpau)
+       return vdpauPic->vdpau->Supports(method);
+#endif
+    return false;
+  }
+  else if(m_renderMethod & RENDER_IMXMAP)
   {
     if(method == VS_INTERLACEMETHOD_IMX_FASTMOTION
     || method == VS_INTERLACEMETHOD_IMX_FASTMOTION_DOUBLE)
@@ -2985,6 +3288,9 @@ EINTERLACEMETHOD CLinuxRendererGLES::AutoInterlaceMethod()
       return VS_INTERLACEMETHOD_NONE;
   }
 
+  if(m_renderMethod & RENDER_VDPAU)
+    return VS_INTERLACEMETHOD_NONE;
+
   if(m_renderMethod & RENDER_OMXEGL)
     return VS_INTERLACEMETHOD_NONE;
 
@@ -3015,7 +3321,9 @@ CRenderInfo CLinuxRendererGLES::GetRenderInfo()
   if(m_format == RENDER_FMT_OMXEGL ||
      m_format == RENDER_FMT_CVBREF ||
      m_format == RENDER_FMT_EGLIMG ||
-     m_format == RENDER_FMT_MEDIACODEC)
+     m_format == RENDER_FMT_MEDIACODEC ||
+     m_format == RENDER_FMT_VDPAU ||
+     m_format == RENDER_FMT_VDPAU_420)
     info.optimal_buffer_size = 2;
   else if(m_format == RENDER_FMT_IMXMAP)
   {
@@ -3111,7 +3419,81 @@ void CLinuxRendererGLES::AddProcessor(CDVDVideoCodecIMXBuffer *buffer, int index
     buffer->Lock();
 }
 #endif
+void CLinuxRendererGLES::RenderVDPAU(int index, int field)
+{
+#ifdef HAVE_LIBVDPAU_0
+  YUVPLANE &plane = m_buffers[index].fields[field][0];
+  CVDPAU   *vdpau = m_buffers[m_iYV12RenderBuffer].vdpau;
 
+  if (!vdpau)
+    return;
+
+  eglEnable(m_textureTarget);
+  eglBindTexture(m_textureTarget, plane.id);
+
+  vdpau->BindPixmap();
+
+  // Try some clamping or wrapping
+  eglTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  eglTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+  if (m_pVideoFilterShader)
+  {
+    GLint filter;
+    if (!m_pVideoFilterShader->GetTextureFilter(filter))
+      filter = m_scalingMethod == VS_SCALINGMETHOD_NEAREST ? GL_NEAREST : GL_LINEAR;
+
+    eglTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, filter);
+    eglTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, filter);
+    m_pVideoFilterShader->SetSourceTexture(0);
+    m_pVideoFilterShader->SetWidth(m_sourceWidth);
+    m_pVideoFilterShader->SetHeight(m_sourceHeight);
+
+    //disable non-linear stretch when a dvd menu is shown, parts of the menu are rendered through the overlay renderer
+    //having non-linear stretch on breaks the alignment
+    if (g_application.m_pPlayer->IsInMenu())
+      m_pVideoFilterShader->SetNonLinStretch(1.0);
+    else
+      m_pVideoFilterShader->SetNonLinStretch(pow(CDisplaySettings::Get().GetPixelRatio(), g_advancedSettings.m_videoNonLinStretchRatio));
+
+    m_pVideoFilterShader->Enable();
+  }
+  else
+  {
+    GLint filter = m_scalingMethod == VS_SCALINGMETHOD_NEAREST ? GL_NEAREST : GL_LINEAR;
+    eglTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, filter);
+    eglTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, filter);
+  }
+
+  VerifyGLState();
+
+  eglBegin(EGL_QUADS);
+  if (m_textureTarget==GL_TEXTURE_2D)
+  {
+    eglTexCoord2f(0.0, 0.0);  eglVertex2f(m_rotatedDestCoords[0].x, m_rotatedDestCoords[0].y);
+    eglTexCoord2f(1.0, 0.0);  eglVertex2f(m_rotatedDestCoords[1].x, m_rotatedDestCoords[1].y);
+    eglTexCoord2f(1.0, 1.0);  eglVertex2f(m_rotatedDestCoords[2].x, m_rotatedDestCoords[2].y);
+    eglTexCoord2f(0.0, 1.0);  eglVertex2f(m_rotatedDestCoords[3].x, m_rotatedDestCoords[3].y);
+  }
+  else
+  {
+    eglTexCoord2f(m_rotatedDestCoords[0].x, m_rotatedDestCoords[0].y); eglVertex4f(m_rotatedDestCoords[0].x, m_rotatedDestCoords[0].y, 0.0f, 0.0f);
+    eglTexCoord2f(m_rotatedDestCoords[1].x, m_rotatedDestCoords[1].y); eglVertex4f(m_rotatedDestCoords[1].x, m_rotatedDestCoords[1].y, 1.0f, 0.0f);
+    eglTexCoord2f(m_rotatedDestCoords[2].x, m_rotatedDestCoords[2].y); eglVertex4f(m_rotatedDestCoords[2].x, m_rotatedDestCoords[2].y, 1.0f, 1.0f);
+    eglTexCoord2f(m_rotatedDestCoords[3].x, m_rotatedDestCoords[3].y); eglVertex4f(m_rotatedDestCoords[3].x, m_rotatedDestCoords[3].y, 0.0f, 1.0f);
+  }
+  eglEnd();
+  VerifyGLState();
+
+  if (m_pVideoFilterShader)
+    m_pVideoFilterShader->Disable();
+
+  vdpau->ReleasePixmap();
+
+  eglBindTexture (m_textureTarget, 0);
+  eglDisable(m_textureTarget);
+#endif
+}
 bool CLinuxRendererGLES::IsGuiLayer()
 {
   if (m_format == RENDER_FMT_BYPASS || m_format == RENDER_FMT_IMXMAP)

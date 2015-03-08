@@ -159,6 +159,9 @@ CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
 	--disable-mips32r2 \
 	--disable-mipsdspr1 \
 	--disable-mipsdspr2 \
+	--disable-armv6 \
+	--disable-armv6t2 \
+	--disable-neon \
         ${FLAGS}
 
 make -j ${BUILDTHREADS} 

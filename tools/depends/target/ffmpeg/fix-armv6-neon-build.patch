@@ -1,0 +1,806 @@
+Only in ../ffmpeg-2.6.4-Isengard: .config
+Only in ../ffmpeg-2.6.4-Isengard: config.fate
+Only in ../ffmpeg-2.6.4-Isengard: config.h
+Only in ../ffmpeg-2.6.4-Isengard: config.log
+Only in ../ffmpeg-2.6.4-Isengard: config.mak
+Only in ../ffmpeg-2.6.4-Isengard/doc: config.texi
+Only in ../ffmpeg-2.6.4-Isengard/doc/examples: pc-uninstalled
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/aacpsdsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/aacpsdsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/aacpsdsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/aacpsdsp_init_arm.c	2016-01-01 14:50:32.700631539 +0100
+***************
+*** 47,52 ****
+--- 47,53 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          s->add_squares            = ff_ps_add_squares_neon;
+          s->mul_pair_single        = ff_ps_mul_pair_single_neon;
+***************
+*** 54,57 ****
+--- 55,59 ----
+          s->hybrid_analysis        = ff_ps_hybrid_analysis_neon;
+          s->stereo_interpolate[0]  = ff_ps_stereo_interpolate_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/ac3dsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/ac3dsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/ac3dsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/ac3dsp_init_arm.c	2016-01-01 14:51:48.148363402 +0100
+***************
+*** 55,64 ****
+  
+      c->update_bap_counts         = ff_ac3_update_bap_counts_arm;
+  
+      if (have_armv6(cpu_flags)) {
+          c->bit_alloc_calc_bap    = ff_ac3_bit_alloc_calc_bap_armv6;
+      }
+! 
+      if (have_neon(cpu_flags)) {
+          c->ac3_exponent_min      = ff_ac3_exponent_min_neon;
+          c->ac3_max_msb_abs_int16 = ff_ac3_max_msb_abs_int16_neon;
+--- 55,66 ----
+  
+      c->update_bap_counts         = ff_ac3_update_bap_counts_arm;
+  
++ #if HAVE_ARMV6
+      if (have_armv6(cpu_flags)) {
+          c->bit_alloc_calc_bap    = ff_ac3_bit_alloc_calc_bap_armv6;
+      }
+! #endif
+! #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          c->ac3_exponent_min      = ff_ac3_exponent_min_neon;
+          c->ac3_max_msb_abs_int16 = ff_ac3_max_msb_abs_int16_neon;
+***************
+*** 70,73 ****
+--- 72,76 ----
+          c->sum_square_butterfly_int32 = ff_ac3_sum_square_butterfly_int32_neon;
+          c->sum_square_butterfly_float = ff_ac3_sum_square_butterfly_float_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/audiodsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/audiodsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/audiodsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/audiodsp_init_arm.c	2016-01-01 14:52:14.327576343 +0100
+***************
+*** 28,33 ****
+--- 28,35 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          ff_audiodsp_init_neon(c);
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/blockdsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/blockdsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/blockdsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/blockdsp_init_arm.c	2016-01-01 14:52:57.116289879 +0100
+***************
+*** 28,33 ****
+--- 28,35 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          ff_blockdsp_init_neon(c, high_bit_depth);
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/dcadsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/dcadsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/dcadsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/dcadsp_init_arm.c	2016-01-01 15:18:29.858512508 +0100
+***************
+*** 59,82 ****
+--- 59,90 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_VFP 
+      if (have_vfp(cpu_flags) && !have_vfpv3(cpu_flags)) {
+          s->lfe_fir[0]      = ff_dca_lfe_fir32_vfp;
+          s->lfe_fir[1]      = ff_dca_lfe_fir64_vfp;
+          s->qmf_32_subbands = ff_dca_qmf_32_subbands_vfp;
+      }
++ #endif
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          s->lfe_fir[0] = ff_dca_lfe_fir0_neon;
+          s->lfe_fir[1] = ff_dca_lfe_fir1_neon;
+          s->decode_hf  = ff_decode_hf_neon;
+      }
++ #endif
+  }
+  
+  av_cold void ff_synth_filter_init_arm(SynthFilterContext *s)
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_VFP 
+      if (have_vfp(cpu_flags) && !have_vfpv3(cpu_flags))
+          s->synth_filter_float = ff_synth_filter_float_vfp;
++ #endif
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          s->synth_filter_float = ff_synth_filter_float_neon;
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/fft_fixed_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/fft_fixed_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/fft_fixed_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/fft_fixed_init_arm.c	2016-01-01 14:56:08.490535321 +0100
+***************
+*** 31,36 ****
+--- 31,37 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          s->fft_permutation = FF_FFT_PERM_SWAP_LSBS;
+  #if CONFIG_FFT
+***************
+*** 45,48 ****
+--- 46,50 ----
+          }
+  #endif
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/fft_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/fft_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/fft_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/fft_init_arm.c	2016-01-01 15:18:49.517885536 +0100
+***************
+*** 40,52 ****
+--- 40,55 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_VFP 
+      if (have_vfp(cpu_flags) && !have_vfpv3(cpu_flags)) {
+          s->fft_calc     = ff_fft_calc_vfp;
+  #if CONFIG_MDCT
+          s->imdct_half   = ff_imdct_half_vfp;
+  #endif
+      }
++ #endif
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+  #if CONFIG_FFT
+          s->fft_permute  = ff_fft_permute_neon;
+***************
+*** 59,64 ****
+--- 62,68 ----
+          s->mdct_permutation = FF_MDCT_PERM_INTERLEAVE;
+  #endif
+      }
++ #endif
+  }
+  
+  #if CONFIG_RDFT
+***************
+*** 66,72 ****
+--- 70,78 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          s->rdft_calc    = ff_rdft_calc_neon;
++ #endif
+  }
+  #endif
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/fmtconvert_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/fmtconvert_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/fmtconvert_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/fmtconvert_init_arm.c	2016-01-01 14:58:23.746467459 +0100
+***************
+*** 38,51 ****
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
+      if (have_vfp(cpu_flags)) {
+          if (!have_vfpv3(cpu_flags)) {
+              c->int32_to_float_fmul_scalar = ff_int32_to_float_fmul_scalar_vfp;
+              c->int32_to_float_fmul_array8 = ff_int32_to_float_fmul_array8_vfp;
+          }
+      }
+! 
+      if (have_neon(cpu_flags)) {
+          c->int32_to_float_fmul_scalar = ff_int32_to_float_fmul_scalar_neon;
+      }
+  }
+--- 38,54 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_VFP
+      if (have_vfp(cpu_flags)) {
+          if (!have_vfpv3(cpu_flags)) {
+              c->int32_to_float_fmul_scalar = ff_int32_to_float_fmul_scalar_vfp;
+              c->int32_to_float_fmul_array8 = ff_int32_to_float_fmul_array8_vfp;
+          }
+      }
+! #endif
+! #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          c->int32_to_float_fmul_scalar = ff_int32_to_float_fmul_scalar_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/g722dsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/g722dsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/g722dsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/g722dsp_init_arm.c	2016-01-01 14:58:50.445664403 +0100
+***************
+*** 30,35 ****
+--- 30,37 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          dsp->apply_qmf = ff_g722_apply_qmf_neon;
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/h264chroma_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/h264chroma_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/h264chroma_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/h264chroma_init_arm.c	2016-01-01 14:59:19.764782514 +0100
+***************
+*** 39,44 ****
+--- 39,45 ----
+      const int high_bit_depth = bit_depth > 8;
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags) && !high_bit_depth) {
+          c->put_h264_chroma_pixels_tab[0] = ff_put_h264_chroma_mc8_neon;
+          c->put_h264_chroma_pixels_tab[1] = ff_put_h264_chroma_mc4_neon;
+***************
+*** 48,51 ****
+--- 49,53 ----
+          c->avg_h264_chroma_pixels_tab[1] = ff_avg_h264_chroma_mc4_neon;
+          c->avg_h264_chroma_pixels_tab[2] = ff_avg_h264_chroma_mc2_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/h264dsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/h264dsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/h264dsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/h264dsp_init_arm.c	2016-01-01 15:44:47.389670703 +0100
+***************
+*** 69,78 ****
+                               int16_t *block, int stride,
+                               const uint8_t nnzc[6*8]);
+  
+  static av_cold void h264dsp_init_neon(H264DSPContext *c, const int bit_depth,
+                                        const int chroma_format_idc)
+  {
+- #if HAVE_NEON
+      if (bit_depth == 8) {
+          c->h264_v_loop_filter_luma   = ff_h264_v_loop_filter_luma_neon;
+          c->h264_h_loop_filter_luma   = ff_h264_h_loop_filter_luma_neon;
+--- 69,78 ----
+                               int16_t *block, int stride,
+                               const uint8_t nnzc[6*8]);
+  
++ #if HAVE_NEON
+  static av_cold void h264dsp_init_neon(H264DSPContext *c, const int bit_depth,
+                                        const int chroma_format_idc)
+  {
+      if (bit_depth == 8) {
+          c->h264_v_loop_filter_luma   = ff_h264_v_loop_filter_luma_neon;
+          c->h264_h_loop_filter_luma   = ff_h264_h_loop_filter_luma_neon;
+***************
+*** 99,106 ****
+          c->h264_idct8_dc_add    = ff_h264_idct8_dc_add_neon;
+          c->h264_idct8_add4      = ff_h264_idct8_add4_neon;
+      }
+- #endif // HAVE_NEON
+  }
+  
+  av_cold void ff_h264dsp_init_arm(H264DSPContext *c, const int bit_depth,
+                                   const int chroma_format_idc)
+--- 99,106 ----
+          c->h264_idct8_dc_add    = ff_h264_idct8_dc_add_neon;
+          c->h264_idct8_add4      = ff_h264_idct8_add4_neon;
+      }
+  }
++ #endif // HAVE_NEON
+  
+  av_cold void ff_h264dsp_init_arm(H264DSPContext *c, const int bit_depth,
+                                   const int chroma_format_idc)
+***************
+*** 111,116 ****
+--- 111,118 ----
+      if (have_setend(cpu_flags))
+          c->startcode_find_candidate = ff_startcode_find_candidate_armv6;
+  #endif
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          h264dsp_init_neon(c, bit_depth, chroma_format_idc);
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/h264pred_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/h264pred_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/h264pred_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/h264pred_init_arm.c	2016-01-01 15:45:47.577815475 +0100
+***************
+*** 45,55 ****
+  void ff_pred8x8_l00_dc_neon(uint8_t *src, ptrdiff_t stride);
+  void ff_pred8x8_0l0_dc_neon(uint8_t *src, ptrdiff_t stride);
+  
+  static av_cold void h264_pred_init_neon(H264PredContext *h, int codec_id,
+                                          const int bit_depth,
+                                          const int chroma_format_idc)
+  {
+- #if HAVE_NEON
+      const int high_depth = bit_depth > 8;
+  
+      if (high_depth)
+--- 45,55 ----
+  void ff_pred8x8_l00_dc_neon(uint8_t *src, ptrdiff_t stride);
+  void ff_pred8x8_0l0_dc_neon(uint8_t *src, ptrdiff_t stride);
+  
++ #if HAVE_NEON
+  static av_cold void h264_pred_init_neon(H264PredContext *h, int codec_id,
+                                          const int bit_depth,
+                                          const int chroma_format_idc)
+  {
+      const int high_depth = bit_depth > 8;
+  
+      if (high_depth)
+***************
+*** 81,94 ****
+      if (codec_id != AV_CODEC_ID_SVQ3 && codec_id != AV_CODEC_ID_RV40 &&
+          codec_id != AV_CODEC_ID_VP7 && codec_id != AV_CODEC_ID_VP8)
+          h->pred16x16[PLANE_PRED8x8  ] = ff_pred16x16_plane_neon;
+- #endif // HAVE_NEON
+  }
+  
+  av_cold void ff_h264_pred_init_arm(H264PredContext *h, int codec_id,
+                                     int bit_depth, const int chroma_format_idc)
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
+      if (have_neon(cpu_flags))
+          h264_pred_init_neon(h, codec_id, bit_depth, chroma_format_idc);
+  }
+--- 81,96 ----
+      if (codec_id != AV_CODEC_ID_SVQ3 && codec_id != AV_CODEC_ID_RV40 &&
+          codec_id != AV_CODEC_ID_VP7 && codec_id != AV_CODEC_ID_VP8)
+          h->pred16x16[PLANE_PRED8x8  ] = ff_pred16x16_plane_neon;
+  }
++ #endif // HAVE_NEON
+  
+  av_cold void ff_h264_pred_init_arm(H264PredContext *h, int codec_id,
+                                     int bit_depth, const int chroma_format_idc)
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          h264_pred_init_neon(h, codec_id, bit_depth, chroma_format_idc);
++ #endif
+  }
+Only in ../ffmpeg-2.6.4-Isengard/libavcodec/arm: .h264pred_init_arm.c.swp
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/h264qpel_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/h264qpel_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/h264qpel_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/h264qpel_init_arm.c	2016-01-01 15:00:53.801953788 +0100
+***************
+*** 99,104 ****
+--- 99,105 ----
+      const int high_bit_depth = bit_depth > 8;
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags) && !high_bit_depth) {
+          c->put_h264_qpel_pixels_tab[0][ 0] = ff_put_h264_qpel16_mc00_neon;
+          c->put_h264_qpel_pixels_tab[0][ 1] = ff_put_h264_qpel16_mc10_neon;
+***************
+*** 168,171 ****
+--- 169,173 ----
+          c->avg_h264_qpel_pixels_tab[1][14] = ff_avg_h264_qpel8_mc23_neon;
+          c->avg_h264_qpel_pixels_tab[1][15] = ff_avg_h264_qpel8_mc33_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/hevcdsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/hevcdsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/hevcdsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/hevcdsp_init_arm.c	2016-01-01 15:01:20.511150299 +0100
+***************
+*** 27,32 ****
+--- 27,34 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          ff_hevcdsp_init_neon(c, bit_depth);
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/hpeldsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/hpeldsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/hpeldsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/hpeldsp_init_arm.c	2016-01-01 15:02:10.319651855 +0100
+***************
+*** 64,71 ****
+--- 64,75 ----
+      c->put_no_rnd_pixels_tab[1][2] = ff_put_no_rnd_pixels8_y2_arm;
+      c->put_no_rnd_pixels_tab[1][3] = ff_put_no_rnd_pixels8_xy2_arm;
+  
++ #if HAVE_ARMV6
+      if (have_armv6(cpu_flags))
+          ff_hpeldsp_init_armv6(c, flags);
++ #endif
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          ff_hpeldsp_init_neon(c, flags);
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/hpeldsp_init_armv6.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/hpeldsp_init_armv6.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/hpeldsp_init_armv6.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/hpeldsp_init_armv6.c	2016-01-01 16:47:34.662362826 +0100
+***************
+*** 42,47 ****
+--- 42,48 ----
+  
+  void ff_avg_pixels8_armv6(uint8_t *, const uint8_t *, ptrdiff_t, int);
+  
++ #if HAVE_ARMV6
+  av_cold void ff_hpeldsp_init_armv6(HpelDSPContext *c, int flags)
+  {
+      c->put_pixels_tab[0][0] = ff_put_pixels16_armv6;
+***************
+*** 65,67 ****
+--- 66,70 ----
+      c->avg_pixels_tab[0][0] = ff_avg_pixels16_armv6;
+      c->avg_pixels_tab[1][0] = ff_avg_pixels8_armv6;
+  }
++ #endif
++ 
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/idctdsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/idctdsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/idctdsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/idctdsp_init_arm.c	2016-01-01 15:03:08.807892191 +0100
+***************
+*** 82,89 ****
+--- 82,93 ----
+  
+      if (have_armv5te(cpu_flags))
+          ff_idctdsp_init_armv5te(c, avctx, high_bit_depth);
++ #if HAVE_ARMV6
+      if (have_armv6(cpu_flags))
+          ff_idctdsp_init_armv6(c, avctx, high_bit_depth);
++ #endif
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          ff_idctdsp_init_neon(c, avctx, high_bit_depth);
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/idctdsp_init_armv6.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/idctdsp_init_armv6.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/idctdsp_init_armv6.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/idctdsp_init_armv6.c	2016-01-01 16:48:16.191066584 +0100
+***************
+*** 29,34 ****
+--- 29,35 ----
+  void ff_add_pixels_clamped_armv6(const int16_t *block, uint8_t *pixels,
+                                   ptrdiff_t line_size);
+  
++ #if HAVE_ARMV6
+  av_cold void ff_idctdsp_init_armv6(IDCTDSPContext *c, AVCodecContext *avctx,
+                                     unsigned high_bit_depth)
+  {
+***************
+*** 43,45 ****
+--- 44,47 ----
+      }
+      c->add_pixels_clamped = ff_add_pixels_clamped_armv6;
+  }
++ #endif
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/lossless_audiodsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/lossless_audiodsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/lossless_audiodsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/lossless_audiodsp_init_arm.c	2016-01-01 15:03:36.137069935 +0100
+***************
+*** 32,38 ****
+--- 32,40 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          c->scalarproduct_and_madd_int16 = ff_scalarproduct_and_madd_int16_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/mlpdsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/mlpdsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/mlpdsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/mlpdsp_init_arm.c	2016-01-01 16:56:16.646077295 +0100
+***************
+*** 86,91 ****
+--- 86,92 ----
+  #define ff_mlp_pack_output_outoforder_8ch_5shift_armv6 0
+  #endif
+  
++ #if HAVE_ARMV6
+  static int32_t (*mlp_select_pack_output_armv6(uint8_t *ch_assign,
+                                                int8_t *output_shift,
+                                                uint8_t max_matrix_channel,
+***************
+*** 132,137 ****
+--- 133,139 ----
+  
+      return routine[(inorder*3+ch_index)*7+shift];
+  }
++ #endif
+  
+  av_cold void ff_mlpdsp_init_arm(MLPDSPContext *c)
+  {
+***************
+*** 141,146 ****
+--- 143,150 ----
+          c->mlp_filter_channel = ff_mlp_filter_channel_arm;
+          c->mlp_rematrix_channel = ff_mlp_rematrix_channel_arm;
+      }
++ #if HAVE_ARMV6
+      if (have_armv6(cpu_flags))
+          c->mlp_select_pack_output = mlp_select_pack_output_armv6;
++ #endif
+  }
+Only in ../ffmpeg-2.6.4-Isengard/libavcodec/arm: .mlpdsp_init_arm.c.swp
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/mpegvideo_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/mpegvideo_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/mpegvideo_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/mpegvideo_arm.c	2016-01-01 15:04:08.446086468 +0100
+***************
+*** 47,54 ****
+--- 47,56 ----
+      if (have_armv5te(cpu_flags))
+          ff_mpv_common_init_armv5te(s);
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          s->dct_unquantize_h263_intra = ff_dct_unquantize_h263_intra_neon;
+          s->dct_unquantize_h263_inter = ff_dct_unquantize_h263_inter_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/rv34dsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/rv34dsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/rv34dsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/rv34dsp_init_arm.c	2016-01-01 15:04:31.395349089 +0100
+***************
+*** 36,41 ****
+--- 36,42 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          c->rv34_inv_transform    = ff_rv34_inv_transform_noround_neon;
+          c->rv34_inv_transform_dc = ff_rv34_inv_transform_noround_dc_neon;
+***************
+*** 43,46 ****
+--- 44,48 ----
+          c->rv34_idct_add    = ff_rv34_idct_add_neon;
+          c->rv34_idct_dc_add = ff_rv34_idct_dc_add_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/rv40dsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/rv40dsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/rv40dsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/rv40dsp_init_arm.c	2016-01-01 15:41:40.265438343 +0100
+***************
+*** 72,77 ****
+--- 72,78 ----
+                                       int filter_q1, int alpha, int beta,
+                                       int lim_p0q0, int lim_q1, int lim_p1);
+  
++ #if HAVE_NEON
+  static av_cold void rv40dsp_init_neon(RV34DSPContext *c)
+  {
+      c->put_pixels_tab[0][ 1] = ff_put_rv40_qpel16_mc10_neon;
+***************
+*** 140,150 ****
+--- 141,154 ----
+      c->rv40_weak_loop_filter[0]     = ff_rv40_h_weak_loop_filter_neon;
+      c->rv40_weak_loop_filter[1]     = ff_rv40_v_weak_loop_filter_neon;
+  }
++ #endif
+  
+  av_cold void ff_rv40dsp_init_arm(RV34DSPContext *c)
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          rv40dsp_init_neon(c);
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/sbrdsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/sbrdsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/sbrdsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/sbrdsp_init_arm.c	2016-01-01 15:05:27.553545352 +0100
+***************
+*** 54,59 ****
+--- 54,60 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          s->sum64x5 = ff_sbr_sum64x5_neon;
+          s->sum_square = ff_sbr_sum_square_neon;
+***************
+*** 70,73 ****
+--- 71,75 ----
+          s->hf_apply_noise[2] = ff_sbr_hf_apply_noise_2_neon;
+          s->hf_apply_noise[3] = ff_sbr_hf_apply_noise_3_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/vc1dsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vc1dsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/vc1dsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vc1dsp_init_arm.c	2016-01-01 15:05:54.812670166 +0100
+***************
+*** 32,37 ****
+--- 32,39 ----
+      if (have_setend(cpu_flags))
+          dsp->startcode_find_candidate = ff_startcode_find_candidate_armv6;
+  #endif
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          ff_vc1dsp_init_neon(dsp);
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/vorbisdsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vorbisdsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/vorbisdsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vorbisdsp_init_arm.c	2016-01-01 15:06:16.661968831 +0100
+***************
+*** 31,37 ****
+--- 31,39 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          c->vorbis_inverse_coupling = ff_vorbis_inverse_coupling_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/vp3dsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vp3dsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/vp3dsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vp3dsp_init_arm.c	2016-01-01 15:06:40.341208917 +0100
+***************
+*** 34,39 ****
+--- 34,40 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          c->idct_put      = ff_vp3_idct_put_neon;
+          c->idct_add      = ff_vp3_idct_add_neon;
+***************
+*** 41,44 ****
+--- 42,46 ----
+          c->v_loop_filter = ff_vp3_v_loop_filter_neon;
+          c->h_loop_filter = ff_vp3_h_loop_filter_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/vp6dsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vp6dsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/vp6dsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vp6dsp_init_arm.c	2016-01-01 15:07:02.460499218 +0100
+***************
+*** 32,39 ****
+--- 32,41 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          s->edge_filter_hor = ff_vp6_edge_filter_hor_neon;
+          s->edge_filter_ver = ff_vp6_edge_filter_ver_neon;
+      }
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/vp8dsp_init_arm.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vp8dsp_init_arm.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/vp8dsp_init_arm.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vp8dsp_init_arm.c	2016-01-01 15:08:01.118617867 +0100
+***************
+*** 27,44 ****
+--- 27,52 ----
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_ARMV6
+      if (have_armv6(cpu_flags))
+          ff_vp78dsp_init_armv6(dsp);
++ #endif
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          ff_vp78dsp_init_neon(dsp);
++ #endif
+  }
+  
+  av_cold void ff_vp8dsp_init_arm(VP8DSPContext *dsp)
+  {
+      int cpu_flags = av_get_cpu_flags();
+  
++ #if HAVE_ARMV6
+      if (have_armv6(cpu_flags))
+          ff_vp8dsp_init_armv6(dsp);
++ #endif
++ #if HAVE_NEON
+      if (have_neon(cpu_flags))
+          ff_vp8dsp_init_neon(dsp);
++ #endif
+  }
+diff -c -r FFmpeg-2.6.4-Isengard/libavcodec/arm/vp8dsp_init_armv6.c ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vp8dsp_init_armv6.c
+*** FFmpeg-2.6.4-Isengard/libavcodec/arm/vp8dsp_init_armv6.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libavcodec/arm/vp8dsp_init_armv6.c	2016-01-01 16:49:00.869672140 +0100
+***************
+*** 40,45 ****
+--- 40,46 ----
+  VP8_BILIN(8,  armv6);
+  VP8_BILIN(4,  armv6);
+  
++ #if HAVE_ARMV6
+  av_cold void ff_vp78dsp_init_armv6(VP8DSPContext *dsp)
+  {
+      dsp->put_vp8_epel_pixels_tab[0][0][0] = ff_put_vp8_pixels16_armv6;
+***************
+*** 121,123 ****
+--- 122,126 ----
+      dsp->vp8_v_loop_filter_simple = ff_vp8_v_loop_filter16_simple_armv6;
+      dsp->vp8_h_loop_filter_simple = ff_vp8_h_loop_filter16_simple_armv6;
+  }
++ #endif
++ 
+Only in ../ffmpeg-2.6.4-Isengard/libavcodec: libavcodec.pc
+Only in ../ffmpeg-2.6.4-Isengard/libavdevice: libavdevice.pc
+Only in ../ffmpeg-2.6.4-Isengard/libavfilter: libavfilter.pc
+Only in ../ffmpeg-2.6.4-Isengard/libavformat: libavformat.pc
+Only in ../ffmpeg-2.6.4-Isengard/libavutil: avconfig.h
+Only in ../ffmpeg-2.6.4-Isengard/libavutil: ffversion.h
+Only in ../ffmpeg-2.6.4-Isengard/libavutil: libavutil.pc
+Only in ../ffmpeg-2.6.4-Isengard/libpostproc: libpostproc.pc
+diff -c -r FFmpeg-2.6.4-Isengard/libswresample/arm/audio_convert_init.c ../ffmpeg-2.6.4-Isengard/libswresample/arm/audio_convert_init.c
+*** FFmpeg-2.6.4-Isengard/libswresample/arm/audio_convert_init.c	2015-08-02 12:35:17.000000000 +0200
+--- ../ffmpeg-2.6.4-Isengard/libswresample/arm/audio_convert_init.c	2016-01-01 17:00:40.327856224 +0100
+***************
+*** 26,31 ****
+--- 26,32 ----
+  #include "libswresample/swresample_internal.h"
+  #include "libswresample/audioconvert.h"
+  
++ #if HAVE_NEON
+  void swri_oldapi_conv_flt_to_s16_neon(int16_t *dst, const float *src, int len);
+  void swri_oldapi_conv_fltp_to_s16_2ch_neon(int16_t *dst, float *const *src, int len, int channels);
+  void swri_oldapi_conv_fltp_to_s16_nch_neon(int16_t *dst, float *const *src, int len, int channels);
+***************
+*** 44,49 ****
+--- 45,51 ----
+          ;
+      swri_oldapi_conv_fltp_to_s16_nch_neon((int16_t*)*dst, (float *const*)src, len, channels);
+  }
++ #endif
+  
+  av_cold void swri_audio_convert_init_arm(struct AudioConvert *ac,
+                                         enum AVSampleFormat out_fmt,
+***************
+*** 54,59 ****
+--- 56,62 ----
+  
+      ac->simd_f= NULL;
+  
++ #if HAVE_NEON
+      if (have_neon(cpu_flags)) {
+          if(out_fmt == AV_SAMPLE_FMT_S16 && in_fmt == AV_SAMPLE_FMT_FLT || out_fmt == AV_SAMPLE_FMT_S16P && in_fmt == AV_SAMPLE_FMT_FLTP)
+              ac->simd_f = conv_flt_to_s16_neon;
+***************
+*** 64,67 ****
+--- 67,71 ----
+          if(ac->simd_f)
+              ac->in_simd_align_mask = ac->out_simd_align_mask = 15;
+      }
++ #endif
+  }
+Only in ../ffmpeg-2.6.4-Isengard/libswresample: libswresample.pc
+Only in ../ffmpeg-2.6.4-Isengard/libswscale: libswscale.pc
+Only in ../ffmpeg-2.6.4-Isengard: .version
