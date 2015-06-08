@@ -116,6 +116,8 @@ double CDVDClock::GetClock(double& absolute, bool interpolated /*= true*/)
   }
 
   CSharedLock lock(m_critSection);
+  CLog::Log(LOGDEBUG, "CDVDClock::%s - current=%lld",__FUNCTION__, 
+            current);
   return SystemToPlaying(current);
 }
 
@@ -273,6 +275,10 @@ double CDVDClock::SystemToPlaying(int64_t system)
   else
     current = system;
 
+#if DEBUG_DVD_CLOCK
+  CLog::Log(LOGDEBUG, "CDVDClock::%s - current=%lld m_startClock=%lld m_systemUsed=%lld m_iDisc=%lf",__FUNCTION__, 
+            current, m_startClock, m_systemUsed, m_iDisc);
+#endif
   return DVD_TIME_BASE * (double)(current - m_startClock) / m_systemUsed + m_iDisc;
 }
 

@@ -714,7 +714,11 @@ void CXBMCRenderManager::FlipPage(volatile bool& bStop, double timestamp /* = 0L
 
     /* failsafe for invalid timestamps, to make sure queue always empties */
     if(timestamp > GetPresentTime() + 5.0)
-      timestamp = GetPresentTime() + 5.0;
+    {
+       CLog::Log(LOGDEBUG, "CXBMCRenderManager::%s - timestamp=%lf presentTime=%lf, adding 5.0", 
+                 __FUNCTION__, timestamp, GetPresentTime());
+       timestamp = GetPresentTime() + 5.0;
+    }
 
     CSingleLock lock2(m_presentlock);
 
@@ -729,6 +733,7 @@ void CXBMCRenderManager::FlipPage(volatile bool& bStop, double timestamp /* = 0L
     m.presentfield  = sync;
     m.presentmethod = presentmethod;
     m.pts           = pts;
+    CLog::Log(LOGDEBUG, "CXBMCRenderManager::%s - m_Queue[%d].timestamp=%lf ", __FUNCTION__, source, m.timestamp);
     requeue(m_queued, m_free);
 
     /* signal to any waiters to check state */
@@ -1100,7 +1105,14 @@ void CXBMCRenderManager::PrepareNextRender()
   {
     if(clocktime > m_Queue[*prev].timestamp + correction                 /* previous frame is late */
     && clocktime > m_Queue[*curr].timestamp - frametime + correction)    /* selected frame is close to it's display time */
-      break;
+    {
+       CLog::Log(LOGDEBUG, "CRenderManager::%s - frame: clocktime=%lf prev=%lf curr=%lf correction=%lf", 
+                 __FUNCTION__, clocktime, m_Queue[*prev].timestamp, m_Queue[*curr].timestamp, correction);
+
+       break;
+    }
+    CLog::Log(LOGDEBUG, "CRenderManager::%s - due frame: clocktime=%lf prev=%lf curr=%lf correction=%lf", 
+              __FUNCTION__, clocktime, m_Queue[*prev].timestamp, m_Queue[*curr].timestamp, correction);
     ++curr;
     ++prev;
   }
@@ -1116,6 +1128,8 @@ void CXBMCRenderManager::PrepareNextRender()
   else
     next = (m_Queue[idx].timestamp <= clocktime + frametime);
 
+  CLog::Log(LOGDEBUG, "CRenderManager::%s - next=%d queue[%d].timestamp=%lf, clocktime=%lf", 
+            __FUNCTION__, idx, idx, m_Queue[idx].timestamp, clocktime);
   if (next)
   {
     int old_skip = m_QueueSkip;

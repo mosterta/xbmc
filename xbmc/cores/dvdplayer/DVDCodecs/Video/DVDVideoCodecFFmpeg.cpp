@@ -506,6 +506,10 @@ int CDVDVideoCodecFFmpeg::Decode(uint8_t* pData, int iSize, double dts, double p
   if (!iGotPicture)
     return VC_BUFFER;
 
+  CLog::Log(LOGDEBUG, "%s - avcodec_decode_video: dec_pic=%d dis_pic=%d pts=%d dts=%d", 
+            __FUNCTION__, m_pFrame->coded_picture_number, m_pFrame->display_picture_number, 
+           m_pFrame->pkt_pts, m_pFrame->pkt_dts);
+
   if(m_pFrame->key_frame)
   {
     m_started = true;

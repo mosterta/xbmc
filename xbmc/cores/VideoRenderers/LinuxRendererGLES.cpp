@@ -215,6 +215,7 @@ CLinuxRendererGLES::~CLinuxRendererGLES()
   }
 }
 
+static unsigned long last_pic = 0;
 #ifdef HAVE_LIBVDPAU
 void CLinuxRendererGLES::AddProcessor(VDPAU::CVdpauRenderPicture* vdpau, int index)
 {
@@ -222,8 +223,9 @@ void CLinuxRendererGLES::AddProcessor(VDPAU::CVdpauRenderPicture* vdpau, int ind
    VDPAU::CVdpauRenderPicture *pic = vdpau->Acquire();
    SAFE_RELEASE(buf.vdpau);
    buf.vdpau = pic;
-   CLog::Log(LOGDEBUG,"CLinuxRendererGLES::%s adding pic, index=%d, surface=%d, pts=%lf", 
-             __FUNCTION__, index, pic->sourceIdx, pic->DVDPic.pts);
+   buf.frame_num = ++last_pic;
+   CLog::Log(LOGDEBUG,"CLinuxRendererGLES::%s adding pic, index=%d, surface=%d, pts=%lf frame_num=%lu", 
+             __FUNCTION__, index, pic->sourceIdx, pic->DVDPic.pts, buf.frame_num);
 }
 #endif
 
@@ -646,8 +648,12 @@ void CLinuxRendererGLES::RenderUpdate(bool clear, DWORD flags, DWORD alpha)
   {
     Render(flags, index);
 #ifdef HAVE_LIBVDPAU
-    if((m_renderMethod & RENDER_VDPAU) && m_buffers[index].vdpau)
-       m_buffers[index].vdpau->vdpau->Present(m_buffers[index].vdpau->sourceIdx);
+    if((m_renderMethod & RENDER_VDPAU) && buf.vdpau)
+    {
+       buf.vdpau->vdpau->Present(buf.vdpau->sourceIdx);
+       CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate vdpau index=%d sourceId=%d frame_num=%lu", 
+                 index, buf.vdpau->sourceIdx, buf.frame_num);
+    }
 #endif
   }
 
@@ -667,6 +673,8 @@ void CLinuxRendererGLES::FlipPage(int source)
     m_iYV12RenderBuffer = NextYV12Texture();
 
   m_buffers[m_iYV12RenderBuffer].flipindex = ++m_flipindex;
+  CLog::Log(LOGERROR, "CLinuxRendererGLES::%s m_iYV12RenderBuffer=%d frame_num=%lu", __FUNCTION__,
+            m_iYV12RenderBuffer, m_buffers[m_iYV12RenderBuffer].frame_num);
 
 #ifdef HAVE_LIBVDPAU_0
   if((m_renderMethod & RENDER_VDPAU) && m_buffers[m_iYV12RenderBuffer].vdpau)
@@ -791,7 +799,8 @@ void CLinuxRendererGLES::LoadShaders(int field)
   float ios_version = CDarwinUtils::GetIOSVersion();
 #endif
 
-  if (m_format == RENDER_FMT_VDPAU)
+  if (m_format == RENDER_FMT_VDPAU ||
+     m_format == RENDER_FMT_VDPAU_420)
   {
     CLog::Log(LOGNOTICE, "GL: Using VDPAU render method");
     m_renderMethod = RENDER_VDPAU;
@@ -851,12 +860,6 @@ void CLinuxRendererGLES::LoadShaders(int field)
     CLog::Log(LOGNOTICE, "GL: Reverting to POT textures");
     m_renderMethod |= RENDER_POT;
   }
-  else if (m_format == RENDER_FMT_VDPAU)
-  {
-    m_textureUpload = &CLinuxRendererGLES::UploadVDPAUTexture;
-    m_textureCreate = &CLinuxRendererGLES::CreateVDPAUTexture;
-    m_textureDelete = &CLinuxRendererGLES::DeleteVDPAUTexture;
-  }
   else
     CLog::Log(LOGNOTICE, "GL: NPOT texture support detected");
 
@@ -903,7 +906,14 @@ void CLinuxRendererGLES::LoadShaders(int field)
     m_textureCreate = &CLinuxRendererGLES::CreateOpenMaxTexture;
     m_textureDelete = &CLinuxRendererGLES::DeleteOpenMaxTexture;
   }
-   else
+  else if (m_format == RENDER_FMT_VDPAU ||
+           m_format == RENDER_FMT_VDPAU_420)
+  {
+     m_textureUpload = &CLinuxRendererGLES::UploadVDPAUTexture;
+     m_textureCreate = &CLinuxRendererGLES::CreateVDPAUTexture;
+     m_textureDelete = &CLinuxRendererGLES::DeleteVDPAUTexture;
+  }
+  else
   {
     // default to YV12 texture handlers
     m_textureUpload = &CLinuxRendererGLES::UploadYV12Texture;
@@ -3234,8 +3244,9 @@ unsigned int CLinuxRendererGLES::GetOptimalBufferSize()
   || m_format == RENDER_FMT_CVBREF
   || m_format == RENDER_FMT_EGLIMG
   || m_format == RENDER_FMT_MEDIACODEC
-  || m_format == RENDER_FMT_VDPAU
-  || m_format == RENDER_FMT_VDPAU_420)
+/*  || m_format == RENDER_FMT_VDPAU
+  || m_format == RENDER_FMT_VDPAU_420
+ */   )
     return 2;
   else
     return 3;
@@ -3329,7 +3340,7 @@ void CLinuxRendererGLES::RenderVDPAU(int index, int field)
 {
 #ifdef HAVE_LIBVDPAU_0
   YUVPLANE &plane = m_buffers[index].fields[field][0];
-  CVDPAU   *vdpau = m_buffers[m_iYV12RenderBuffer].vdpau;
+  CVDPAU   *vdpau = [m_iYV12RenderBuffer].vdpau;
 
   if (!vdpau)
     return;

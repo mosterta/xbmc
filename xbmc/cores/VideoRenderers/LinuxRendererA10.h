@@ -54,7 +54,7 @@ namespace Shaders { class BaseVideoFilterShader; }
 
 typedef std::vector<int>     Features;
 
-#define NUM_BUFFERS 2
+//#define NUM_BUFFERS 2
 
 
 #undef ALIGN
