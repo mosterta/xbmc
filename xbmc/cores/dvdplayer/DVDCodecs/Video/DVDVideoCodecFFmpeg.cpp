@@ -234,7 +234,8 @@ bool CDVDVideoCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
     m_isSWCodec = true;
 
   if(pCodec == NULL)
-    pCodec = avcodec_find_decoder(hints.codec);
+     pCodec = avcodec_find_decoder(hints.codec);
+     //pCodec = avcodec_find_decoder_by_name(hints.codec_name.c_str());
 
   if(pCodec == NULL)
   {

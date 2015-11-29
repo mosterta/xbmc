@@ -229,10 +229,23 @@ BaseYUV2RGBGLSLShader::BaseYUV2RGBGLSLShader(bool rect, unsigned flags, ERenderF
   m_hProj   = -1;
   m_hModel  = -1;
   m_hAlpha  = -1;
+  m_hwidth   = -1;
+  m_hheight  = -1;
+  m_hTiles   = -1; 
+  m_hTilesUV  = -1; 
+  m_hwidthUV = -1;
+  m_hheightUV = -1;
+  m_hmodValues = -1;
+  m_hmodValuesUV = -1;
+  m_hmodLines = -1;
+  m_hmodLinesUV = -1;
+
   if (m_format == RENDER_FMT_YUV420P)
     m_defines += "#define XBMC_YV12\n";
   else if (m_format == RENDER_FMT_NV12)
     m_defines += "#define XBMC_NV12\n";
+  else if (m_format == RENDER_FMT_VDPAU_420)
+    m_defines += "#define XBMC_VDPAU_NV12\n";
   else
     CLog::Log(LOGERROR, "GL: BaseYUV2RGBGLSLShader - unsupported format %d", m_format);
 
@@ -259,6 +272,16 @@ void BaseYUV2RGBGLSLShader::OnCompiledAndLinked()
   m_hMatrix  = glGetUniformLocation(ProgramHandle(), "m_yuvmat");
   m_hStretch = glGetUniformLocation(ProgramHandle(), "m_stretch");
   m_hStep    = glGetUniformLocation(ProgramHandle(), "m_step");
+  m_hwidth   = glGetUniformLocation(ProgramHandle(), "m_width");
+  m_hheight  = glGetUniformLocation(ProgramHandle(), "m_height");
+  m_hwidthUV = glGetUniformLocation(ProgramHandle(), "m_widthUV");
+  m_hheightUV= glGetUniformLocation(ProgramHandle(), "m_heightUV");
+  m_hTiles   = glGetUniformLocation(ProgramHandle(), "m_tiles");
+  m_hTilesUV = glGetUniformLocation(ProgramHandle(), "m_tilesUV");
+  m_hmodValues = glGetUniformLocation(ProgramHandle(), "m_modValues");
+  m_hmodValuesUV = glGetUniformLocation(ProgramHandle(), "m_modValuesUV");
+  m_hmodLines = glGetUniformLocation(ProgramHandle(), "m_modLines");
+  m_hmodLinesUV = glGetUniformLocation(ProgramHandle(), "m_modLinesUV");
   VerifyGLState();
 }
 
@@ -270,7 +293,26 @@ bool BaseYUV2RGBGLSLShader::OnEnabled()
   glUniform1i(m_hVTex, 2);
   glUniform1f(m_hStretch, m_stretch);
   glUniform2f(m_hStep, 1.0 / m_width, 1.0 / m_height);
-
+  glUniform1i(m_hwidth, m_width);
+  glUniform1i(m_hheight, m_height);
+  glUniform1i(m_hwidthUV, (m_width+1)/2);
+  glUniform1i(m_hheightUV, (m_height+1)/2);
+  
+  int mbHeight = ((m_height +31) & ~31);
+  int mbWidth = ((m_width + 31) & ~31);
+  
+  m_numXTiles = mbWidth / 32;
+  m_numYTiles = mbHeight / 32;
+  glUniform2i(m_hTiles, m_numXTiles, m_numYTiles);
+  glUniform2i(m_hTilesUV, (((m_width+1)/2*2 + 31) & ~31) / 32, 
+                          (((m_height+1)/2 + 31) & ~31) / 32);
+  glUniform2i(m_hmodValues, (8*1024) % m_width, (m_numXTiles*1024) % m_width);
+  glUniform2i(m_hmodValuesUV, 8*1024 % m_width, 
+                            ((((m_width+1)/2*2 + 31) & ~31) / 32 * 1024) % m_width);
+  glUniform2i(m_hmodLines, (8*1024) / m_width, (m_numXTiles*1024) / m_width);
+  glUniform2i(m_hmodLinesUV, 8*1024 / m_width, 
+                            ((((m_width+1)/2*2 + 31) & ~31) / 32 * 1024) / m_width);
+  
   GLfloat matrix[4][4];
   CalculateYUVMatrixGL(matrix, m_flags, m_format, m_black, m_contrast);
 

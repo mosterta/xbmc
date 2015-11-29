@@ -205,8 +205,8 @@ protected:
   void UploadVDPAUTexture(int index);
   void DeleteVDPAUTexture(int index);
   bool CreateVDPAUTexture(int index);
-#if 0
-  bool UploadVDPAUTexture420(int index);
+#if 1
+  void UploadVDPAUTexture420(int index);
   void DeleteVDPAUTexture420(int index);
   bool CreateVDPAUTexture420(int index);
 #endif
@@ -247,6 +247,7 @@ protected:
   void RenderSurfaceTexture(int index, int field);// MediaCodec rendering using SurfaceTexture
   void RenderIMXMAPTexture(int index, int field); // IMXMAP rendering
   void RenderVDPAU(int index, int field);
+  void RenderProgressiveWeave(int index, int field);
 
   CFrameBufferObject m_fbo;
 

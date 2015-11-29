@@ -638,6 +638,8 @@ void CDVDPlayerVideo::Process()
           if (m_pVideoCodec->GetPicture(&picture))
           {
             sPostProcessType.clear();
+            if(picture.format == RENDER_FMT_VDPAU)
+               picture.format = RENDER_FMT_VDPAU_420;
 
             if(picture.iDuration == 0.0)
               picture.iDuration = frametime;

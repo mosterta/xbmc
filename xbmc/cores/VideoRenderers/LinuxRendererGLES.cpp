@@ -264,6 +264,9 @@ bool CLinuxRendererGLES::Configure(unsigned int width, unsigned int height, unsi
   m_iFlags = flags;
   m_format = format;
 
+  if(m_format == RENDER_FMT_VDPAU)
+     m_format = RENDER_FMT_VDPAU_420;
+  
   // Calculate the input frame aspect ratio.
   CalculateFrameAspectRatio(d_width, d_height);
   ChooseBestResolution(fps);
@@ -799,8 +802,8 @@ void CLinuxRendererGLES::LoadShaders(int field)
   float ios_version = CDarwinUtils::GetIOSVersion();
 #endif
 
-  if (m_format == RENDER_FMT_VDPAU ||
-     m_format == RENDER_FMT_VDPAU_420)
+  if (m_format == RENDER_FMT_VDPAU /* ||
+     m_format == RENDER_FMT_VDPAU_420 */ )
   {
     CLog::Log(LOGNOTICE, "GL: Using VDPAU render method");
     m_renderMethod = RENDER_VDPAU;
@@ -844,24 +847,81 @@ void CLinuxRendererGLES::LoadShaders(int field)
         m_renderMethod = RENDER_SW;
       }
       #endif
+      
+      int requestedMethod = CSettings::Get().GetInt("videoplayer.rendermethod");
+      CLog::Log(LOGDEBUG, "GLES: Requested render method: %d", requestedMethod);
+
+      if (m_pYUVShader)
+      {
+         m_pYUVShader->Free();
+         delete m_pYUVShader;
+         m_pYUVShader = NULL;
+      }
+
+      bool tryGlsl = true;
+      switch(requestedMethod)
+      {
+         case RENDER_METHOD_AUTO:
+#if defined(TARGET_POSIX) && !defined(TARGET_DARWIN)
+       //with render method set to auto, don't try glsl on ati if we're on linux
+       //it seems to be broken in a random way with every new driver release
+       //     tryGlsl = !StringUtils::StartsWithNoCase(g_Windowing.GetRenderVendor(), "ati");
+#endif
+      
+         case RENDER_METHOD_GLSL:
+      // Try GLSL shaders if supported and user requested auto or GLSL.
+            if (glCreateProgram && tryGlsl)
+            {
+        // create regular progressive scan shader
+               m_pYUVShader = new YUV2RGBProgressiveShader(false, m_iFlags, m_format,
+                     /* m_nonLinStretch && */ m_renderQuality == RQ_SINGLEPASS);
+
+               CLog::Log(LOGNOTICE, "GLES: Selecting Single Pass YUV 2 RGB shader");
+
+               if (m_pYUVShader && m_pYUVShader->CompileAndLink())
+               {
+                  m_renderMethod = RENDER_GLSL;
+                  UpdateVideoFilter();
+                  break;
+               }
+               else if (m_pYUVShader)
+               {
+                  m_pYUVShader->Free();
+                  delete m_pYUVShader;
+                  m_pYUVShader = NULL;
+               }
+               CLog::Log(LOGERROR, "GLES: Error enabling YUV2RGB GLSL shader");
+            }
+            break;
+         case RENDER_METHOD_SOFTWARE:
+         default:
+      // Use software YUV 2 RGB conversion if user requested it or GLSL and/or ARB shaders failed
+         {
+            m_renderMethod = RENDER_SW ;
+            CLog::Log(LOGNOTICE, "GLES: Shaders support not present, falling back to SW mode");
+            break;
+         }
+#if 0
       // Try GLSL shaders if supported and user requested auto or GLSL.
       if (glCreateProgram)
       {
         // create regular progressive scan shader
         m_pYUVShader = new YUV2RGBProgressiveShader(false, m_iFlags, m_format);
-        CLog::Log(LOGNOTICE, "GL: Selecting Single Pass YUV 2 RGB shader");
-     }
+        CLog::Log(LOGNOTICE, "GLES: Selecting Single Pass YUV 2 RGB shader");
+      }
+#endif
+      }
   }
 
   // determine whether GPU supports NPOT textures
   if (!g_Windowing.IsExtSupported("GL_TEXTURE_NPOT"))
   {
-    CLog::Log(LOGNOTICE, "GL: GL_ARB_texture_rectangle not supported and OpenGL version is not 2.x");
-    CLog::Log(LOGNOTICE, "GL: Reverting to POT textures");
+    CLog::Log(LOGNOTICE, "GLES: GL_ARB_texture_rectangle not supported and OpenGL version is not 2.x");
+    CLog::Log(LOGNOTICE, "GLES: Reverting to POT textures");
     m_renderMethod |= RENDER_POT;
   }
   else
-    CLog::Log(LOGNOTICE, "GL: NPOT texture support detected");
+    CLog::Log(LOGNOTICE, "GLES: NPOT texture support detected");
 
   // Now that we now the render method, setup texture function handlers
   if (m_format == RENDER_FMT_CVBREF)
@@ -906,12 +966,18 @@ void CLinuxRendererGLES::LoadShaders(int field)
     m_textureCreate = &CLinuxRendererGLES::CreateOpenMaxTexture;
     m_textureDelete = &CLinuxRendererGLES::DeleteOpenMaxTexture;
   }
-  else if (m_format == RENDER_FMT_VDPAU ||
-           m_format == RENDER_FMT_VDPAU_420)
+  else if (m_format == RENDER_FMT_VDPAU /* ||
+           m_format == RENDER_FMT_VDPAU_420 */ )
   {
      m_textureUpload = &CLinuxRendererGLES::UploadVDPAUTexture;
      m_textureCreate = &CLinuxRendererGLES::CreateVDPAUTexture;
      m_textureDelete = &CLinuxRendererGLES::DeleteVDPAUTexture;
+  }
+  else if (m_format == RENDER_FMT_VDPAU_420)
+  {
+     m_textureUpload = &CLinuxRendererGLES::UploadVDPAUTexture420;
+     m_textureCreate = &CLinuxRendererGLES::CreateVDPAUTexture420;
+     m_textureDelete = &CLinuxRendererGLES::DeleteVDPAUTexture420;
   }
   else
   {
@@ -931,7 +997,7 @@ void CLinuxRendererGLES::LoadShaders(int field)
 
 void CLinuxRendererGLES::UnInit()
 {
-  CLog::Log(LOGDEBUG, "LinuxRendererGL: Cleaning up GLES resources");
+  CLog::Log(LOGDEBUG, "LinuxRendererGLES: Cleaning up GLES resources");
   CSingleLock lock(g_graphicsContext);
 
   if (m_rgbBuffer != NULL)
@@ -1034,7 +1100,7 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
   else
     m_currentField = FIELD_FULL;
 
-#if 0
+#if 1
   (this->*m_textureUpload)(index);
 #endif
   if (m_renderMethod & RENDER_GLSL)
@@ -1044,7 +1110,11 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
     {
     case RQ_LOW:
     case RQ_SINGLEPASS:
-      RenderSinglePass(index, m_currentField);
+       if (m_format == RENDER_FMT_VDPAU_420 && m_currentField == FIELD_FULL)
+          RenderProgressiveWeave(index, m_currentField);
+       else
+          RenderSinglePass(index, m_currentField);
+
       VerifyGLState();
       break;
 
@@ -1096,7 +1166,7 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
     VerifyGLState();
   }
 #ifdef HAVE_LIBVDPAU
-  if (m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420)
+  if (m_format == RENDER_FMT_VDPAU)
   {
       YUVBUFFER &buf = m_buffers[index];
       if (buf.vdpau)
@@ -1106,6 +1176,14 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
   }
 #endif
 
+}
+void CLinuxRendererGLES::RenderProgressiveWeave(int index, int field)
+{
+   bool scale = (int)m_sourceHeight != m_destRect.Height() ||
+         (int)m_sourceWidth != m_destRect.Width();
+
+      RenderSinglePass(index, FIELD_TOP);
+      //RenderSinglePass(index, FIELD_BOT);
 }
 
 void CLinuxRendererGLES::RenderSinglePass(int index, int field)
@@ -2501,7 +2579,7 @@ void CLinuxRendererGLES::UploadVDPAUTexture(int index)
 
 #endif
 }
-#if 0
+#if 1
 void CLinuxRendererGLES::DeleteVDPAUTexture420(int index)
 {
 #ifdef HAVE_LIBVDPAU
@@ -2525,24 +2603,18 @@ bool CLinuxRendererGLES::CreateVDPAUTexture420(int index)
     YV12Image &im     = m_buffers[index].image;
     YUVFIELDS &fields = m_buffers[index].fields;
     YUVPLANE &plane = fields[0][0];
-    GLuint    *pbo    = m_buffers[index].pbo;
 
     DeleteVDPAUTexture420(index);
 
     memset(&im    , 0, sizeof(im));
     memset(&fields, 0, sizeof(fields));
 
-    im.cshift_x = 1;
-    im.cshift_y = 1;
+    im.cshift_x = 2;
+    im.cshift_y = 2;
 
     im.plane[0] = NULL;
     im.plane[1] = NULL;
     im.plane[2] = NULL;
-
-    for(int p=0; p<3; p++)
-    {
-        pbo[p] = None;
-    }
 
     plane.id = 1;
 
@@ -2550,7 +2622,7 @@ bool CLinuxRendererGLES::CreateVDPAUTexture420(int index)
     return true;
 }
 
-bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
+void CLinuxRendererGLES::UploadVDPAUTexture420(int index)
 {
 #ifdef HAVE_LIBVDPAU
     VDPAU::CVdpauRenderPicture *vdpau = m_buffers[index].vdpau;
@@ -2560,7 +2632,7 @@ bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
 
     if (!vdpau || !vdpau->valid)
     {
-        return false;
+        return;
     }
 
     im.height = vdpau->texHeight;
@@ -2572,7 +2644,7 @@ bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
         YUVPLANES &planes = fields[f];
 
         planes[0].texwidth  = im.width;
-        planes[0].texheight = im.height >> 1;
+        planes[0].texheight = im.height  >> 1;
 
         planes[1].texwidth  = planes[0].texwidth  >> im.cshift_x;
         planes[1].texheight = planes[0].texheight >> im.cshift_y;
@@ -2594,15 +2666,19 @@ bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
   // set textures
     fields[1][0].id = vdpau->texture[0];
     fields[1][1].id = vdpau->texture[2];
-    fields[1][2].id = vdpau->texture[2];
+    fields[1][2].id = vdpau->texture[4];
     fields[2][0].id = vdpau->texture[1];
     fields[2][1].id = vdpau->texture[3];
-    fields[2][2].id = vdpau->texture[3];
-
+    fields[2][2].id = vdpau->texture[5];
+    if(vdpau->numTextures == 4)
+    {
+       fields[1][2].id = vdpau->texture[2];
+       fields[2][2].id = vdpau->texture[3];
+    }
     glEnable(m_textureTarget);
     for (int f = FIELD_TOP; f <= FIELD_BOT; f++)
     {
-        for (int p=0; p<2; p++)
+       for (int p=0; p < vdpau->numTextures / 2; p++)
         {
             glBindTexture(m_textureTarget,fields[f][p].id);
             glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -2618,7 +2694,6 @@ bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
     glDisable(m_textureTarget);
 
 #endif
-    return true;
 }
 #endif
 
@@ -3378,26 +3453,26 @@ void CLinuxRendererGLES::RenderVDPAU(int index, int field)
   else
   {
     GLint filter = m_scalingMethod == VS_SCALINGMETHOD_NEAREST ? GL_NEAREST : GL_LINEAR;
-    eglTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, filter);
-    eglTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, filter);
+    glTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, filter);
+    glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, filter);
   }
 
   VerifyGLState();
 
-  eglBegin(EGL_QUADS);
+  glBegin(EGL_QUADS);
   if (m_textureTarget==GL_TEXTURE_2D)
   {
-    eglTexCoord2f(0.0, 0.0);  eglVertex2f(m_rotatedDestCoords[0].x, m_rotatedDestCoords[0].y);
-    eglTexCoord2f(1.0, 0.0);  eglVertex2f(m_rotatedDestCoords[1].x, m_rotatedDestCoords[1].y);
-    eglTexCoord2f(1.0, 1.0);  eglVertex2f(m_rotatedDestCoords[2].x, m_rotatedDestCoords[2].y);
-    eglTexCoord2f(0.0, 1.0);  eglVertex2f(m_rotatedDestCoords[3].x, m_rotatedDestCoords[3].y);
+    glTexCoord2f(0.0, 0.0);  glVertex2f(m_rotatedDestCoords[0].x, m_rotatedDestCoords[0].y);
+    glTexCoord2f(1.0, 0.0);  glVertex2f(m_rotatedDestCoords[1].x, m_rotatedDestCoords[1].y);
+    glTexCoord2f(1.0, 1.0);  glVertex2f(m_rotatedDestCoords[2].x, m_rotatedDestCoords[2].y);
+    glTexCoord2f(0.0, 1.0);  glVertex2f(m_rotatedDestCoords[3].x, m_rotatedDestCoords[3].y);
   }
   else
   {
-    eglTexCoord2f(m_rotatedDestCoords[0].x, m_rotatedDestCoords[0].y); eglVertex4f(m_rotatedDestCoords[0].x, m_rotatedDestCoords[0].y, 0.0f, 0.0f);
-    eglTexCoord2f(m_rotatedDestCoords[1].x, m_rotatedDestCoords[1].y); eglVertex4f(m_rotatedDestCoords[1].x, m_rotatedDestCoords[1].y, 1.0f, 0.0f);
-    eglTexCoord2f(m_rotatedDestCoords[2].x, m_rotatedDestCoords[2].y); eglVertex4f(m_rotatedDestCoords[2].x, m_rotatedDestCoords[2].y, 1.0f, 1.0f);
-    eglTexCoord2f(m_rotatedDestCoords[3].x, m_rotatedDestCoords[3].y); eglVertex4f(m_rotatedDestCoords[3].x, m_rotatedDestCoords[3].y, 0.0f, 1.0f);
+    glTexCoord2f(m_rotatedDestCoords[0].x, m_rotatedDestCoords[0].y); glVertex4f(m_rotatedDestCoords[0].x, m_rotatedDestCoords[0].y, 0.0f, 0.0f);
+    glTexCoord2f(m_rotatedDestCoords[1].x, m_rotatedDestCoords[1].y); glVertex4f(m_rotatedDestCoords[1].x, m_rotatedDestCoords[1].y, 1.0f, 0.0f);
+    glTexCoord2f(m_rotatedDestCoords[2].x, m_rotatedDestCoords[2].y); glVertex4f(m_rotatedDestCoords[2].x, m_rotatedDestCoords[2].y, 1.0f, 1.0f);
+    glTexCoord2f(m_rotatedDestCoords[3].x, m_rotatedDestCoords[3].y); glVertex4f(m_rotatedDestCoords[3].x, m_rotatedDestCoords[3].y, 0.0f, 1.0f);
   }
   eglEnd();
   VerifyGLState();
@@ -3407,8 +3482,8 @@ void CLinuxRendererGLES::RenderVDPAU(int index, int field)
 
   vdpau->ReleasePixmap();
 
-  eglBindTexture (m_textureTarget, 0);
-  eglDisable(m_textureTarget);
+  glBindTexture (m_textureTarget, 0);
+  glDisable(m_textureTarget);
 #endif
 }
 
