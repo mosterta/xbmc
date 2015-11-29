@@ -104,7 +104,7 @@ bool CWinSystemEGL::InitWindowSystem()
     return false;
   }
 
-  EGLint surface_type = EGL_WINDOW_BIT;
+  EGLint surface_type = EGL_WINDOW_BIT | EGL_PIXMAP_BIT;
   // for the non-trivial dirty region modes, we need the EGL buffer to be preserved across updates
   if (g_advancedSettings.m_guiAlgorithmDirtyRegions == DIRTYREGION_SOLVER_COST_REDUCTION ||
       g_advancedSettings.m_guiAlgorithmDirtyRegions == DIRTYREGION_SOLVER_UNION)

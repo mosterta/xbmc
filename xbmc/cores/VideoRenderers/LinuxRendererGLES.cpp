@@ -246,6 +246,9 @@ bool CLinuxRendererGLES::Configure(unsigned int width, unsigned int height, unsi
   m_iFlags = flags;
   m_format = format;
 
+  if(m_format == RENDER_FMT_VDPAU)
+     m_format = RENDER_FMT_VDPAU_420;
+  
   // Calculate the input frame aspect ratio.
   CalculateFrameAspectRatio(d_width, d_height);
   ChooseBestResolution(fps);
@@ -876,14 +879,13 @@ void CLinuxRendererGLES::LoadShaders(int field)
   CLog::Log(LOGDEBUG, "GL: Requested render method: %d", requestedMethod);
 
   ReleaseShaders();
-  if (m_format == RENDER_FMT_VDPAU ||
-     m_format == RENDER_FMT_VDPAU_420)
+  if(m_format == RENDER_FMT_VDPAU /* ||
+     m_format == RENDER_FMT_VDPAU_420 */ )
   {
     CLog::Log(LOGNOTICE, "GL: Using VDPAU render method");
     m_renderMethod = RENDER_VDPAU;
   }
   else
-
   switch(requestedMethod)
   {
     case RENDER_METHOD_AUTO:
@@ -965,12 +967,12 @@ void CLinuxRendererGLES::LoadShaders(int field)
   // determine whether GPU supports NPOT textures
   if (!g_Windowing.IsExtSupported("GL_TEXTURE_NPOT"))
   {
-    CLog::Log(LOGNOTICE, "GL: GL_ARB_texture_rectangle not supported and OpenGL version is not 2.x");
-    CLog::Log(LOGNOTICE, "GL: Reverting to POT textures");
+    CLog::Log(LOGNOTICE, "GLES: GL_ARB_texture_rectangle not supported and OpenGL version is not 2.x");
+    CLog::Log(LOGNOTICE, "GLES: Reverting to POT textures");
     m_renderMethod |= RENDER_POT;
   }
   else
-    CLog::Log(LOGNOTICE, "GL: NPOT texture support detected");
+    CLog::Log(LOGNOTICE, "GLES: NPOT texture support detected");
 
   // Now that we now the render method, setup texture function handlers
   if (m_format == RENDER_FMT_CVBREF)
@@ -1015,12 +1017,18 @@ void CLinuxRendererGLES::LoadShaders(int field)
     m_textureCreate = &CLinuxRendererGLES::CreateOpenMaxTexture;
     m_textureDelete = &CLinuxRendererGLES::DeleteOpenMaxTexture;
   }
-  else if (m_format == RENDER_FMT_VDPAU ||
-           m_format == RENDER_FMT_VDPAU_420)
+  else if (m_format == RENDER_FMT_VDPAU /* ||
+           m_format == RENDER_FMT_VDPAU_420 */ )
   {
      m_textureUpload = &CLinuxRendererGLES::UploadVDPAUTexture;
      m_textureCreate = &CLinuxRendererGLES::CreateVDPAUTexture;
      m_textureDelete = &CLinuxRendererGLES::DeleteVDPAUTexture;
+  }
+  else if (m_format == RENDER_FMT_VDPAU_420)
+  {
+     m_textureUpload = &CLinuxRendererGLES::UploadVDPAUTexture420;
+     m_textureCreate = &CLinuxRendererGLES::CreateVDPAUTexture420;
+     m_textureDelete = &CLinuxRendererGLES::DeleteVDPAUTexture420;
   }
   else
   {
@@ -1056,7 +1064,7 @@ void CLinuxRendererGLES::ReleaseShaders()
 
 void CLinuxRendererGLES::UnInit()
 {
-  CLog::Log(LOGDEBUG, "LinuxRendererGL: Cleaning up GLES resources");
+  CLog::Log(LOGDEBUG, "LinuxRendererGLES: Cleaning up GLES resources");
   CSingleLock lock(g_graphicsContext);
 
   if (m_rgbBuffer != NULL)
@@ -1163,7 +1171,11 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
     {
     case RQ_LOW:
     case RQ_SINGLEPASS:
-      RenderSinglePass(index, m_currentField);
+       if (m_format == RENDER_FMT_VDPAU_420 && m_currentField == FIELD_FULL)
+          RenderProgressiveWeave(index, m_currentField);
+       else
+          RenderSinglePass(index, m_currentField);
+
       VerifyGLState();
       break;
 
@@ -2595,7 +2607,7 @@ void CLinuxRendererGLES::UploadVDPAUTexture(int index)
 
 #endif
 }
-#if 0
+#if 1
 void CLinuxRendererGLES::DeleteVDPAUTexture420(int index)
 {
 #ifdef HAVE_LIBVDPAU
@@ -2619,7 +2631,6 @@ bool CLinuxRendererGLES::CreateVDPAUTexture420(int index)
     YV12Image &im     = m_buffers[index].image;
     YUVFIELDS &fields = m_buffers[index].fields;
     YUVPLANE &plane = fields[0][0];
-    GLuint    *pbo    = m_buffers[index].pbo;
 
     DeleteVDPAUTexture420(index);
 
@@ -2633,18 +2644,13 @@ bool CLinuxRendererGLES::CreateVDPAUTexture420(int index)
     im.plane[1] = NULL;
     im.plane[2] = NULL;
 
-    for(int p=0; p<3; p++)
-    {
-        pbo[p] = None;
-    }
-
     plane.id = 1;
 
 #endif
     return true;
 }
 
-bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
+void CLinuxRendererGLES::UploadVDPAUTexture420(int index)
 {
 #ifdef HAVE_LIBVDPAU
     VDPAU::CVdpauRenderPicture *vdpau = m_buffers[index].vdpau;
@@ -2654,7 +2660,7 @@ bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
 
     if (!vdpau || !vdpau->valid)
     {
-        return false;
+        return ;
     }
 
     im.height = vdpau->texHeight;
@@ -2666,7 +2672,7 @@ bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
         YUVPLANES &planes = fields[f];
 
         planes[0].texwidth  = im.width;
-        planes[0].texheight = im.height >> 1;
+        planes[0].texheight = im.height  >> 1;
 
         planes[1].texwidth  = planes[0].texwidth  >> im.cshift_x;
         planes[1].texheight = planes[0].texheight >> im.cshift_y;
@@ -2688,15 +2694,19 @@ bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
   // set textures
     fields[1][0].id = vdpau->texture[0];
     fields[1][1].id = vdpau->texture[2];
-    fields[1][2].id = vdpau->texture[2];
+    fields[1][2].id = vdpau->texture[4];
     fields[2][0].id = vdpau->texture[1];
     fields[2][1].id = vdpau->texture[3];
-    fields[2][2].id = vdpau->texture[3];
-
+    fields[2][2].id = vdpau->texture[5];
+    if(vdpau->numTextures == 4)
+    {
+       fields[1][2].id = vdpau->texture[2];
+       fields[2][2].id = vdpau->texture[3];
+    }
     glEnable(m_textureTarget);
     for (int f = FIELD_TOP; f <= FIELD_BOT; f++)
     {
-        for (int p=0; p<2; p++)
+       for (int p=0; p < vdpau->numTextures / 2; p++)
         {
             glBindTexture(m_textureTarget,fields[f][p].id);
             glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -2712,7 +2722,6 @@ bool CLinuxRendererGLES::UploadVDPAUTexture420(int index)
     glDisable(m_textureTarget);
 
 #endif
-    return true;
 }
 #endif
 

@@ -2421,7 +2421,7 @@ bool CLinuxRendererGL::CreateVDPAUTexture420(int index)
 
 bool CLinuxRendererGL::UploadVDPAUTexture420(int index)
 {
-#ifdef HAVE_LIBVDPAU
+#if defined( HAVE_LIBVDPAU )
   VDPAU::CVdpauRenderPicture *vdpau = m_buffers[index].vdpau;
   YV12Image &im = m_buffers[index].image;
 
