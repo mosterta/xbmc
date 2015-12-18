@@ -207,7 +207,7 @@ bool CAddonMgr::CheckUserDirs(const cp_cfg_element_t *settings)
   return true;
 }
 
-CAddonMgr::CAddonMgr()
+CAddonMgr::CAddonMgr() : m_initialized(false)
 {
   m_cpluff = NULL;
 }
@@ -220,6 +220,8 @@ CAddonMgr::~CAddonMgr()
 CAddonMgr &CAddonMgr::Get()
 {
   static CAddonMgr sAddonMgr;
+//  if(sAddonMgr.m_initialized == false)
+//     sAddonMgr.Init();
   return sAddonMgr;
 }
 
@@ -249,6 +251,7 @@ void CAddonMgr::UnregisterAddonMgrCallback(TYPE type)
 
 bool CAddonMgr::Init()
 {
+  m_initialized = true;
   m_cpluff = new DllLibCPluff;
   m_cpluff->Load();
 
@@ -312,6 +315,7 @@ void CAddonMgr::DeInit()
   m_cpluff = NULL;
   m_database.Close();
   m_disabled.clear();
+  m_initialized = false;
 }
 
 bool CAddonMgr::HasAddons(const TYPE &type, bool enabled /*= true*/)
