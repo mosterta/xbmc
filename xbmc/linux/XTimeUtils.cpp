@@ -66,7 +66,7 @@ VOID GetLocalTime(LPSYSTEMTIME sysTime)
 #endif
   struct tm now;
   struct timespec utc_now;
-  clock_gettime(CLOCK_MONOTONIC, &utc_now);
+  clock_gettime(CLOCK_REALTIME, &utc_now);
 
   localtime_r(&utc_now.tv_sec, &now);
   sysTime->wYear = now.tm_year + 1900;
