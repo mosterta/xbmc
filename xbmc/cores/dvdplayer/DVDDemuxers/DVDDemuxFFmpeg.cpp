@@ -1276,7 +1276,6 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int iId)
 
     stream->codec = pStream->codec->codec_id;
     stream->codec_fourcc = pStream->codec->codec_tag;
-    //stream->codec_name = pStream->codec->codec->name;
     stream->profile = pStream->codec->profile;
     stream->level   = pStream->codec->level;
 

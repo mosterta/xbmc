@@ -229,16 +229,6 @@ BaseYUV2RGBGLSLShader::BaseYUV2RGBGLSLShader(bool rect, unsigned flags, ERenderF
   m_hProj   = -1;
   m_hModel  = -1;
   m_hAlpha  = -1;
-  m_hwidth   = -1;
-  m_hheight  = -1;
-  m_hTiles   = -1; 
-  m_hTilesUV  = -1; 
-  m_hwidthUV = -1;
-  m_hheightUV = -1;
-  m_hmodValues = -1;
-  m_hmodValuesUV = -1;
-  m_hmodLines = -1;
-  m_hmodLinesUV = -1;
 
   if (m_format == RENDER_FMT_YUV420P)
     m_defines += "#define XBMC_YV12\n";
@@ -272,16 +262,6 @@ void BaseYUV2RGBGLSLShader::OnCompiledAndLinked()
   m_hMatrix  = glGetUniformLocation(ProgramHandle(), "m_yuvmat");
   m_hStretch = glGetUniformLocation(ProgramHandle(), "m_stretch");
   m_hStep    = glGetUniformLocation(ProgramHandle(), "m_step");
-  m_hwidth   = glGetUniformLocation(ProgramHandle(), "m_width");
-  m_hheight  = glGetUniformLocation(ProgramHandle(), "m_height");
-  m_hwidthUV = glGetUniformLocation(ProgramHandle(), "m_widthUV");
-  m_hheightUV= glGetUniformLocation(ProgramHandle(), "m_heightUV");
-  m_hTiles   = glGetUniformLocation(ProgramHandle(), "m_tiles");
-  m_hTilesUV = glGetUniformLocation(ProgramHandle(), "m_tilesUV");
-  m_hmodValues = glGetUniformLocation(ProgramHandle(), "m_modValues");
-  m_hmodValuesUV = glGetUniformLocation(ProgramHandle(), "m_modValuesUV");
-  m_hmodLines = glGetUniformLocation(ProgramHandle(), "m_modLines");
-  m_hmodLinesUV = glGetUniformLocation(ProgramHandle(), "m_modLinesUV");
   VerifyGLState();
 }
 
