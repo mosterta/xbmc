@@ -104,9 +104,6 @@ namespace Shaders {
     float m_contrast;
     float m_stretch;
 
-    int   m_numXTiles;
-    int   m_numYTiles;
-    
     string m_defines;
 
     // shader attribute handles
@@ -124,16 +121,6 @@ namespace Shaders {
     GLint m_hProj;
     GLint m_hModel;
     GLint m_hAlpha;
-    GLint m_hwidth;
-    GLint m_hheight;
-    GLint m_hwidthUV;
-    GLint m_hheightUV;
-    GLint m_hTiles;
-    GLint m_hTilesUV;
-    GLint m_hmodValues;
-    GLint m_hmodValuesUV;
-    GLint m_hmodLines;
-    GLint m_hmodLinesUV;
     
     GLfloat *m_proj;
     GLfloat *m_model;
