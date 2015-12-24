@@ -135,51 +135,6 @@ void CCedarTexture::Update(unsigned int width, unsigned int height, unsigned int
 
 bool CCedarTexture::LoadFromFileInternal(const CStdString& texturePath, unsigned int maxWidth, unsigned int maxHeight, bool autoRotate, bool requirePixels, const std::string& strMimeType)
 {
-#if 0
-   string file = CSpecialProtocol::TranslatePath(texturePath);
-   if (URIUtils::HasExtension(texturePath, ".jpg|.tbn") && ! URIUtils::IsURL(file))
-   {
-      CSingleLock lock(m_critSection);
-    m_fallback_gl = false;
-    cedarLoadJpeg(CSpecialProtocol::TranslatePath(texturePath).c_str(), &m_jpeg);
-    bool okay = false;
-    int orientation = 0;
-
-
-#if 0  
-      orientation = file->GetOrientation();
-      // limit the sizes of jpegs (even if we fail to decode)
-      g_OMXImage.ClampLimits(maxWidth, maxHeight, file->GetWidth(), file->GetHeight(), orientation & 4);
-#endif
-
-    ClampLimits(maxWidth, maxHeight, m_jpeg.width, m_jpeg.height, orientation & 4);
-    // to be improved, cedarDecodeJpeg must be checked first
-    if (requirePixels)
-    {
-      Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
-      if (m_pixels && cedarDecodeJpegToMem(&m_jpeg, maxWidth, maxHeight, (char *)m_pixels))
-         okay = true;
-    }
-    else
-    {
-      if (cedarDecodeJpegToTexture(&m_jpeg, maxWidth, maxHeight, &m_egl_image) && m_egl_image)
-      {
-         Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
-         okay = true;
-      }
-    }
-    cedarCloseJpeg(&m_jpeg);
-    if (okay)
-    {
-      m_hasAlpha = false;
-      if (autoRotate)
-         m_orientation = orientation;
-      return true;
-    }
-    else
-       m_fallback_gl = true;
-  }
-#else
    if (URIUtils::HasExtension(texturePath, ".jpg|.tbn"))
    {
       XFILE::CFile file;
@@ -196,12 +151,8 @@ bool CCedarTexture::LoadFromFileInternal(const CStdString& texturePath, unsigned
       bool okay = false;
       int orientation = 0;
 
-
-#if 0  
-      orientation = file->GetOrientation();
+      orientation = m_jpeg.orientation;
       // limit the sizes of jpegs (even if we fail to decode)
-      g_OMXImage.ClampLimits(maxWidth, maxHeight, file->GetWidth(), file->GetHeight(), orientation & 4);
-#endif
 
       ClampLimits(maxWidth, maxHeight, m_jpeg.width, m_jpeg.height, orientation & 4);
     // to be improved, cedarDecodeJpeg must be checked first
@@ -230,8 +181,6 @@ bool CCedarTexture::LoadFromFileInternal(const CStdString& texturePath, unsigned
       else
          m_fallback_gl = true;
    }
-
-#endif
   return CGLTexture::LoadFromFileInternal(texturePath, maxWidth, maxHeight, autoRotate, requirePixels);
 }
 
