@@ -273,25 +273,6 @@ bool BaseYUV2RGBGLSLShader::OnEnabled()
   glUniform1i(m_hVTex, 2);
   glUniform1f(m_hStretch, m_stretch);
   glUniform2f(m_hStep, 1.0 / m_width, 1.0 / m_height);
-  glUniform1i(m_hwidth, m_width);
-  glUniform1i(m_hheight, m_height);
-  glUniform1i(m_hwidthUV, (m_width+1)/2);
-  glUniform1i(m_hheightUV, (m_height+1)/2);
-  
-  int mbHeight = ((m_height +31) & ~31);
-  int mbWidth = ((m_width + 31) & ~31);
-  
-  m_numXTiles = mbWidth / 32;
-  m_numYTiles = mbHeight / 32;
-  glUniform2i(m_hTiles, m_numXTiles, m_numYTiles);
-  glUniform2i(m_hTilesUV, (((m_width+1)/2*2 + 31) & ~31) / 32, 
-                          (((m_height+1)/2 + 31) & ~31) / 32);
-  glUniform2i(m_hmodValues, (8*1024) % m_width, (m_numXTiles*1024) % m_width);
-  glUniform2i(m_hmodValuesUV, 8*1024 % m_width, 
-                            ((((m_width+1)/2*2 + 31) & ~31) / 32 * 1024) % m_width);
-  glUniform2i(m_hmodLines, (8*1024) / m_width, (m_numXTiles*1024) / m_width);
-  glUniform2i(m_hmodLinesUV, 8*1024 / m_width, 
-                            ((((m_width+1)/2*2 + 31) & ~31) / 32 * 1024) / m_width);
   
   GLfloat matrix[4][4];
   CalculateYUVMatrixGL(matrix, m_flags, m_format, m_black, m_contrast);
