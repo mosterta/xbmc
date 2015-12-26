@@ -47,8 +47,10 @@ protected:
 
 private:
   void *m_egl_image;
-  struct jpeg_t m_jpeg;
+  CEDAR_JPEG_HANDLE m_jpgHandle;
   static CCriticalSection m_critSection;
   bool m_fallback_gl;
+  static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC pglEGLImageTargetTexture2DOES;
+
 };
 
