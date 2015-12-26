@@ -44,25 +44,33 @@ using namespace std;
 /*    CCedarTexture                                                       */
 /************************************************************************/
 CCriticalSection CCedarTexture::m_critSection;
+PFNGLEGLIMAGETARGETTEXTURE2DOESPROC CCedarTexture::pglEGLImageTargetTexture2DOES = NULL;
 
 CCedarTexture::CCedarTexture(unsigned int width, unsigned int height, unsigned int format)
    : CGLTexture(width, height, format), m_egl_image(NULL), m_fallback_gl(true)
 {
-  memset(&m_jpeg, 0, sizeof(m_jpeg));
-  EGLContext eglC = EGL_NO_CONTEXT;
-      //if not created on render thread than a different OpenGL context has to be created
-#if 0
-  if(g_application.IsCurrentThread() == false)
-     eglC = g_Windowing.GetEGLContext();
-#endif
-
+  //creating an EGL Image requires the EGL display
   EGLDisplay eglD = g_Windowing.GetEGLDisplay();
-  cedarInitJpeg(&m_jpeg, eglD, eglC);
+  m_jpgHandle = cedarInitJpeg(eglD);
+  if(m_jpgHandle == NULL)
+  {
+     CLog::Log(LOGERROR, "CCedarTexture: cedarInitJpeg failed!");
+  }
+  
+  if(pglEGLImageTargetTexture2DOES == NULL)
+  {
+     pglEGLImageTargetTexture2DOES =
+        (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)eglGetProcAddress("glEGLImageTargetTexture2DOES");
+
+     if(pglEGLImageTargetTexture2DOES == NULL){
+        CLog::Log(LOGERROR, "glEGLImageTargetTexture2DOES not found!");
+     }
+  }
 }
 
 CCedarTexture::~CCedarTexture()
 {
-  cedarDestroyJpeg(&m_jpeg);
+  cedarDestroyJpeg(m_jpgHandle);
   m_egl_image = NULL;
 }
 
@@ -115,7 +123,19 @@ void CCedarTexture::CreateTextureObject()
    {
       if(!m_texture)
       {
-         cedarGetTexture(&m_jpeg, &m_texture);
+         glGenTextures(1, (GLuint*) &m_texture);
+  
+        // Bind the texture object
+         glBindTexture(GL_TEXTURE_2D, m_texture);
+  
+        // Set the texture's stretching properties
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+         cedarGetEglImage(m_jpgHandle, &m_egl_image);
+         pglEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)m_egl_image);
       }
    }
    else
@@ -146,31 +166,34 @@ bool CCedarTexture::LoadFromFileInternal(const CStdString& texturePath, unsigned
       CSingleLock lock(m_critSection);
       m_fallback_gl = false;
       
-      cedarLoadMem(&m_jpeg, buf.get(), buf.size());
+      cedarLoadMem(m_jpgHandle, reinterpret_cast<uint8_t*>(buf.get()), buf.size());
       
       bool okay = false;
       int orientation = 0;
 
-      orientation = m_jpeg.orientation;
+      orientation = cedarGetOrientation(m_jpgHandle);
       // limit the sizes of jpegs (even if we fail to decode)
 
-      ClampLimits(maxWidth, maxHeight, m_jpeg.width, m_jpeg.height, orientation & 4);
+      ClampLimits(maxWidth, maxHeight, 
+                  cedarGetWidth(m_jpgHandle), 
+                  cedarGetHeight(m_jpgHandle), 
+                  orientation & 4);
     // to be improved, cedarDecodeJpeg must be checked first
       if (requirePixels)
       {
          Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
-         if (m_pixels && cedarDecodeJpegToMem(&m_jpeg, maxWidth, maxHeight, (char *)m_pixels))
+         if (m_pixels && cedarDecodeJpegToMem(m_jpgHandle, maxWidth, maxHeight, (char *)m_pixels))
             okay = true;
       }
       else
       {
-         if (cedarDecodeJpegToTexture(&m_jpeg, maxWidth, maxHeight, &m_egl_image) && m_egl_image)
+         if (cedarDecodeJpeg(m_jpgHandle, maxWidth, maxHeight))
          {
             Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
             okay = true;
          }
       }
-      cedarCloseJpeg(&m_jpeg);
+      cedarCloseJpeg(m_jpgHandle);
       if (okay)
       {
          m_hasAlpha = false;
