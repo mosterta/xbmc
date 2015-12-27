@@ -72,6 +72,11 @@ if test "x$TAR" = "xno" ; then
   AC_MSG_ERROR("Missing program: tar")
 fi
 
+AC_PATH_PROG(PATCH,patch,"no")
+if test "x$PATCH" = "xno" ; then
+  AC_MSG_ERROR("Missing program: patch")
+fi
+
 use_host=$host_alias
 
 if test "x$host" = "x$build"; then
