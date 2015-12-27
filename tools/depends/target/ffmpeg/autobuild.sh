@@ -124,6 +124,9 @@ fi
 mkdir ffmpeg-${VERSION}
 cd ffmpeg-${VERSION} || exit 2
 tar --strip-components=1 -xf ../${ARCHIVE}
+echo "patching files with MPEG4 VDPAU extension"
+patch -p1 < ../0001-fix-armv6-neon-build.patch
+patch -p1 < ../0002-MPEG4-vdpau-${VERSION}.patch
 
 CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
 ./configure --prefix=$FFMPEG_PREFIX \
