@@ -231,6 +231,8 @@ libusb_disabled="== libusb disabled. Plug and play USB device support will not b
 libusb_disabled_udev_found="== libusb disabled. =="
 libcec_enabled="== libcec enabled. =="
 libcec_disabled="== libcec disabled. CEC adapter support will not be available. =="
+libcedarJpeg_not_found"== Could not find libcedarJpeg. Will fall back to libjpeg. =="
+libcedarJpeg_disabled"== cedarJpeg support disabled. Will use libjpeg instead. =="
 
 AC_ARG_WITH([ffmpeg],
   [AS_HELP_STRING([--with-ffmpeg],
@@ -563,6 +565,12 @@ AC_ARG_ENABLE([libav-compat],
    *not* supported by ${APP_NAME} developers and is provided only for convenience. (default is no) 'Linux only'])],
   [use_libav_hacks=$enableval],
   [use_libav_hacks=no])
+
+AC_ARG_ENABLE([cedarJpeg],
+  [AS_HELP_STRING([--enable-cedarJpeg],
+  [enable cedarJpeg support (default is auto)])],
+  [use_libcedarJpeg=$enableval],
+  [use_libcedarJpeg=auto])
 
 ### End of external library options
 

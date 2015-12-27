@@ -18,6 +18,8 @@
  *
  */
 
+#if defined (HAVE_LIBCEDARJPEG)
+
 #include "system.h"
 #include "Texture.h"
 #include "windowing/WindowingFactory.h"
@@ -255,3 +257,4 @@ bool CCedarTexture::ClampLimits(unsigned int &width, unsigned int &height, unsig
   return clamped;
 }
 
+#endif

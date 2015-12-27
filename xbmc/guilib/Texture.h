@@ -134,7 +134,7 @@ protected:
 #if defined(HAS_OMXPLAYER)
 #include "TexturePi.h"
 #define CTexture CPiTexture
-#elif defined (ALLWINNERA10)
+#elif defined (HAVE_LIBCEDARJPEG)
 #include "TextureCedar.h"
 #define CTexture CCedarTexture
 #elif defined(HAS_GL) || defined(HAS_GLES)
