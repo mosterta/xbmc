@@ -226,6 +226,8 @@ libusb_disabled="== libusb disabled. Plug and play USB device support will not b
 libusb_disabled_udev_found="== libusb disabled. =="
 libcec_enabled="== libcec enabled. =="
 libcec_disabled="== libcec disabled. CEC adapter support will not be available. =="
+libcedarJpeg_not_found"== Could not find libcedarJpeg. Will fall back to libjpeg. =="
+libcedarJpeg_disabled"== cedarJpeg support disabled. Will use libjpeg instead. =="
 
 dashes="------------------------"
 final_message="\n  ${APP_NAME} Configuration:"
@@ -568,6 +570,12 @@ AC_ARG_ENABLE([libav-compat],
    *not* supported by ${APP_NAME} developers and is provided only for convenience. (default is no) 'Linux only'])],
   [use_libav_hacks=$enableval],
   [use_libav_hacks=no])
+
+AC_ARG_ENABLE([cedarJpeg],
+  [AS_HELP_STRING([--enable-cedarJpeg],
+  [enable cedarJpeg support (default is auto)])],
+  [use_libcedarJpeg=$enableval],
+  [use_libcedarJpeg=auto])
 
 ### End of external library options
 
@@ -1672,6 +1680,27 @@ else
   AC_MSG_NOTICE($libcap_disabled)
 fi
 
+# libcedarJpeg
+if test "$use_libcedarJpeg" != "no"; then
+  AC_CHECK_HEADERS([cedarJpegLib.h],,
+   [if test "$use_libcedarJpeg" = "yes"; then
+      AC_MSG_ERROR($libcedarJpeg_not_found)
+    elif test "$use_libcedarJpeg" != "no"; then
+      AC_MSG_NOTICE($libcedarJpeg_not_found)
+      use_libcedarJpeg="no"
+    fi
+   ])
+  if test "$use_libcedarJpeg" != "no"; then
+    AC_CHECK_LIB([cedarJpeg], main, LIBS="$LIBS -lcedarJpeg", use_libcedarJpeg=no)
+  fi
+  if test "$use_libcedarJpeg" != "no"; then
+    AC_DEFINE([HAVE_LIBCEDARJPEG], [1], [Whether to use libcedarJpeg library.])
+  fi
+else
+  AC_MSG_NOTICE($libcedarJpeg_disabled)
+fi
+
+
 # FFmpeg
 FFMPEG_LIBNAMES="libavcodec >= 56.1.100
                  libavfilter >= 5.1.100
@@ -2386,6 +2415,12 @@ if test "x$use_libcap" != "xno"; then
   final_message="$final_message\n  libcap support:\tYes"
 else
   final_message="$final_message\n  libcap support:\tNo"
+fi
+
+if test "x$use_libcedarJpeg" != "xno"; then
+  final_message="$final_message\n  libcedarJpeg support:\tYes"
+else
+  final_message="$final_message\n  libcedarJpeg support:\tNo"
 fi
 
 if test "x$add_players" != "xno"; then
