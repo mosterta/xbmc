@@ -226,8 +226,8 @@ libusb_disabled="== libusb disabled. Plug and play USB device support will not b
 libusb_disabled_udev_found="== libusb disabled. =="
 libcec_enabled="== libcec enabled. =="
 libcec_disabled="== libcec disabled. CEC adapter support will not be available. =="
-libcedarJpeg_not_found"== Could not find libcedarJpeg. Will fall back to libjpeg. =="
-libcedarJpeg_disabled"== cedarJpeg support disabled. Will use libjpeg instead. =="
+libcedarJpeg_not_found="== Could not find libcedarJpeg. Will fall back to libjpeg. =="
+libcedarJpeg_disabled="== cedarJpeg support disabled. Will use libjpeg instead. =="
 
 dashes="------------------------"
 final_message="\n  ${APP_NAME} Configuration:"
@@ -741,6 +741,17 @@ case $use_platform in
      USE_MMAL=1; AC_DEFINE([HAS_MMAL],[1],["Define to 1 if MMAL libs is enabled"])
      CFLAGS="$CFLAGS"
      CXXFLAGS="$CXXFLAGS"
+     ;;
+  allwinner-mali)
+     target_platform=target_allwinner_mali
+     use_neon=yes
+     use_arch="arm"
+     use_x11=no
+     ARCH="arm"
+     use_hardcoded_tables="yes"
+     AC_DEFINE(HAS_EGLGLES, [1], [Define if supporting EGL based GLES Framebuffer])
+     CFLAGS="$CFLAGS -DALLWINNERA10"
+     CXXFLAGS="$CXXFLAGS -DALLWINNERA10"
      ;;
 esac
 
