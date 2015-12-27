@@ -222,7 +222,7 @@ std::string CLinuxTimezone::GetOSConfiguredTimezone()
    char timezoneName[255];
 
    // try Slackware approach first
-   char *timezonelinks[] = { "/etc/localtime-copied-from", "/etc/localtime" };
+   const char *timezonelinks[] = { "/etc/localtime-copied-from", "/etc/localtime" };
    for(int i=0; i < 2; i++)
    {
      ssize_t rlrc = readlink(timezonelinks[i], timezoneName, sizeof(timezoneName)-1);
