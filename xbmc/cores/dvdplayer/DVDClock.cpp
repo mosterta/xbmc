@@ -123,6 +123,8 @@ double CDVDClock::GetClock(double& absolute, bool interpolated /*= true*/)
   }
 
   return GetClock(interpolated);
+  CLog::Log(LOGDEBUG, "CDVDClock::%s - current=%lld",__FUNCTION__, 
+            current);
 }
 
 void CDVDClock::SetSpeed(int iSpeed)

@@ -531,6 +531,7 @@ void CDVDPlayerVideo::Process()
       {
         m_iDroppedFrames++;
         iDropped++;
+        CLog::Log(LOGDEBUG,"CDVDPlayerVideo::%s dropped=%d, mdropped=%d", __FUNCTION__, iDropped, m_iDroppedFrames);
       }
 
       if (m_messageQueue.GetDataSize() == 0
@@ -722,6 +723,8 @@ void CDVDPlayerVideo::Process()
             if (picture.iRepeatPicture)
               picture.iDuration *= picture.iRepeatPicture + 1;
 
+            CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - OutputPicture: pts=%lf",__FUNCTION__, 
+                      pts);
             int iResult = OutputPicture(&picture, pts);
 
             frametime = (double)DVD_TIME_BASE/m_fFrameRate;
@@ -751,6 +754,7 @@ void CDVDPlayerVideo::Process()
             {
               m_iDroppedFrames++;
               iDropped++;
+              CLog::Log(LOGDEBUG,"CDVDPlayerVideo::%s dropped=%d, mdropped=%d", __FUNCTION__, iDropped, m_iDroppedFrames);
             }
             else
               iDropped = 0;
@@ -1070,6 +1074,8 @@ int CDVDPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
   {
     m_pullupCorrection.Add(pts);
     pts += m_pullupCorrection.GetCorrection();
+    CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - after pullup correction pts=%lf",__FUNCTION__, 
+              pts);
   }
 
   //try to calculate the framerate
@@ -1085,14 +1091,19 @@ int CDVDPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
   if (refreshrate > 0) //refreshrate of -1 means the videoreferenceclock is not running
   {//when using the videoreferenceclock, a frame is always presented half a vblank interval too late
     pts -= DVD_TIME_BASE * interval;
+    CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - after refresh rate=%lf",__FUNCTION__, 
+              pts);
   }
 
   if (m_output.color_format != RENDER_FMT_BYPASS)
   {
     // Correct pts by user set delay and rendering delay
     pts += m_iVideoDelay - DVD_SEC_TO_TIME(g_renderManager.GetDisplayLatency());
+    CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - after render delay=%lf",__FUNCTION__, 
+              pts);
   }
 
+      CLog::Log(LOGDEBUG,"%s - dropped - too late", __FUNCTION__);
   // calculate the time we need to delay this picture before displaying
   double iSleepTime, iClockSleep, iFrameSleep, iPlayingClock, iCurrentClock;
 
@@ -1103,6 +1114,8 @@ int CDVDPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
   {
     iClockSleep = (pts - iPlayingClock) * DVD_PLAYSPEED_NORMAL / m_speed;
     iFrameSleep = (pts - m_FlipTimePts) * DVD_PLAYSPEED_NORMAL / m_speed - (iCurrentClock - m_FlipTimeStamp);
+    CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - m_speed=%d, iClockSleep=%lf iFrameSleep=%lf",__FUNCTION__, 
+              m_speed, iClockSleep, iFrameSleep);
   }
   else
   {
@@ -1217,6 +1230,9 @@ int CDVDPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
     m_droppingStats.AddOutputDropGain(pts, 1/m_fFrameRate);
     return EOS_DROPPED;
   }
+
+  CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - OutputPicture: iCurrentClock=%lf iSleepTime=%lf",__FUNCTION__, 
+            iCurrentClock, iSleepTime);
 
   g_renderManager.FlipPage(CThread::m_bStop, (iCurrentClock + iSleepTime) / DVD_TIME_BASE, pts_org, -1, mDisplayField);
 
@@ -1419,7 +1435,7 @@ int CDVDPlayerVideo::CalcDropRequirement(double pts, bool updateOnly)
       m_droppingStats.m_totalGain += gain.gain;
       result |= EOS_DROPPED;
       m_droppingStats.m_dropRequests = 0;
-      if (g_advancedSettings.CanLogComponent(LOGVIDEO))
+      //if (g_advancedSettings.CanLogComponent(LOGVIDEO))
         CLog::Log(LOGDEBUG,"CDVDPlayerVideo::CalcDropRequirement - dropped pictures, Sleeptime: %f, Bufferlevel: %d, Gain: %f", iSleepTime, iBufferLevel, iGain);
     }
     else if (iDroppedPics < 0 && iGain > (1/m_fFrameRate + 0.001))
@@ -1431,7 +1447,7 @@ int CDVDPlayerVideo::CalcDropRequirement(double pts, bool updateOnly)
       m_droppingStats.m_totalGain += iGain;
       result |= EOS_DROPPED;
       m_droppingStats.m_dropRequests = 0;
-      if (g_advancedSettings.CanLogComponent(LOGVIDEO))
+      //if (g_advancedSettings.CanLogComponent(LOGVIDEO))
         CLog::Log(LOGDEBUG,"CDVDPlayerVideo::CalcDropRequirement - dropped in decoder, Sleeptime: %f, Bufferlevel: %d, Gain: %f", iSleepTime, iBufferLevel, iGain);
     }
   }

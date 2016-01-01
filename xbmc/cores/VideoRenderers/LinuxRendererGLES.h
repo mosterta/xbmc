@@ -322,6 +322,7 @@ protected:
 #endif
 #ifdef HAVE_LIBVDPAU
     VDPAU::CVdpauRenderPicture *vdpau;
+    unsigned long frame_num;
 #endif
   };
 

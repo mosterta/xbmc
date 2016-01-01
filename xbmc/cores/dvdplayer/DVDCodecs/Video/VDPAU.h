@@ -125,6 +125,7 @@ struct VDPAU_procs
   VdpPresentationQueueTargetCreateX11 *         vdp_presentation_queue_target_create_x11;
   VdpPresentationQueueQuerySurfaceStatus *      vdp_presentation_queue_query_surface_status;
   VdpPresentationQueueGetTime *                 vdp_presentation_queue_get_time;
+  VdpDecoderSetControlData *                    vdp_decoder_set_video_control_data;
 
 };
 
@@ -610,6 +611,7 @@ public:
   static int Render(struct AVCodecContext *s, struct AVFrame *src,
                     const VdpPictureInfo *info, uint32_t buffers_used,
                     const VdpBitstreamBuffer *buffers);
+  static int FFSetVideoHeader(AVCodecContext *avctx, uint32_t id);
 
   virtual void OnLostDevice();
   virtual void OnResetDevice();
@@ -645,6 +647,9 @@ protected:
   CVdpauConfig  m_vdpauConfig;
   CVideoSurfaces m_videoSurfaces;
   AVVDPAUContext m_hwContext;
+  VdpDecoderControlData m_data;
+  uint32_t     m_dataId;
+  bool         m_dataSet;
 
   COutput       m_vdpauOutput;
   CVdpauBufferStats m_bufferStats;
