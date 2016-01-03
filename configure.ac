@@ -1712,6 +1712,26 @@ else
   AC_MSG_NOTICE($libcap_disabled)
 fi
 
+# libcedarJpeg
+if test "$use_libcedarJpeg" != "no"; then
+  AC_CHECK_HEADERS([cedarJpegLib.h],,
+   [if test "$use_libcedarJpeg" = "yes"; then
+      AC_MSG_ERROR($libcedarJpeg_not_found)
+    elif test "$use_libcedarJpeg" != "no"; then
+      AC_MSG_NOTICE($libcedarJpeg_not_found)
+      use_libcedarJpeg="no"
+    fi
+   ])
+  if test "$use_libcedarJpeg" != "no"; then
+    AC_CHECK_LIB([cedarJpeg], main, LIBS="$LIBS -lcedarJpeg", use_libcedarJpeg=no)
+  fi
+  if test "$use_libcedarJpeg" != "no"; then
+    AC_DEFINE([HAVE_LIBCEDARJPEG], [1], [Whether to use libcedarJpeg library.])
+  fi
+else
+  AC_MSG_NOTICE($libcedarJpeg_disabled)
+fi
+
 # FFmpeg
 FFMPEG_LIBNAMES="libavcodec >= 56.26.100
                  libavfilter >= 5.11.102
@@ -2438,6 +2458,12 @@ if test "x$use_libcap" != "xno"; then
   final_message="$final_message\n  libcap support:\tYes"
 else
   final_message="$final_message\n  libcap support:\tNo"
+fi
+
+if test "x$use_libcedarJpeg" != "xno"; then
+  final_message="$final_message\n  libcedarJpeg support:\tYes"
+else
+  final_message="$final_message\n  libcedarJpeg support:\tNo"
 fi
 
 if test "x$add_players" != "xno"; then
