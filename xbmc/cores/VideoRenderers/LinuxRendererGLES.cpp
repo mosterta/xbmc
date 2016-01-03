@@ -1161,9 +1161,7 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
   else
     m_currentField = FIELD_FULL;
 
-#if 0
   (this->*m_textureUpload)(index);
-#endif
   if (m_renderMethod & RENDER_GLSL)
   {
     UpdateVideoFilter();
@@ -1171,6 +1169,7 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
     {
     case RQ_LOW:
     case RQ_SINGLEPASS:
+
        if (m_format == RENDER_FMT_VDPAU_420 && m_currentField == FIELD_FULL)
           RenderProgressiveWeave(index, m_currentField);
        else
@@ -1237,6 +1236,15 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
   }
 #endif
 
+}
+
+void CLinuxRendererGLES::RenderProgressiveWeave(int index, int field)
+{
+   bool scale = (int)m_sourceHeight != m_destRect.Height() ||
+         (int)m_sourceWidth != m_destRect.Width();
+
+   RenderSinglePass(index, FIELD_TOP);
+      //RenderSinglePass(index, FIELD_BOT);
 }
 
 void CLinuxRendererGLES::RenderSinglePass(int index, int field)
@@ -2666,7 +2674,7 @@ void CLinuxRendererGLES::UploadVDPAUTexture420(int index)
     im.height = vdpau->texHeight;
     im.width  = vdpau->texWidth;
 
-  // YUV
+  // YUV 
     for (int f = FIELD_TOP; f<=FIELD_BOT ; f++)
     {
         YUVPLANES &planes = fields[f];
