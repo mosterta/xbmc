@@ -702,8 +702,8 @@ case $target_platform in
      ARCH="arm"
      use_hardcoded_tables="yes"
      AC_DEFINE(HAS_EGLGLES, [1], [Define if supporting EGL based GLES Framebuffer])
-     CFLAGS="$CFLAGS -DALLWINNERA10"
-     CXXFLAGS="$CXXFLAGS -DALLWINNERA10"
+     CFLAGS="$CFLAGS -DALLWINNERA10 -DUSE_VIDEO_SYNC_FB"
+     CXXFLAGS="$CXXFLAGS -DALLWINNERA10i -DUSE_VIDEO_SYNC_FB"
      ;;
 esac
 

@@ -4,6 +4,7 @@ SRCS=VideoSyncGLX.cpp \
      VideoSyncDRM.cpp \
      VideoSyncPi.cpp \
      VideoSyncIMX.cpp \
+     VideoSyncFb.cpp \
      VideoSyncAndroid.cpp \
 
 LIB=videosync.a

@@ -49,6 +49,9 @@
 #if defined(TARGET_ANDROID)
 #include "video/videosync/VideoSyncAndroid.h"
 #endif
+#if defined(ALLWINNERA10)
+#include "video/videosync/VideoSyncFb.h"
+#endif
 
 #ifdef TARGET_POSIX
 #include "linux/XTimeUtils.h"
@@ -125,6 +128,12 @@ void CVideoReferenceClock::Process()
     m_pVideoSync = new CVideoSyncIMX(this);
 #elif defined(TARGET_ANDROID)
     m_pVideoSync = new CVideoSyncAndroid(this);
+#elif defined(USE_VIDEO_SYNC_FB)
+    int fbNum = 0;
+ #if defined ALLWINNERA10
+    fbNum = 0;
+ #endif
+    m_pVideoSync = new CVideoSyncFb(this, fbNum);
 #endif
 
     if (m_pVideoSync)
