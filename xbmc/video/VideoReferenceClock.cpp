@@ -46,6 +46,9 @@
 #if defined(TARGET_DARWIN_IOS)
 #include "video/videosync/VideoSyncIos.h"
 #endif
+#if defined(ALLWINNERA10)
+#include "video/videosync/VideoSyncFb.h"
+#endif
 
 using namespace std;
 
@@ -122,6 +125,12 @@ void CVideoReferenceClock::Process()
     m_pVideoSync = new CVideoSyncIos();
 #elif defined(TARGET_RASPBERRY_PI)
     m_pVideoSync = new CVideoSyncPi();
+#elif defined(USE_VIDEO_SYNC_FB)
+    int fbNum = 0;
+ #if defined ALLWINNERA10
+    fbNum = 0;
+ #endif
+    m_pVideoSync = new CVideoSyncFb(fbNum);
 #endif
 
     if (m_pVideoSync)
