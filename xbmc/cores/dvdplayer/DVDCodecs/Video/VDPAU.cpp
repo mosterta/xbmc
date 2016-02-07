@@ -612,7 +612,7 @@ bool CDecoder::Open(AVCodecContext* avctx, const enum PixelFormat fmt, unsigned 
 
     // convert FFMPEG codec ID to VDPAU profile.
     ReadFormatOf(avctx->codec_id, profile, m_vdpauConfig.vdpChromaType);
-    if(profile)
+    if(profile != -1)
     {
       VdpStatus vdp_st;
       VdpBool is_supported = false;
@@ -969,8 +969,8 @@ void CDecoder::ReadFormatOf( AVCodecID codec
       vdp_chroma_type     = VDP_CHROMA_TYPE_420;
       break;
     default:
-      vdp_decoder_profile = 0;
-      vdp_chroma_type     = 0;
+      vdp_decoder_profile = -1;
+      vdp_chroma_type     = -1;
       break;
   }
 }
