@@ -1611,12 +1611,12 @@ bool CMixer::IsActive()
 
 void CMixer::OnStartup()
 {
-  CLog::Log(LOGNOTICE, "CMixer::OnStartup: Output Thread created");
+  CLog::Log(LOGNOTICE, "CMixer::OnStartup: Mixer Thread created");
 }
 
 void CMixer::OnExit()
 {
-  CLog::Log(LOGNOTICE, "CMixer::OnExit: Output Thread terminated");
+  CLog::Log(LOGNOTICE, "CMixer::OnExit: Mixer Thread terminated");
 }
 
 enum MIXER_STATES
