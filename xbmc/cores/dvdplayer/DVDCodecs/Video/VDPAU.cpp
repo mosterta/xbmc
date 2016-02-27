@@ -615,8 +615,8 @@ bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum P
     VdpDecoderProfile profile = 0;
 
     // convert FFMPEG codec ID to VDPAU profile.
-    ReadFormatOf(avctx->codec_id, profile, m_vdpauConfig.vdpChromaType);
-    if(profile != -1)
+    bool found = ReadFormatOf(avctx->codec_id, profile, m_vdpauConfig.vdpChromaType);
+    if(found)
     {
       VdpStatus vdp_st;
       VdpBool is_supported = false;
@@ -942,10 +942,12 @@ void CDecoder::FiniVDPAUOutput()
   m_videoSurfaces.Reset();
 }
 
-void CDecoder::ReadFormatOf( AVCodecID codec
+bool CDecoder::ReadFormatOf( AVCodecID codec
                            , VdpDecoderProfile &vdp_decoder_profile
                            , VdpChromaType     &vdp_chroma_type)
 {
+  bool found = true;
+  
   switch (codec)
   {
     case AV_CODEC_ID_MPEG1VIDEO:
@@ -983,10 +985,12 @@ void CDecoder::ReadFormatOf( AVCodecID codec
       vdp_chroma_type     = VDP_CHROMA_TYPE_420;
       break;
     default:
-      vdp_decoder_profile = -1;
-      vdp_chroma_type     = -1;
+      vdp_decoder_profile = 0;
+      vdp_chroma_type     = 0;
+      found = false;
       break;
   }
+  return found;
 }
 
 bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)

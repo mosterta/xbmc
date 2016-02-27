@@ -676,7 +676,7 @@ protected:
   void ReturnRenderPicture(CVdpauRenderPicture *renderPic);
   long ReleasePicReference();
 
-  static void ReadFormatOf( AVCodecID codec
+  static bool ReadFormatOf( AVCodecID codec
                           , VdpDecoderProfile &decoder_profile
                           , VdpChromaType     &chroma_type);
 
