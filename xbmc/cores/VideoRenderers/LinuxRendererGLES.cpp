@@ -676,14 +676,14 @@ void CLinuxRendererGLES::FlipPage(int source)
     m_iYV12RenderBuffer = NextYV12Texture();
 
   m_buffers[m_iYV12RenderBuffer].flipindex = ++m_flipindex;
-  CLog::Log(LOGERROR, "CLinuxRendererGLES::%s m_iYV12RenderBuffer=%d frame_num=%lu", __FUNCTION__,
+  CLog::Log(LOGDEBUG, "CLinuxRendererGLES::%s m_iYV12RenderBuffer=%d frame_num=%lu", __FUNCTION__,
             m_iYV12RenderBuffer, m_buffers[m_iYV12RenderBuffer].frame_num);
 
 #ifdef HAVE_LIBVDPAU_0
   if((m_renderMethod & RENDER_VDPAU) && m_buffers[m_iYV12RenderBuffer].vdpau)
   {
      m_buffers[m_iYV12RenderBuffer].vdpau->vdpau->Present(m_buffers[m_iYV12RenderBuffer].vdpau->sourceIdx);
-     CLog::Log(LOGERROR, "CLinuxRendererGLES::%s pic.pts=%lf picNum=%d order=%d", __FUNCTION__,
+     CLog::Log(LOGDEBUG, "CLinuxRendererGLES::%s pic.pts=%lf picNum=%d order=%d", __FUNCTION__,
                m_buffers[m_iYV12RenderBuffer].vdpau->DVDPic.pts,
                m_buffers[m_iYV12RenderBuffer].vdpau->DVDPic.iPicNum,
                picNum+1 == m_buffers[m_iYV12RenderBuffer].vdpau->DVDPic.iPicNum);
