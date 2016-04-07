@@ -24,6 +24,8 @@ ifeq (@USE_MMAL@,1)
 SRCS += MMALRenderer.cpp
 endif
 
+SRCS += LinuxRendererA10.cpp
+
 LIB = VideoRenderer.a
 
 include @abs_top_srcdir@/Makefile.include

@@ -221,6 +221,8 @@ libusb_disabled="== libusb disabled. Plug and play USB device support will not b
 libusb_disabled_udev_found="== libusb disabled. =="
 libcec_enabled="== libcec enabled. =="
 libcec_disabled="== libcec disabled. CEC adapter support will not be available. =="
+libcedarJpeg_not_found="== Could not find libcedarJpeg. Will fall back to libjpeg. =="
+libcedarJpeg_disabled="== cedarJpeg support disabled. Will use libjpeg instead. =="
 
 AC_ARG_WITH([ffmpeg],
   [AS_HELP_STRING([--with-ffmpeg],
@@ -524,6 +526,12 @@ AC_ARG_ENABLE([libav-compat],
   [use_libav_hacks=$enableval],
   [use_libav_hacks=no])
 
+AC_ARG_ENABLE([cedarJpeg],
+  [AS_HELP_STRING([--enable-cedarJpeg],
+  [enable cedarJpeg support (default is auto)])],
+  [use_libcedarJpeg=$enableval],
+  [use_libcedarJpeg=auto])
+
 ### End of external library options
 
 if test "x$host_vendor" != "xapple"; then
@@ -708,6 +716,17 @@ case $use_platform in
      USE_MMAL=1; AC_DEFINE([HAS_MMAL],[1],["Define to 1 if MMAL libs is enabled"])
      CFLAGS="$CFLAGS"
      CXXFLAGS="$CXXFLAGS"
+     ;;
+  allwinner-mali)
+     target_platform=target_allwinner_mali
+     use_neon=yes
+     use_arch="arm"
+     use_x11=no
+     ARCH="arm"
+     use_hardcoded_tables="yes"
+     AC_DEFINE(HAS_EGLGLES, [1], [Define if supporting EGL based GLES Framebuffer])
+     CFLAGS="$CFLAGS -DALLWINNERA10"
+     CXXFLAGS="$CXXFLAGS -DALLWINNERA10"
      ;;
 esac
 
@@ -1122,7 +1141,7 @@ int main() {
   )])
 AC_LANG_POP([C++])
 
-if test "${target_platform}" = "target_linux" || test "${target_platform}" = "target_raspberry_pi" || test "${target_platform}" = "target_android"; then
+if test "${target_platform}" = "target_linux" || test "${target_platform}" = "target_raspberry_pi" || test "${target_platform}" = "target_allwinner_mali" || test "${target_platform}" = "target_android"; then
   PKG_CHECK_MODULES([UUID], [uuid],, AC_MSG_ERROR(libuuid not found))
 fi
 
@@ -1619,6 +1638,27 @@ if test "$use_libcap" != "no"; then
 else
   AC_MSG_NOTICE($libcap_disabled)
 fi
+
+# libcedarJpeg
+if test "$use_libcedarJpeg" != "no"; then
+  AC_CHECK_HEADERS([cedarJpegLib.h],,
+   [if test "$use_libcedarJpeg" = "yes"; then
+      AC_MSG_ERROR($libcedarJpeg_not_found)
+    elif test "$use_libcedarJpeg" != "no"; then
+      AC_MSG_NOTICE($libcedarJpeg_not_found)
+      use_libcedarJpeg="no"
+    fi
+   ])
+  if test "$use_libcedarJpeg" != "no"; then
+    AC_CHECK_LIB([cedarJpeg], main, LIBS="$LIBS -lcedarJpeg", use_libcedarJpeg=no)
+  fi
+  if test "$use_libcedarJpeg" != "no"; then
+    AC_DEFINE([HAVE_LIBCEDARJPEG], [1], [Whether to use libcedarJpeg library.])
+  fi
+else
+  AC_MSG_NOTICE($libcedarJpeg_disabled)
+fi
+
 
 # FFmpeg
 FFMPEG_LIBNAMES="libavcodec >= 56.26.100
@@ -2319,6 +2359,12 @@ else
   final_message="$final_message\n  libcap support:\tNo"
 fi
 
+if test "x$use_libcedarJpeg" != "xno"; then
+  final_message="$final_message\n  libcedarJpeg support:\tYes"
+else
+  final_message="$final_message\n  libcedarJpeg support:\tNo"
+fi
+
 if test "x$add_players" != "xno"; then
   final_message="$final_message\n  additional players:\tYes, $add_players"
 else
@@ -2654,6 +2700,8 @@ XB_CONFIG_MODULE([lib/gtest], [
     --enable-static \
     --with-pthreads
 ], [$SKIP_CONFIG_GTEST])
+
+LIBS="$LIBS $CEDARLIBS"
 
 AC_OUTPUT
 

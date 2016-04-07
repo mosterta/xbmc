@@ -4,7 +4,7 @@ DEPS= ../../Makefile.include FFMPEG-VERSION Makefile
 
 # set to "yes" to enable patching
 # we don't apply patches until we move to a vanilla ffmpeg tarball
-APPLY_PATCHES=no
+APPLY_PATCHES=yes
 
 # configuration settings
 ffmpg_config = --prefix=$(PREFIX) --extra-version="kodi-$(VERSION)"
@@ -69,6 +69,12 @@ $(TARBALLS_LOCATION)/$(ARCHIVE):
 $(PLATFORM): $(TARBALLS_LOCATION)/$(ARCHIVE) $(DEPS)
 	rm -rf $(PLATFORM); mkdir -p $(PLATFORM)
 	cd $(PLATFORM); $(ARCHIVE_TOOL) $(ARCHIVE_TOOL_FLAGS) $(TARBALLS_LOCATION)/$(ARCHIVE)
+	#ifeq ($(APPLY_PATCHES), yes) 
+	#	ifeq (test -f $(PLATFORM)/.patched, "false") 
+			cd $(PLATFORM); $(PATCH_TOOL) -p1 < ../0001-MPEG4-vdpau-2-4-6.patch
+	#		touch $(PLATFORM)/.patched 
+	#	endif 
+	#endif
 	cd $(PLATFORM); sed -i".bak" -e "s%pkg_config_default=pkg-config%export PKG_CONFIG_LIBDIR=$(PREFIX)/lib/pkgconfig \&\& pkg_config_default=$(NATIVEPREFIX)/bin/pkg-config%" configure
 	cd $(PLATFORM);\
 	CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" \

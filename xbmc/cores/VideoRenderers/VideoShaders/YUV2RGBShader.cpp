@@ -228,10 +228,13 @@ BaseYUV2RGBGLSLShader::BaseYUV2RGBGLSLShader(bool rect, unsigned flags, ERenderF
   m_hProj   = -1;
   m_hModel  = -1;
   m_hAlpha  = -1;
+
   if (m_format == RENDER_FMT_YUV420P)
     m_defines += "#define XBMC_YV12\n";
   else if (m_format == RENDER_FMT_NV12)
     m_defines += "#define XBMC_NV12\n";
+  else if (m_format == RENDER_FMT_VDPAU_420)
+    m_defines += "#define XBMC_VDPAU_NV12\n";
   else
     CLog::Log(LOGERROR, "GL: BaseYUV2RGBGLSLShader - unsupported format %d", m_format);
 
@@ -269,7 +272,7 @@ bool BaseYUV2RGBGLSLShader::OnEnabled()
   glUniform1i(m_hVTex, 2);
   glUniform1f(m_hStretch, m_stretch);
   glUniform2f(m_hStep, 1.0 / m_width, 1.0 / m_height);
-
+  
   GLfloat matrix[4][4];
   CalculateYUVMatrixGL(matrix, m_flags, m_format, m_black, m_contrast);
 

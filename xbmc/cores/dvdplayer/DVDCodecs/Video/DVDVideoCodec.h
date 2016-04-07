@@ -58,7 +58,7 @@ class CDVDMediaCodecInfo;
 class CDVDVideoCodecIMXBuffer;
 class CMMALVideoBuffer;
 typedef void* EGLImageKHR;
-
+struct A10VLQueueItem;
 
 // should be entirely filled by all codecs
 struct DVDVideoPicture
@@ -108,6 +108,9 @@ struct DVDVideoPicture
       CMMALVideoBuffer *MMALBuffer;
     };
 
+    struct {
+      A10VLQueueItem *a10buffer;
+    };
   };
 
   unsigned int iFlags;
@@ -133,6 +136,7 @@ struct DVDVideoPicture
   unsigned int iDisplayHeight; // height of the picture without black bars
 
   ERenderFormat format;
+  unsigned int iPicNum;
 };
 
 struct DVDVideoUserData

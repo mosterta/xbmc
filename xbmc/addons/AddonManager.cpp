@@ -239,6 +239,8 @@ CAddonMgr::~CAddonMgr()
 CAddonMgr &CAddonMgr::GetInstance()
 {
   static CAddonMgr sAddonMgr;
+//  if(sAddonMgr.m_initialized == false)
+//     sAddonMgr.Init();
   return sAddonMgr;
 }
 
@@ -369,6 +371,7 @@ void CAddonMgr::DeInit()
   m_cpluff = NULL;
   m_database.Close();
   m_disabled.clear();
+  m_initialized = false;
 }
 
 bool CAddonMgr::HasAddons(const TYPE &type, bool enabled /*= true*/)

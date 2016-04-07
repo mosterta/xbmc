@@ -44,7 +44,11 @@
 #elif defined(HAS_MMAL)
   #include "MMALRenderer.h"
 #elif HAS_GLES == 2
+#if defined(ALLWINNERA10) && not defined (HAVE_LIBVDPAU)
+  #include "LinuxRendererA10.h"
+#else
   #include "LinuxRendererGLES.h"
+#endif
 #elif defined(HAS_DX)
   #include "WinRenderer.h"
 #elif defined(HAS_SDL)
@@ -454,7 +458,11 @@ unsigned int CXBMCRenderManager::PreInit()
 #elif defined(HAS_MMAL)
     m_pRenderer = new CMMALRenderer();
 #elif HAS_GLES == 2
-    m_pRenderer = new CLinuxRendererGLES();
+  #if defined( ALLWINNERA10) and not defined (HAVE_LIBVDPAU)
+    m_pRenderer = new CLinuxRenderA10();
+  #else 
+    m_pRenderer = new CLinuxRendererGLES(); 
+  #endif
 #elif defined(HAS_DX)
     m_pRenderer = new CWinRenderer();
 #elif defined(HAS_SDL)
@@ -730,7 +738,11 @@ void CXBMCRenderManager::FlipPage(volatile bool& bStop, double timestamp /* = 0L
 
     /* failsafe for invalid timestamps, to make sure queue always empties */
     if(timestamp > GetPresentTime() + 5.0)
-      timestamp = GetPresentTime() + 5.0;
+    {
+       CLog::Log(LOGDEBUG, "CXBMCRenderManager::%s - timestamp=%lf presentTime=%lf, adding 5.0", 
+                 __FUNCTION__, timestamp, GetPresentTime());
+       timestamp = GetPresentTime() + 5.0;
+    }
 
     CSingleLock lock2(m_presentlock);
 
@@ -745,6 +757,7 @@ void CXBMCRenderManager::FlipPage(volatile bool& bStop, double timestamp /* = 0L
     m.presentfield  = sync;
     m.presentmethod = presentmethod;
     m.pts           = pts;
+    CLog::Log(LOGDEBUG, "CXBMCRenderManager::%s - m_Queue[%d].timestamp=%lf ", __FUNCTION__, source, m.timestamp);
     requeue(m_queued, m_free);
 
     /* signal to any waiters to check state */
@@ -996,6 +1009,10 @@ int CXBMCRenderManager::AddVideoPicture(DVDVideoPicture& pic)
        || pic.format == RENDER_FMT_VDPAU_420)
     m_pRenderer->AddProcessor(pic.vdpau, index);
 #endif
+#if defined( ALLWINNERA10) and not defined (HAVE_LIBVDPAU) 
+  else if (pic.format == RENDER_FMT_A10BUF)
+    m_pRenderer->AddProcessor(pic.a10buffer);
+#endif
 #ifdef HAVE_LIBOPENMAX
   else if(pic.format == RENDER_FMT_OMXEGL)
     m_pRenderer->AddProcessor(pic.openMax, &pic, index);
@@ -1170,17 +1187,27 @@ void CXBMCRenderManager::PrepareNextRender()
 
   /* see if any future queued frames are already due */
   std::deque<int>::reverse_iterator curr, prev;
-  int idx;
   curr = prev = m_queued.rbegin();
+  int idx=*curr;
   ++prev;
   while (prev != m_queued.rend())
   {
     if(clocktime > m_Queue[*prev].timestamp + correction                 /* previous frame is late */
     && clocktime > m_Queue[*curr].timestamp - frametime + correction)    /* selected frame is close to it's display time */
-      break;
+    {
+       CLog::Log(LOGDEBUG, "CRenderManager::%s - frame: clocktime=%lf prev=%lf curr=%lf correction=%lf", 
+                 __FUNCTION__, clocktime, m_Queue[*prev].timestamp, m_Queue[*curr].timestamp, correction);
+
+       break;
+    }
+    CLog::Log(LOGDEBUG, "CRenderManager::%s - due frame: clocktime=%lf prev=%lf curr=%lf correction=%lf", 
+              __FUNCTION__, clocktime, m_Queue[*prev].timestamp, m_Queue[*curr].timestamp, correction);
     ++curr;
     ++prev;
   }
+  CLog::Log(LOGDEBUG, "CRenderManager::%s - due %d frames; curr=%d, idx=%d", 
+            __FUNCTION__, *curr-idx, *curr, idx);
+  
   idx = *curr;
 
   /* in fullscreen we will block after render, but only for MAXPRESENTDELAY */
@@ -1190,14 +1217,19 @@ void CXBMCRenderManager::PrepareNextRender()
   else
     next = (m_Queue[idx].timestamp <= clocktime + frametime);
 
+  CLog::Log(LOGDEBUG, "CRenderManager::%s - next=%d queue[%d].timestamp=%lf, clocktime=%lf", 
+            __FUNCTION__, idx, idx, m_Queue[idx].timestamp, clocktime);
   if (next)
   {
+    int old_skip = m_QueueSkip;
     /* skip late frames */
     while(m_queued.front() != idx)
     {
       requeue(m_discard, m_queued);
       m_QueueSkip++;
     }
+    CLog::Log(LOGDEBUG, "CRenderManager::%s - skipped %d frames", 
+              __FUNCTION__, m_QueueSkip-old_skip);
 
     m_presentstep   = PRESENT_FLIP;
     m_discard.push_back(m_presentsource);

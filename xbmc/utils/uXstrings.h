@@ -39,7 +39,7 @@
 
 #ifndef HAVE_STD__U16STRING
 #ifndef HAVE_CHAR16_T
-typedef uint_least16_t char16_t;
+//typedef uint_least16_t char16_t;
 #endif // HAVE_CHAR16_T
 namespace std
 {
@@ -49,7 +49,7 @@ namespace std
 
 #ifndef HAVE_STD__U32STRING
 #ifndef HAVE_CHAR32_T
-typedef uint_least32_t char32_t;
+//typedef uint_least32_t char32_t;
 #endif // HAVE_CHAR32_T
 namespace std
 {

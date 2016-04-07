@@ -15,6 +15,7 @@ ARCHIVE_TOOL=@TAR@
 PREFIX=@prefix@/@deps_dir@
 NATIVEPREFIX=@prefix@/@tool_dir@
 ARCHIVE_TOOL_NATIVE=$(NATIVEPREFIX)/bin/tar
+PATCH_TOOL=@PATCH@
 OS=@platform_os@
 NATIVE_OS=@build_os@
 CROSS_COMPILING=@cross_compiling@

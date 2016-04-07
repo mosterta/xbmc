@@ -218,23 +218,26 @@ std::string CLinuxTimezone::GetOSConfiguredTimezone()
    char timezoneName[255];
 
    // try Slackware approach first
-   ssize_t rlrc = readlink("/etc/localtime-copied-from"
-                           , timezoneName, sizeof(timezoneName)-1);
-   if (rlrc != -1)
+   const char *timezonelinks[] = { "/etc/localtime-copied-from", "/etc/localtime" };
+   for(int i=0; i < 2; i++)
    {
-     timezoneName[rlrc] = '\0';
+     ssize_t rlrc = readlink(timezonelinks[i], timezoneName, sizeof(timezoneName)-1);
+     if (rlrc != -1)
+     {
+       timezoneName[rlrc] = '\0';
 
-     char* p = strrchr(timezoneName,'/');
-     if (p)
-     { // we want the previous '/'
-       char* q = p;
-       *q = 0;
-       p = strrchr(timezoneName,'/');
-       *q = '/';
+       char* p = strrchr(timezoneName,'/');
        if (p)
-         p++;
+       { // we want the previous '/'
+         char* q = p;
+         *q = 0;
+         p = strrchr(timezoneName,'/');
+         *q = '/';
+         if (p)
+           p++;
+       }
+       return p;
      }
-     return p;
    }
 
    // now try Debian approach

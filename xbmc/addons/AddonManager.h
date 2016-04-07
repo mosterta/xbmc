@@ -219,6 +219,8 @@ namespace ADDON
     */
     void StopServices(const bool onlylogin);
 
+    bool m_initialized;
+
   private:
     void LoadAddons(const std::string &path,
                     std::map<std::string, AddonPtr>& unresolved);

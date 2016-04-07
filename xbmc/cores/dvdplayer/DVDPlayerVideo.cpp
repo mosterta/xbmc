@@ -186,6 +186,11 @@ bool CDVDPlayerVideo::OpenStream( CDVDStreamInfo &hint )
   if(hint.flags & AV_DISPOSITION_ATTACHED_PIC)
     return false;
 
+#ifdef ALLWINNERA10
+  if (m_pVideoCodec && (strcmp(m_pVideoCodec->GetName(), "A10") == 0))
+    m_pVideoCodec->Dispose();
+#endif
+
   CLog::Log(LOGNOTICE, "Creating video codec with codec id: %i", hint.codec);
   CDVDVideoCodec* codec = CDVDFactoryCodec::CreateVideoCodec(hint, info);
   if(!codec)
@@ -525,6 +530,7 @@ void CDVDPlayerVideo::Process()
       {
         m_iDroppedFrames++;
         iDropped++;
+        CLog::Log(LOGDEBUG,"CDVDPlayerVideo::%s dropped=%d, mdropped=%d", __FUNCTION__, iDropped, m_iDroppedFrames);
       }
 
       if (m_messageQueue.GetDataSize() == 0
@@ -642,6 +648,8 @@ void CDVDPlayerVideo::Process()
           if (m_pVideoCodec->GetPicture(&picture))
           {
             sPostProcessType.clear();
+            if(picture.format == RENDER_FMT_VDPAU)
+               picture.format = RENDER_FMT_VDPAU_420;
 
             if(picture.iDuration == 0.0)
               picture.iDuration = frametime;
@@ -658,6 +666,9 @@ void CDVDPlayerVideo::Process()
             // validate picture timing,
             // if both dts/pts invalid, use pts calulated from picture.iDuration
             // if pts invalid use dts, else use picture.pts as passed
+            CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - picture: pts=%lf, dts=%lf",__FUNCTION__, 
+                     picture.pts, picture.dts);
+
             if (picture.dts == DVD_NOPTS_VALUE && picture.pts == DVD_NOPTS_VALUE)
               picture.pts = pts;
             else if (picture.pts == DVD_NOPTS_VALUE)
@@ -713,6 +724,8 @@ void CDVDPlayerVideo::Process()
             if (picture.iRepeatPicture)
               picture.iDuration *= picture.iRepeatPicture + 1;
 
+            CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - OutputPicture: pts=%lf",__FUNCTION__, 
+                      pts);
             int iResult = OutputPicture(&picture, pts);
 
             frametime = (double)DVD_TIME_BASE/m_fFrameRate;
@@ -742,6 +755,7 @@ void CDVDPlayerVideo::Process()
             {
               m_iDroppedFrames++;
               iDropped++;
+              CLog::Log(LOGDEBUG,"CDVDPlayerVideo::%s dropped=%d, mdropped=%d", __FUNCTION__, iDropped, m_iDroppedFrames);
             }
             else
               iDropped = 0;
@@ -932,6 +946,9 @@ static std::string GetRenderFormatName(ERenderFormat format)
     case RENDER_FMT_IMXMAP:    return "IMXMAP";
     case RENDER_FMT_MMAL:      return "MMAL";
     case RENDER_FMT_NONE:      return "NONE";
+#ifdef ALLWINNERA10
+    case RENDER_FMT_A10BUF:    return "A10BUF";
+#endif
   }
   return "UNKNOWN";
 }
@@ -1059,6 +1076,8 @@ int CDVDPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
   {
     m_pullupCorrection.Add(pts);
     pts += m_pullupCorrection.GetCorrection();
+    CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - after pullup correction pts=%lf",__FUNCTION__, 
+              pts);
   }
 
   //try to calculate the framerate
@@ -1074,12 +1093,16 @@ int CDVDPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
   if (refreshrate > 0) //refreshrate of -1 means the videoreferenceclock is not running
   {//when using the videoreferenceclock, a frame is always presented half a vblank interval too late
     pts -= DVD_TIME_BASE * interval;
+    CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - after refresh rate=%lf",__FUNCTION__, 
+              pts);
   }
 
   if (m_output.color_format != RENDER_FMT_BYPASS)
   {
     // Correct pts by user set delay and rendering delay
     pts += m_iVideoDelay - DVD_SEC_TO_TIME(g_renderManager.GetDisplayLatency());
+    CLog::Log(LOGDEBUG, "CDVDPlayerVideo::%s - after render delay=%lf",__FUNCTION__, 
+              pts);
   }
 
   // calculate the time we need to delay this picture before displaying
@@ -1118,6 +1141,7 @@ int CDVDPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
       {
         Sleep(50);
       }
+      CLog::Log(LOGDEBUG,"%s - dropped - too late", __FUNCTION__);
       return result | EOS_DROPPED;
     }
     else if (pts_org < iPlayingClock)
@@ -1408,7 +1432,7 @@ int CDVDPlayerVideo::CalcDropRequirement(double pts, bool updateOnly)
       m_droppingStats.m_totalGain += gain.gain;
       result |= EOS_DROPPED;
       m_droppingStats.m_dropRequests = 0;
-      if (g_advancedSettings.CanLogComponent(LOGVIDEO))
+      //if (g_advancedSettings.CanLogComponent(LOGVIDEO))
         CLog::Log(LOGDEBUG,"CDVDPlayerVideo::CalcDropRequirement - dropped pictures, Sleeptime: %f, Bufferlevel: %d, Gain: %f", iSleepTime, iBufferLevel, iGain);
     }
     else if (iDroppedPics < 0 && iGain > (1/m_fFrameRate + 0.001))
@@ -1420,7 +1444,7 @@ int CDVDPlayerVideo::CalcDropRequirement(double pts, bool updateOnly)
       m_droppingStats.m_totalGain += iGain;
       result |= EOS_DROPPED;
       m_droppingStats.m_dropRequests = 0;
-      if (g_advancedSettings.CanLogComponent(LOGVIDEO))
+      //if (g_advancedSettings.CanLogComponent(LOGVIDEO))
         CLog::Log(LOGDEBUG,"CDVDPlayerVideo::CalcDropRequirement - dropped in decoder, Sleeptime: %f, Bufferlevel: %d, Gain: %f", iSleepTime, iBufferLevel, iGain);
     }
   }

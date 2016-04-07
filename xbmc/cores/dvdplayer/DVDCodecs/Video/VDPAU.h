@@ -42,10 +42,18 @@
 
 #include "DVDVideoCodec.h"
 #include "DVDVideoCodecFFmpeg.h"
+#include "libavcodec/vdpau.h"
+#if HAS_GL
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #define GLX_GLXEXT_PROTOTYPES
 #include <GL/glx.h>
+#endif
+#if HAS_GLES
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES2/gl2ext.h>
+#endif
 
 #include "DVDVideoCodec.h"
 #include "DVDVideoCodecFFmpeg.h"
@@ -66,6 +74,39 @@ extern "C" {
 
 #define FULLHD_WIDTH                       1920
 #define MAX_PIC_Q_LENGTH                   20 //for non-interop_yuv this controls the max length of the decoded pic to render completion Q
+
+#define GL_NV_vdpau_sim_interop 1
+#define GL_OES_EGL_sync         1
+
+#if defined(GL_NV_vdpau_sim_interop)
+#ifndef GL_APIENTRYP
+#   define GL_APIENTRYP GL_APIENTRY*
+#endif
+
+typedef GLintptr  GLvdpauSurfaceNV;
+#define GL_READ_ONLY    0x88B8
+#define GL_WRITE_ONLY   0x88B9
+#define GL_READ_WRITE   0x88BA
+
+GL_APICALL void GL_APIENTRY glEGLImageTargetTexture2DOES (GLenum target, GLeglImageOES image);
+
+typedef void (GL_APIENTRYP PFNGLVDPAUFININVPROC) (void);
+typedef void (GL_APIENTRYP PFNGLVDPAUGETSURFACEIVNVPROC) (GLvdpauSurfaceNV surface, GLenum pname, GLsizei bufSize, GLsizei* length, GLint *values);
+#if GL_NV_vdpau_sim_interop
+  typedef void (GL_APIENTRYP PFNGLVDPAUINITNVPROC) (const void* vdpDevice, const GLvoid*getProcAddress, EGLContext shared_context);
+#else
+  typedef void (GL_APIENTRYP PFNGLVDPAUINITNVPROC) (const void* vdpDevice, const GLvoid*getProcAddress);
+#endif
+typedef void (GL_APIENTRYP PFNGLVDPAUISSURFACENVPROC) (GLvdpauSurfaceNV surface);
+typedef void (GL_APIENTRYP PFNGLVDPAUMAPSURFACESNVPROC) (GLsizei numSurfaces, const GLvdpauSurfaceNV* surfaces);
+typedef GLvdpauSurfaceNV (GL_APIENTRYP PFNGLVDPAUREGISTEROUTPUTSURFACENVPROC) (const void* vdpSurface, GLenum target, GLsizei numTextureNames, const GLuint *textureNames);
+typedef GLvdpauSurfaceNV (GL_APIENTRYP PFNGLVDPAUREGISTERVIDEOSURFACENVPROC) (const void* vdpSurface, GLenum target, GLsizei numTextureNames, const GLuint *textureNames);
+typedef void (GL_APIENTRYP PFNGLVDPAUSURFACEACCESSNVPROC) (GLvdpauSurfaceNV surface, GLenum access);
+typedef void (GL_APIENTRYP PFNGLVDPAUUNMAPSURFACESNVPROC) (GLsizei numSurface, const GLvdpauSurfaceNV* surfaces);
+typedef void (GL_APIENTRYP PFNGLVDPAUUNREGISTERSURFACENVPROC) (GLvdpauSurfaceNV surface);
+
+typedef VdpStatus (*PVDPDEVICEOPENGLESNVOPEN)(EGLDisplay _eglDisplay, VdpGetProcAddress **get_proc_address);
+#endif
 
 namespace VDPAU
 {
@@ -110,6 +151,16 @@ struct VDPAU_procs
   VdpDecoderQueryCapabilities *  vdp_decoder_query_caps;
 
   VdpPreemptionCallbackRegister * vdp_preemption_callback_register;
+  
+  VdpPresentationQueueTargetDestroy *           vdp_presentation_queue_target_destroy;
+  VdpPresentationQueueCreate *                  vdp_presentation_queue_create;
+  VdpPresentationQueueDestroy *                 vdp_presentation_queue_destroy;
+  VdpPresentationQueueDisplay *                 vdp_presentation_queue_display;
+  VdpPresentationQueueBlockUntilSurfaceIdle *   vdp_presentation_queue_block_until_surface_idle;
+  VdpPresentationQueueTargetCreateX11 *         vdp_presentation_queue_target_create_x11;
+  VdpPresentationQueueQuerySurfaceStatus *      vdp_presentation_queue_query_surface_status;
+  VdpPresentationQueueGetTime *                 vdp_presentation_queue_get_time;
+  VdpDecoderSetControlData *                    vdp_decoder_set_video_control_data;
 
 };
 
@@ -214,12 +265,18 @@ class CVdpauRenderPicture
   friend class COutput;
 public:
   CVdpauRenderPicture(CCriticalSection &section)
-    : refCount(0), renderPicSection(section) { fence = None; }
+    : refCount(0), renderPicSection(section) { 
+#if HAS_GL
+      fence = None;
+#endif
+    }
   void Sync();
   DVDVideoPicture DVDPic;
   int texWidth, texHeight;
   CRect crop;
-  GLuint texture[4];
+  static const int MAX_NUM_TEXTURES = 6;
+  int numTextures;
+  GLuint texture[MAX_NUM_TEXTURES];
   uint32_t sourceIdx;
   bool valid;
   CDecoder *vdpau;
@@ -228,7 +285,12 @@ public:
 private:
   void ReturnUnused();
   bool usefence;
+#if HAS_GL
   GLsync fence;
+#endif
+#if GL_OES_EGL_sync
+  EGLSyncKHR fence;
+#endif
   int refCount;
   CCriticalSection &renderPicSection;
 };
@@ -353,10 +415,12 @@ struct VdpauBufferPool
 {
   VdpauBufferPool();
   virtual ~VdpauBufferPool();
+  static const int MAX_NUM_TEXTURES = 6;
   struct GLVideoSurface
   {
-    GLuint texture[4];
-#ifdef GL_NV_vdpau_interop
+    int numTextures;
+    GLuint texture[MAX_NUM_TEXTURES];
+#if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop)
     GLvdpauSurfaceNV glVdpauSurface;
 #endif
     VdpVideoSurface sourceVuv;
@@ -457,15 +521,20 @@ protected:
   CVdpauConfig m_config;
   VdpauBufferPool m_bufferPool;
   CMixer m_mixer;
+#if HAS_GL
   Display *m_Display;
   Window m_Window;
   GLXContext m_glContext;
   GLXWindow m_glWindow;
   Pixmap    m_pixmap;
   GLXPixmap m_glPixmap;
-
+#endif
+#if HAS_GLES
+  EGLDisplay m_Display;
+  EGLContext m_context;
+#endif
   // gl functions
-#ifdef GL_NV_vdpau_interop
+#if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop)
   PFNGLVDPAUINITNVPROC glVDPAUInitNV;
   PFNGLVDPAUFININVPROC glVDPAUFiniNV;
   PFNGLVDPAUREGISTEROUTPUTSURFACENVPROC glVDPAURegisterOutputSurfaceNV;
@@ -476,6 +545,15 @@ protected:
   PFNGLVDPAUMAPSURFACESNVPROC glVDPAUMapSurfacesNV;
   PFNGLVDPAUUNMAPSURFACESNVPROC glVDPAUUnmapSurfacesNV;
   PFNGLVDPAUGETSURFACEIVNVPROC glVDPAUGetSurfaceivNV;
+#endif
+#if defined(GL_NV_vdpau_sim_interop)
+  PVDPDEVICEOPENGLESNVOPEN nv_ndpau_device_open;
+#endif
+
+
+#ifdef GL_NV_vdpau_sim_interop
+  void *m_dlVdpauNvHandle;
+  void* GLNVGetProcAddress(const char * func);
 #endif
 };
 
@@ -515,6 +593,8 @@ public:
   bool Supports(VdpVideoMixerFeature feature);
   VdpVideoMixerFeature* GetFeatures();
   int GetFeatureCount();
+  VdpPresentationQueueTarget   m_vdpFlipTarget;
+  VdpPresentationQueue         m_vdpFlipQueue;
 private:
   CVDPAUContext();
   void Close();
@@ -523,6 +603,7 @@ private:
   void DestroyContext();
   void QueryProcs();
   void SpewHardwareAvailable();
+  bool CheckStatus(VdpStatus vdp_st, int line);
   static CVDPAUContext *m_context;
   static CCriticalSection m_section;
   static Display *m_display;
@@ -533,6 +614,7 @@ private:
   VdpDevice m_vdpDevice;
   VDPAU_procs m_vdpProcs;
   VdpStatus (*dl_vdp_device_create_x11)(Display* display, int screen, VdpDevice* device, VdpGetProcAddress **get_proc_address);
+
 };
 
 /**
@@ -540,7 +622,9 @@ private:
  */
 class CDecoder
  : public CDVDVideoCodecFFmpeg::IHardwareDecoder
+#if HAS_GL
  , public IDispResource
+#endif
 {
    friend class CVdpauRenderPicture;
 
@@ -578,10 +662,12 @@ public:
   static int Render(struct AVCodecContext *s, struct AVFrame *src,
                     const VdpPictureInfo *info, uint32_t buffers_used,
                     const VdpBitstreamBuffer *buffers);
+  static int FFSetVideoHeader(AVCodecContext *avctx, uint32_t id);
 
   virtual void OnLostDevice();
   virtual void OnResetDevice();
-
+  void Present(uint32_t surface);
+  
 protected:
   void SetWidthHeight(int width, int height);
   bool ConfigVDPAU(AVCodecContext *avctx, int ref_frames);
@@ -612,6 +698,9 @@ protected:
   CVdpauConfig  m_vdpauConfig;
   CVideoSurfaces m_videoSurfaces;
   AVVDPAUContext m_hwContext;
+  VdpDecoderControlData m_data;
+  uint32_t     m_dataId;
+  bool         m_dataSet;
 
   COutput       m_vdpauOutput;
   CVdpauBufferStats m_bufferStats;
