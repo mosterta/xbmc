@@ -1,0 +1,895 @@
+Only in ffmpeg-2.8.6-Jarvis-16.0: build.01.log
+Only in ffmpeg-2.8.6-Jarvis-16.0: build.02.log
+Only in ffmpeg-2.8.6-Jarvis-16.0: build.03.log
+Only in ffmpeg-2.8.6-Jarvis-16.0: build.05.log
+Only in ffmpeg-2.8.6-Jarvis-16.0: build.06.log
+Only in ffmpeg-2.8.6-Jarvis-16.0: .config
+Only in ffmpeg-2.8.6-Jarvis-16.0: config.fate
+Only in ffmpeg-2.8.6-Jarvis-16.0: config.h
+Only in ffmpeg-2.8.6-Jarvis-16.0: config.log
+Only in ffmpeg-2.8.6-Jarvis-16.0: config.mak
+Only in ffmpeg-2.8.6-Jarvis-16.0/doc: config.texi
+Only in ffmpeg-2.8.6-Jarvis-16.0/doc/examples: pc-uninstalled
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/allcodecs.c ffmpeg-2.8.6-Jarvis-16.0/libavcodec/allcodecs.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/allcodecs.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/allcodecs.c	2016-03-28 16:13:15.838685283 +0200
+***************
+*** 113,118 ****
+--- 113,119 ----
+      REGISTER_HWACCEL(WMV3_DXVA2,        wmv3_dxva2);
+      REGISTER_HWACCEL(WMV3_VAAPI,        wmv3_vaapi);
+      REGISTER_HWACCEL(WMV3_VDPAU,        wmv3_vdpau);
++     REGISTER_HWACCEL(MSMPEG4V3_VDPAU,   msmpeg4v3_vdpau);
+  
+      /* video codecs */
+      REGISTER_ENCODER(A64MULTI,          a64multi);
+***************
+*** 243,250 ****
+--- 244,253 ----
+      REGISTER_DECODER(MSA1,              msa1);
+      REGISTER_DECODER(MSMPEG4_CRYSTALHD, msmpeg4_crystalhd);
+      REGISTER_DECODER(MSMPEG4V1,         msmpeg4v1);
++     REGISTER_DECODER(MSMPEG4V1_VDPAU,   msmpeg4v1_vdpau);
+      REGISTER_ENCDEC (MSMPEG4V2,         msmpeg4v2);
+      REGISTER_ENCDEC (MSMPEG4V3,         msmpeg4v3);
++     REGISTER_DECODER(MSMPEG4V3_VDPAU,   msmpeg4v3_vdpau);
+      REGISTER_DECODER(MSRLE,             msrle);
+      REGISTER_DECODER(MSS1,              mss1);
+      REGISTER_DECODER(MSS2,              mss2);
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/arm/aac.h ffmpeg-2.8.6-Jarvis-16.0/libavcodec/arm/aac.h
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/arm/aac.h	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/arm/aac.h	2016-03-28 21:39:37.525494676 +0200
+***************
+*** 93,99 ****
+               : "d0", "d1", "d2");
+      return dst;
+  }
+! 
+  #define VMUL4S VMUL4S
+  static inline float *VMUL4S(float *dst, const float *v, unsigned idx,
+                              unsigned sign, const float *scale)
+--- 93,99 ----
+               : "d0", "d1", "d2");
+      return dst;
+  }
+! /*
+  #define VMUL4S VMUL4S
+  static inline float *VMUL4S(float *dst, const float *v, unsigned idx,
+                              unsigned sign, const float *scale)
+***************
+*** 137,143 ****
+               : "cc", "d0", "d1", "d2", "d3", "d4", "d5");
+      return dst;
+  }
+! 
+  #endif /* HAVE_NEON_INLINE */
+  
+  #endif /* AVCODEC_ARM_AAC_H */
+--- 137,143 ----
+               : "cc", "d0", "d1", "d2", "d3", "d4", "d5");
+      return dst;
+  }
+! */
+  #endif /* HAVE_NEON_INLINE */
+  
+  #endif /* AVCODEC_ARM_AAC_H */
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/avcodec.h ffmpeg-2.8.6-Jarvis-16.0/libavcodec/avcodec.h
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/avcodec.h	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/avcodec.h	2016-03-28 16:13:15.848684982 +0200
+***************
+*** 122,127 ****
+--- 122,128 ----
+      AV_CODEC_ID_MSMPEG4V1,
+      AV_CODEC_ID_MSMPEG4V2,
+      AV_CODEC_ID_MSMPEG4V3,
++     AV_CODEC_ID_MSMPEG4V4,
+      AV_CODEC_ID_WMV1,
+      AV_CODEC_ID_WMV2,
+      AV_CODEC_ID_H263P,
+***************
+*** 1760,1768 ****
+                              const AVFrame *src, int offset[AV_NUM_DATA_POINTERS],
+                              int y, int type, int height);
+  
+      /**
+       * callback to negotiate the pixelFormat
+!      * @param fmt is the list of formats which are supported by the codec,
+       * it is terminated by -1 as 0 is a valid format, the formats are ordered by quality.
+       * The first is always the native one.
+       * @note The callback may be called again immediately if initialization for
+--- 1761,1771 ----
+                              const AVFrame *src, int offset[AV_NUM_DATA_POINTERS],
+                              int y, int type, int height);
+  
++     int (*set_video_header)(struct AVCodecContext *avctx, const uint32_t id);
++ 
+      /**
+       * callback to negotiate the pixelFormat
+!      * @param fmt is the list of formats which are supported by the codec,F
+       * it is terminated by -1 as 0 is a valid format, the formats are ordered by quality.
+       * The first is always the native one.
+       * @note The callback may be called again immediately if initialization for
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/h263dec.c ffmpeg-2.8.6-Jarvis-16.0/libavcodec/h263dec.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/h263dec.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/h263dec.c	2016-03-28 16:13:15.858684681 +0200
+***************
+*** 161,167 ****
+  {
+      int pos = (get_bits_count(&s->gb) + 7) >> 3;
+  
+!     if (s->divx_packed || s->avctx->hwaccel) {
+          /* We would have to scan through the whole buf to handle the weird
+           * reordering ... */
+          return buf_size;
+--- 161,171 ----
+  {
+      int pos = (get_bits_count(&s->gb) + 7) >> 3;
+  
+!     if(s->divx_packed || (s->avctx->hwaccel &&
+!          !(s->codec_id == AV_CODEC_ID_MSMPEG4V1 || 
+!            s->codec_id == AV_CODEC_ID_MSMPEG4V2 ||
+!            s->codec_id == AV_CODEC_ID_MSMPEG4V3 ||
+!            s->codec_id == AV_CODEC_ID_MSMPEG4V4))) {
+          /* We would have to scan through the whole buf to handle the weird
+           * reordering ... */
+          return buf_size;
+***************
+*** 197,203 ****
+  
+      ff_set_qscale(s, s->qscale);
+  
+!     if (s->avctx->hwaccel) {
+          const uint8_t *start = s->gb.buffer + get_bits_count(&s->gb) / 8;
+          ret = s->avctx->hwaccel->decode_slice(s->avctx, start, s->gb.buffer_end - start);
+          // ensure we exit decode loop
+--- 201,207 ----
+  
+      ff_set_qscale(s, s->qscale);
+  
+!     if (s->avctx->hwaccel /* && !s->msmpeg4_version */) {
+          const uint8_t *start = s->gb.buffer + get_bits_count(&s->gb) / 8;
+          ret = s->avctx->hwaccel->decode_slice(s->avctx, start, s->gb.buffer_end - start);
+          // ensure we exit decode loop
+***************
+*** 604,610 ****
+          ff_thread_finish_setup(avctx);
+  
+  #if FF_API_CAP_VDPAU
+!     if (CONFIG_MPEG4_VDPAU_DECODER && (s->avctx->codec->capabilities & AV_CODEC_CAP_HWACCEL_VDPAU)) {
+          ff_vdpau_mpeg4_decode_picture(avctx->priv_data, s->gb.buffer, s->gb.buffer_end - s->gb.buffer);
+          goto frame_end;
+      }
+--- 608,615 ----
+          ff_thread_finish_setup(avctx);
+  
+  #if FF_API_CAP_VDPAU
+!     if ((CONFIG_MPEG4_VDPAU_DECODER || CONFIG_MSMPEG4V3_VDPAU_DECODER) && 
+!           (s->avctx->codec->capabilities & CODEC_CAP_HWACCEL_VDPAU)) {
+          ff_vdpau_mpeg4_decode_picture(avctx->priv_data, s->gb.buffer, s->gb.buffer_end - s->gb.buffer);
+          goto frame_end;
+      }
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavcodec: libavcodec.pc
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/Makefile ffmpeg-2.8.6-Jarvis-16.0/libavcodec/Makefile
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/Makefile	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/Makefile	2016-03-28 23:33:41.189537201 +0200
+***************
+*** 706,711 ****
+--- 706,712 ----
+  
+  OBJS-$(CONFIG_H263_VAAPI_HWACCEL)         += vaapi_mpeg4.o
+  OBJS-$(CONFIG_H263_VDPAU_HWACCEL)         += vdpau_mpeg4.o
++ OBJS-$(CONFIG_MSMPEG4V3_VDPAU_HWACCEL)    += vdpau_msmpeg4.o
+  OBJS-$(CONFIG_H263_VIDEOTOOLBOX_HWACCEL)  += videotoolbox.o
+  OBJS-$(CONFIG_H264_D3D11VA_HWACCEL)       += dxva2_h264.o
+  OBJS-$(CONFIG_H264_DXVA2_HWACCEL)         += dxva2_h264.o
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/mpeg12dec.c ffmpeg-2.8.6-Jarvis-16.0/libavcodec/mpeg12dec.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/mpeg12dec.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/mpeg12dec.c	2016-03-28 16:13:15.878684079 +0200
+***************
+*** 1187,1193 ****
+      AV_PIX_FMT_XVMC,
+  #endif
+  #if CONFIG_MPEG1_VDPAU_DECODER && FF_API_VDPAU
+!     AV_PIX_FMT_VDPAU_MPEG1,
+  #endif
+  #if CONFIG_MPEG1_VDPAU_HWACCEL
+      AV_PIX_FMT_VDPAU,
+--- 1187,1193 ----
+      AV_PIX_FMT_XVMC,
+  #endif
+  #if CONFIG_MPEG1_VDPAU_DECODER && FF_API_VDPAU
+! //    AV_PIX_FMT_VDPAU_MPEG1,
+  #endif
+  #if CONFIG_MPEG1_VDPAU_HWACCEL
+      AV_PIX_FMT_VDPAU,
+***************
+*** 1201,1207 ****
+      AV_PIX_FMT_XVMC,
+  #endif
+  #if CONFIG_MPEG_VDPAU_DECODER && FF_API_VDPAU
+!     AV_PIX_FMT_VDPAU_MPEG2,
+  #endif
+  #if CONFIG_MPEG2_VDPAU_HWACCEL
+      AV_PIX_FMT_VDPAU,
+--- 1201,1207 ----
+      AV_PIX_FMT_XVMC,
+  #endif
+  #if CONFIG_MPEG_VDPAU_DECODER && FF_API_VDPAU
+! //    AV_PIX_FMT_VDPAU_MPEG2,
+  #endif
+  #if CONFIG_MPEG2_VDPAU_HWACCEL
+      AV_PIX_FMT_VDPAU,
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/mpeg4videodec.c ffmpeg-2.8.6-Jarvis-16.0/libavcodec/mpeg4videodec.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/mpeg4videodec.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/mpeg4videodec.c	2016-03-28 16:13:15.888683778 +0200
+***************
+*** 34,39 ****
+--- 34,40 ----
+  #include "h263.h"
+  #include "thread.h"
+  #include "xvididct.h"
++ #include "vdpau.h"
+  
+  /* The defines below define the number of bits that are read at once for
+   * reading vlc values. Changing these may improve speed and data cache needs
+***************
+*** 2599,2604 ****
+--- 2600,2608 ----
+          if (startcode >= 0x120 && startcode <= 0x12F) {
+              if ((ret = decode_vol_header(ctx, gb)) < 0)
+                  return ret;
++             if(s->avctx->set_video_header) {
++                s->avctx->set_video_header(s->avctx, VDP_MPEG4_VOL_HEADER);
++             }
+          } else if (startcode == USER_DATA_STARTCODE) {
+              decode_user_data(ctx, gb);
+          } else if (startcode == GOP_STARTCODE) {
+***************
+*** 2776,2781 ****
+--- 2780,2797 ----
+      LIBAVUTIL_VERSION_INT,
+  };
+  
++ const enum AVPixelFormat ff_mpeg4_hwaccel_pixfmt_list_420[] = {
++ #if CONFIG_VAAPI
++    AV_PIX_FMT_VAAPI_VLD,
++ #endif
++ #if CONFIG_VDPAU
++ //   AV_PIX_FMT_VDPAU_MPEG4,
++    AV_PIX_FMT_VDPAU,
++ #endif
++    AV_PIX_FMT_YUV420P,
++    AV_PIX_FMT_NONE
++ };
++ 
+  AVCodec ff_mpeg4_decoder = {
+      .name                  = "mpeg4",
+      .long_name             = NULL_IF_CONFIG_SMALL("MPEG-4 part 2"),
+***************
+*** 2785,2796 ****
+      .init                  = decode_init,
+      .close                 = ff_h263_decode_end,
+      .decode                = ff_h263_decode_frame,
+!     .capabilities          = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1 |
+                               AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_DELAY |
+                               AV_CODEC_CAP_FRAME_THREADS,
+      .flush                 = ff_mpeg_flush,
+      .max_lowres            = 3,
+!     .pix_fmts              = ff_h263_hwaccel_pixfmt_list_420,
+      .profiles              = NULL_IF_CONFIG_SMALL(mpeg4_video_profiles),
+      .update_thread_context = ONLY_IF_THREADS_ENABLED(mpeg4_update_thread_context),
+      .priv_class = &mpeg4_class,
+--- 2801,2812 ----
+      .init                  = decode_init,
+      .close                 = ff_h263_decode_end,
+      .decode                = ff_h263_decode_frame,
+!     .capabilities          = /*AV_CODEC_CAP_DRAW_HORIZ_BAND |*/ AV_CODEC_CAP_DR1 |
+                               AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_DELAY |
+                               AV_CODEC_CAP_FRAME_THREADS,
+      .flush                 = ff_mpeg_flush,
+      .max_lowres            = 3,
+!     .pix_fmts              = ff_mpeg4_hwaccel_pixfmt_list_420,
+      .profiles              = NULL_IF_CONFIG_SMALL(mpeg4_video_profiles),
+      .update_thread_context = ONLY_IF_THREADS_ENABLED(mpeg4_update_thread_context),
+      .priv_class = &mpeg4_class,
+***************
+*** 2814,2823 ****
+      .init           = decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_DELAY |
+!                       AV_CODEC_CAP_HWACCEL_VDPAU,
+!     .pix_fmts       = (const enum AVPixelFormat[]) { AV_PIX_FMT_VDPAU_MPEG4,
+!                                                   AV_PIX_FMT_NONE },
+      .priv_class     = &mpeg4_vdpau_class,
+  };
+  #endif
+--- 2830,2841 ----
+      .init           = decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .flush          = ff_mpeg_flush,
+!     .capabilities   = CODEC_CAP_DR1 | CODEC_CAP_TRUNCATED | CODEC_CAP_DELAY |
+!                       CODEC_CAP_HWACCEL_VDPAU,
+!     .pix_fmts       = (const enum AVPixelFormat[]) { AV_PIX_FMT_VDPAU,
+!                                                    AV_PIX_FMT_NONE },
+!     .profiles       = NULL_IF_CONFIG_SMALL(mpeg4_video_profiles),
+      .priv_class     = &mpeg4_vdpau_class,
+  };
+  #endif
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/msmpeg4dec.c ffmpeg-2.8.6-Jarvis-16.0/libavcodec/msmpeg4dec.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/msmpeg4dec.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/msmpeg4dec.c	2016-03-28 16:13:15.888683778 +0200
+***************
+*** 915,920 ****
+--- 915,932 ----
+      return 0;
+  }
+  
++ const enum AVPixelFormat ff_msmpeg_hwaccel_pixfmt_list_420[] = {
++ #if CONFIG_VAAPI
++     AV_PIX_FMT_VAAPI_VLD,
++ #endif
++ #if CONFIG_VDPAU
++ //    AV_PIX_FMT_VDPAU_MSMPEG4V3,
++     AV_PIX_FMT_VDPAU,
++ #endif
++     AV_PIX_FMT_YUV420P,
++     AV_PIX_FMT_NONE
++ };
++ 
+  AVCodec ff_msmpeg4v1_decoder = {
+      .name           = "msmpeg4v1",
+      .long_name      = NULL_IF_CONFIG_SMALL("MPEG-4 part 2 Microsoft variant version 1"),
+***************
+*** 924,935 ****
+      .init           = ff_msmpeg4_decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .capabilities   = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+      .max_lowres     = 3,
+!     .pix_fmts       = (const enum AVPixelFormat[]) {
+!         AV_PIX_FMT_YUV420P,
+!         AV_PIX_FMT_NONE
+!     },
+  };
+  
+  AVCodec ff_msmpeg4v2_decoder = {
+--- 936,944 ----
+      .init           = ff_msmpeg4_decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .capabilities   = /* CODEC_CAP_DRAW_HORIZ_BAND | */ AV_CODEC_CAP_DR1 | AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_DELAY,
+      .max_lowres     = 3,
+!     .pix_fmts       = ff_msmpeg_hwaccel_pixfmt_list_420,
+  };
+  
+  AVCodec ff_msmpeg4v2_decoder = {
+***************
+*** 941,952 ****
+      .init           = ff_msmpeg4_decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .capabilities   = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+      .max_lowres     = 3,
+!     .pix_fmts       = (const enum AVPixelFormat[]) {
+!         AV_PIX_FMT_YUV420P,
+!         AV_PIX_FMT_NONE
+!     },
+  };
+  
+  AVCodec ff_msmpeg4v3_decoder = {
+--- 950,958 ----
+      .init           = ff_msmpeg4_decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .capabilities   = /* CODEC_CAP_DRAW_HORIZ_BAND | */ AV_CODEC_CAP_DR1 | AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_DELAY,
+      .max_lowres     = 3,
+!     .pix_fmts       = ff_msmpeg_hwaccel_pixfmt_list_420,
+  };
+  
+  AVCodec ff_msmpeg4v3_decoder = {
+***************
+*** 958,969 ****
+      .init           = ff_msmpeg4_decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .capabilities   = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+      .max_lowres     = 3,
+!     .pix_fmts       = (const enum AVPixelFormat[]) {
+!         AV_PIX_FMT_YUV420P,
+!         AV_PIX_FMT_NONE
+!     },
+  };
+  
+  AVCodec ff_wmv1_decoder = {
+--- 964,972 ----
+      .init           = ff_msmpeg4_decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .capabilities   = /* CODEC_CAP_DRAW_HORIZ_BAND | */ AV_CODEC_CAP_DR1 | AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_DELAY,
+      .max_lowres     = 3,
+!     .pix_fmts       = ff_msmpeg_hwaccel_pixfmt_list_420,
+  };
+  
+  AVCodec ff_wmv1_decoder = {
+***************
+*** 975,984 ****
+      .init           = ff_msmpeg4_decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .capabilities   = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+      .max_lowres     = 3,
+!     .pix_fmts       = (const enum AVPixelFormat[]) {
+!         AV_PIX_FMT_YUV420P,
+!         AV_PIX_FMT_NONE
+!     },
+  };
+--- 978,1046 ----
+      .init           = ff_msmpeg4_decode_init,
+      .close          = ff_h263_decode_end,
+      .decode         = ff_h263_decode_frame,
+!     .capabilities   = /* CODEC_CAP_DRAW_HORIZ_BAND | */ AV_CODEC_CAP_DR1 | AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_DELAY,
+!     .max_lowres     = 3,
+!     .pix_fmts       = ff_msmpeg_hwaccel_pixfmt_list_420,
+! };
+! 
+! #define CONFIG_MSMPEGV3_VDPAU_DECODER 1
+! #if CONFIG_MSMPEGV3_VDPAU_DECODER
+! static const AVOption msmpeg_options[] = {
+!     {"quarter_sample", "1/4 subpel MC", offsetof(MpegEncContext, quarter_sample), FF_OPT_TYPE_INT, {.i64 = 0}, 0, 1, 0},
+!     {"divx_packed", "divx style packed b frames", offsetof(MpegEncContext, divx_packed), FF_OPT_TYPE_INT, {.i64 = 0}, 0, 1, 0},
+!     {NULL}
+! };
+! 
+! static const AVClass msmpegv1_vdpau_class = {
+!     "MSMPEG4 Video VDPAU Decoder",
+!     av_default_item_name,
+!     msmpeg_options,
+!     LIBAVUTIL_VERSION_INT,
+! };
+!  
+! AVCodec ff_msmpeg4v3_vdpau_decoder = {
+!     .name           = "msmpeg4_vdpau",
+!     .long_name      = NULL_IF_CONFIG_SMALL("MPEG-4 part 2 Microsoft variant version 3 (VDPAU)"),
+!     .type           = AVMEDIA_TYPE_VIDEO,
+!     .id             = AV_CODEC_ID_MSMPEG4V3,
+!     .priv_data_size = sizeof(Mpeg4DecContext),
+!     .init           = ff_msmpeg4_decode_init,
+!     .close          = ff_h263_decode_end,
+!     .decode         = ff_h263_decode_frame,
+!     .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_HWACCEL_VDPAU,
+!     .max_lowres     = 3,
+!     .pix_fmts       = (const enum AVPixelFormat[]){ AV_PIX_FMT_VDPAU, AV_PIX_FMT_NONE },
+!     .priv_class     = &msmpegv1_vdpau_class,
+! };
+! 
+! AVCodec ff_msmpeg4v2_vdpau_decoder = {
+!     .name           = "msmpeg4v2_vdpau",
+!     .long_name      = NULL_IF_CONFIG_SMALL("MPEG-4 part 2 Microsoft variant version 2 (VDPAU)"),
+!     .type           = AVMEDIA_TYPE_VIDEO,
+!     .id             = AV_CODEC_ID_MSMPEG4V2,
+!     .priv_data_size = sizeof(Mpeg4DecContext),
+!     .init           = ff_msmpeg4_decode_init,
+!     .close          = ff_h263_decode_end,
+!     .decode         = ff_h263_decode_frame,
+!     .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_HWACCEL_VDPAU,
+      .max_lowres     = 3,
+!     .pix_fmts       = (const enum AVPixelFormat[]){ AV_PIX_FMT_VDPAU, AV_PIX_FMT_NONE },
+!     .priv_class     = &msmpegv1_vdpau_class,
+  };
++ 
++ AVCodec ff_msmpeg4v1_vdpau_decoder = {
++     .name           = "msmpeg4v1_vdpau",
++     .long_name      = NULL_IF_CONFIG_SMALL("MPEG-4 part 2 Microsoft variant version 1 (VDPAU)"),
++     .type           = AVMEDIA_TYPE_VIDEO,
++     .id             = AV_CODEC_ID_MSMPEG4V1,
++     .priv_data_size = sizeof(Mpeg4DecContext),
++     .init           = ff_msmpeg4_decode_init,
++     .close          = ff_h263_decode_end,
++     .decode         = ff_h263_decode_frame,
++     .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_TRUNCATED | AV_CODEC_CAP_HWACCEL_VDPAU,
++     .max_lowres     = 3,
++     .pix_fmts       = (const enum AVPixelFormat[]){ AV_PIX_FMT_VDPAU, AV_PIX_FMT_NONE },
++     .priv_class     = &msmpegv1_vdpau_class,
++ };
++ 
++ #endif
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/old_codec_ids.h ffmpeg-2.8.6-Jarvis-16.0/libavcodec/old_codec_ids.h
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/old_codec_ids.h	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/old_codec_ids.h	2016-03-28 16:13:15.898683477 +0200
+***************
+*** 49,54 ****
+--- 49,55 ----
+      CODEC_ID_MSMPEG4V1,
+      CODEC_ID_MSMPEG4V2,
+      CODEC_ID_MSMPEG4V3,
++     CODEC_ID_MSMPEG4V4,
+      CODEC_ID_WMV1,
+      CODEC_ID_WMV2,
+      CODEC_ID_H263P,
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/utils.c ffmpeg-2.8.6-Jarvis-16.0/libavcodec/utils.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/utils.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/utils.c	2016-03-28 16:13:15.908683176 +0200
+***************
+*** 1152,1159 ****
+  
+  enum AVPixelFormat avcodec_default_get_format(struct AVCodecContext *s, const enum AVPixelFormat *fmt)
+  {
+!     while (*fmt != AV_PIX_FMT_NONE && is_hwaccel_pix_fmt(*fmt))
+!         ++fmt;
+      return fmt[0];
+  }
+  
+--- 1152,1159 ----
+  
+  enum AVPixelFormat avcodec_default_get_format(struct AVCodecContext *s, const enum AVPixelFormat *fmt)
+  {
+! //    while (*fmt != AV_PIX_FMT_NONE && is_hwaccel_pix_fmt(*fmt))
+! //         ++fmt;
+      return fmt[0];
+  }
+  
+***************
+*** 2447,2452 ****
+--- 2447,2453 ----
+              ret = avctx->codec->decode(avctx, picture, got_picture_ptr,
+                                         &tmp);
+              picture->pkt_dts = avpkt->dts;
++             //picture->pts = avpkt->pts;
+  
+              if(!avctx->has_b_frames){
+                  av_frame_set_pkt_pos(picture, avpkt->pos);
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vc1dec.c ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vc1dec.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vc1dec.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vc1dec.c	2016-03-28 16:13:15.908683176 +0200
+***************
+*** 1171,1177 ****
+      .close          = ff_vc1_decode_end,
+      .decode         = vc1_decode_frame,
+      .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_DELAY | AV_CODEC_CAP_HWACCEL_VDPAU,
+!     .pix_fmts       = (const enum AVPixelFormat[]){ AV_PIX_FMT_VDPAU_WMV3, AV_PIX_FMT_NONE },
+      .profiles       = NULL_IF_CONFIG_SMALL(profiles)
+  };
+  #endif
+--- 1171,1177 ----
+      .close          = ff_vc1_decode_end,
+      .decode         = vc1_decode_frame,
+      .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_DELAY | AV_CODEC_CAP_HWACCEL_VDPAU,
+!     .pix_fmts       = (const enum AVPixelFormat[]){ AV_PIX_FMT_VDPAU, AV_PIX_FMT_NONE },
+      .profiles       = NULL_IF_CONFIG_SMALL(profiles)
+  };
+  #endif
+***************
+*** 1187,1193 ****
+      .close          = ff_vc1_decode_end,
+      .decode         = vc1_decode_frame,
+      .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_DELAY | AV_CODEC_CAP_HWACCEL_VDPAU,
+!     .pix_fmts       = (const enum AVPixelFormat[]){ AV_PIX_FMT_VDPAU_VC1, AV_PIX_FMT_NONE },
+      .profiles       = NULL_IF_CONFIG_SMALL(profiles)
+  };
+  #endif
+--- 1187,1193 ----
+      .close          = ff_vc1_decode_end,
+      .decode         = vc1_decode_frame,
+      .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_DELAY | AV_CODEC_CAP_HWACCEL_VDPAU,
+!     .pix_fmts       = (const enum AVPixelFormat[]){ AV_PIX_FMT_VDPAU, AV_PIX_FMT_NONE },
+      .profiles       = NULL_IF_CONFIG_SMALL(profiles)
+  };
+  #endif
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vdpau.c ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vdpau.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vdpau.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vdpau.c	2016-03-28 16:13:15.918682875 +0200
+***************
+*** 676,684 ****
+--- 676,686 ----
+  
+      switch (s->pict_type) {
+      case AV_PICTURE_TYPE_B:
++     case AV_PICTURE_TYPE_S:
+          next = (struct vdpau_render_state *)s->next_picture.f->data[0];
+          assert(next);
+          render->info.mpeg4.backward_reference     = next->surface;
++         if( s->pict_type != AV_PICTURE_TYPE_S)
+          render->info.mpeg4.vop_coding_type        = 2;
+          // no break here, going to set forward prediction
+      case AV_PICTURE_TYPE_P:
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vdpau.h ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vdpau.h
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vdpau.h	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vdpau.h	2016-03-28 16:13:15.918682875 +0200
+***************
+*** 101,106 ****
+--- 101,107 ----
+       * Set by the user.
+       */
+      VdpDecoderRender *render;
++     VdpDecoderSetControlData *set_video_header;
+  
+  #if FF_API_BUFS_VDPAU
+      /**
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vdpau_internal.h ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vdpau_internal.h
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vdpau_internal.h	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vdpau_internal.h	2016-03-28 16:13:15.928682574 +0200
+***************
+*** 123,128 ****
+--- 123,130 ----
+  int ff_vdpau_common_end_frame(AVCodecContext *avctx, AVFrame *frame,
+                                struct vdpau_picture_context *pic);
+  int ff_vdpau_mpeg_end_frame(AVCodecContext *avctx);
++ int ff_vdpau_msmpeg_end_frame(AVCodecContext *avctx);
++ 
+  int ff_vdpau_add_buffer(struct vdpau_picture_context *pic, const uint8_t *buf,
+                          uint32_t buf_size);
+  
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vdpau_mpeg4.c ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vdpau_mpeg4.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavcodec/vdpau_mpeg4.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavcodec/vdpau_mpeg4.c	2016-03-28 16:13:15.928682574 +0200
+***************
+*** 28,33 ****
+--- 28,35 ----
+  #include "vdpau.h"
+  #include "vdpau_internal.h"
+  
++ int vdpau_mpeg4_create_video_headers(AVCodecContext *avctx, uint32_t id, VdpDecoderControlData *data);
++ 
+  static int vdpau_mpeg4_start_frame(AVCodecContext *avctx,
+                                     const uint8_t *buffer, uint32_t size)
+  {
+***************
+*** 46,54 ****
+--- 48,58 ----
+  
+      switch (s->pict_type) {
+      case AV_PICTURE_TYPE_B:
++     case AV_PICTURE_TYPE_S:
+          ref = ff_vdpau_get_surface_id(s->next_picture.f);
+          assert(ref != VDP_INVALID_HANDLE);
+          info->backward_reference = ref;
++         if( s->pict_type != AV_PICTURE_TYPE_S)
+          info->vop_coding_type    = 2;
+          /* fall-through */
+      case AV_PICTURE_TYPE_P:
+***************
+*** 88,93 ****
+--- 92,156 ----
+       return 0;
+  }
+  
++ int vdpau_mpeg4_create_video_headers(AVCodecContext *avctx, uint32_t id, VdpDecoderControlData *data)
++ {
++    Mpeg4DecContext * const s = avctx->priv_data;
++    memset(data, 0x0, sizeof(*data));
++     
++    if(id == VDP_MPEG4_VOL_HEADER) 
++    {
++       VdpDecoderMpeg4VolHeader *vol = &(data->mpeg4VolHdr);
++         
++       vol->struct_version               = VDP_MPEG4_STRUCT_VERSION;
++       vol->video_object_type_indication = s->m.vo_type;
++       vol->aspect_ratio_info            = s->m.aspect_ratio_info;
++       vol->par_width                    = s->m.avctx->sample_aspect_ratio.num;
++       vol->par_height                   = s->m.avctx->sample_aspect_ratio.den;
++       vol->vol_control_parameters       = s->vol_control_parameters;
++       vol->low_delay                    = s->m.low_delay;
++       vol->video_object_layer_shape     = s->shape;
++       vol->vop_time_increment_resolution = s->m.avctx->time_base.den;
++       vol->video_object_layer_width     = s->m.width;
++       vol->video_object_layer_height    = s->m.height;
++       vol->interlaced                   = s->m.progressive_frame ^ 1;
++       vol->sprite_enable                = s->vol_sprite_usage;
++       vol->no_of_sprite_warping_points  = s->num_sprite_warping_points;
++       vol->sprite_warping_accuracy      = s->m.sprite_warping_accuracy;
++       vol->sprite_brightness_change     = s->sprite_brightness_change;
++       vol->quant_precision              = s->m.quant_precision;
++       vol->quant_type                   = s->m.mpeg_quant;
++       for(int i=0; i < 64; ++i)
++       {
++             //to be done matrices
++       }
++       vol->quarter_sample               = s->m.quarter_sample;
++       vol->resync_marker_disable        = s->resync_marker;
++       vol->data_partitioned             = s->m.data_partitioning;
++       vol->reversible_vlc               = s->rvlc;
++       vol->newpred_enable               = s->new_pred;
++       vol->scalability                  = s->scalability;
++       vol->enhancement_type             = s->enhancement_type;
++ 
++       return 1;
++    }
++    return 0;
++ }
++ 
++ static int vdpau_mpeg4_set_video_header (AVCodecContext *avctx, uint32_t id)
++ {
++     AVVDPAUContext *hwctx = avctx->hwaccel_context;
++     VdpDecoderControlData data;
++ 
++     if(!hwctx->set_video_header)
++        return 0;
++ 
++     if(vdpau_mpeg4_create_video_headers(avctx, id, &data))
++        return hwctx->set_video_header(hwctx->decoder, id, &data);
++ 
++     return 0;
++ }
++ 
++ 
+  #if CONFIG_H263_VDPAU_HWACCEL
+  static int vdpau_h263_init(AVCodecContext *avctx)
+  {
+***************
+*** 103,108 ****
+--- 166,172 ----
+      .start_frame    = vdpau_mpeg4_start_frame,
+      .end_frame      = ff_vdpau_mpeg_end_frame,
+      .decode_slice   = vdpau_mpeg4_decode_slice,
++ //    .set_video_header = vdpau_mpeg4_set_video_header
+      .frame_priv_data_size = sizeof(struct vdpau_picture_context),
+      .init           = vdpau_h263_init,
+      .uninit         = ff_vdpau_common_uninit,
+***************
+*** 140,145 ****
+--- 204,210 ----
+      .start_frame    = vdpau_mpeg4_start_frame,
+      .end_frame      = ff_vdpau_mpeg_end_frame,
+      .decode_slice   = vdpau_mpeg4_decode_slice,
++ //    .set_video_header = vdpau_mpeg4_set_video_header
+      .frame_priv_data_size = sizeof(struct vdpau_picture_context),
+      .init           = vdpau_mpeg4_init,
+      .uninit         = ff_vdpau_common_uninit,
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavcodec: vdpau_msmpeg4.c
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavcodec: .vdpau_msmpeg4.c.swp
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavdevice: libavdevice.pc
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavfilter: libavfilter.pc
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavformat: libavformat.pc
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavformat/mov.c ffmpeg-2.8.6-Jarvis-16.0/libavformat/mov.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavformat/mov.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavformat/mov.c	2016-03-28 16:13:15.948681972 +0200
+***************
+*** 3047,3052 ****
+--- 3047,3053 ----
+              return ret;
+      }
+  
++ #if 0
+      switch (st->codec->codec_id) {
+  #if CONFIG_H261_DECODER
+      case AV_CODEC_ID_H261:
+***************
+*** 3061,3066 ****
+--- 3062,3068 ----
+          st->codec->height= 0;
+          break;
+      }
++ #endif
+  
+      /* Do not need those anymore. */
+      av_freep(&sc->chunk_offsets);
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavformat: mov.c.orig
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavutil/arm/intmath.h ffmpeg-2.8.6-Jarvis-16.0/libavutil/arm/intmath.h
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavutil/arm/intmath.h	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavutil/arm/intmath.h	2016-03-28 21:40:08.854510325 +0200
+***************
+*** 61,67 ****
+      __asm__ ("ssat %0, #16, %1" : "=r"(x) : "r"(a));
+      return x;
+  }
+! 
+  #define av_clip_intp2 av_clip_intp2_arm
+  static av_always_inline av_const int av_clip_intp2_arm(int a, int p)
+  {
+--- 61,67 ----
+      __asm__ ("ssat %0, #16, %1" : "=r"(x) : "r"(a));
+      return x;
+  }
+! /*
+  #define av_clip_intp2 av_clip_intp2_arm
+  static av_always_inline av_const int av_clip_intp2_arm(int a, int p)
+  {
+***************
+*** 69,75 ****
+      __asm__ ("ssat %0, %2, %1" : "=r"(x) : "r"(a), "i"(p+1));
+      return x;
+  }
+! 
+  #define av_clip_uintp2 av_clip_uintp2_arm
+  static av_always_inline av_const unsigned av_clip_uintp2_arm(int a, int p)
+  {
+--- 69,76 ----
+      __asm__ ("ssat %0, %2, %1" : "=r"(x) : "r"(a), "i"(p+1));
+      return x;
+  }
+! */
+! /*
+  #define av_clip_uintp2 av_clip_uintp2_arm
+  static av_always_inline av_const unsigned av_clip_uintp2_arm(int a, int p)
+  {
+***************
+*** 77,82 ****
+--- 78,84 ----
+      __asm__ ("usat %0, %2, %1" : "=r"(x) : "r"(a), "i"(p));
+      return x;
+  }
++ */
+  
+  #define av_sat_add32 av_sat_add32_arm
+  static av_always_inline int av_sat_add32_arm(int a, int b)
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavutil: avconfig.h
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavutil: ffversion.h
+Only in ffmpeg-2.8.6-Jarvis-16.0/libavutil: libavutil.pc
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavutil/pixdesc.c ffmpeg-2.8.6-Jarvis-16.0/libavutil/pixdesc.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavutil/pixdesc.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavutil/pixdesc.c	2016-03-28 16:13:15.958681671 +0200
+***************
+*** 963,968 ****
+--- 963,992 ----
+          .log2_chroma_h = 1,
+          .flags = AV_PIX_FMT_FLAG_HWACCEL,
+      },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V1] = {
++         .name = "vdpau_msmpegv1",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V2] = {
++         .name = "vdpau_msmpegv2",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V3] = {
++         .name = "vdpau_msmpegv3",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V4] = {
++         .name = "vdpau_msmpegv4",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
+  #endif
+      [AV_PIX_FMT_RGB48BE] = {
+          .name = "rgb48be",
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavutil/pixfmt.h ffmpeg-2.8.6-Jarvis-16.0/libavutil/pixfmt.h
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavutil/pixfmt.h	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavutil/pixfmt.h	2016-03-28 16:13:15.968681370 +0200
+***************
+*** 107,112 ****
+--- 107,116 ----
+      AV_PIX_FMT_VDPAU_MPEG2,///< MPEG-2 HW decoding with VDPAU, data[0] contains a vdpau_render_state struct which contains the bitstream of the slices as well as various fields extracted from headers
+      AV_PIX_FMT_VDPAU_WMV3,///< WMV3 HW decoding with VDPAU, data[0] contains a vdpau_render_state struct which contains the bitstream of the slices as well as various fields extracted from headers
+      AV_PIX_FMT_VDPAU_VC1, ///< VC-1 HW decoding with VDPAU, data[0] contains a vdpau_render_state struct which contains the bitstream of the slices as well as various fields extracted from headers
++     AV_PIX_FMT_VDPAU_MSMPEG4V1,
++     AV_PIX_FMT_VDPAU_MSMPEG4V2,
++     AV_PIX_FMT_VDPAU_MSMPEG4V3,
++     AV_PIX_FMT_VDPAU_MSMPEG4V4,
+  #endif
+      AV_PIX_FMT_RGB48BE,   ///< packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for each R/G/B component is stored as big-endian
+      AV_PIX_FMT_RGB48LE,   ///< packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for each R/G/B component is stored as little-endian
+diff -r -c ffmpeg-2.8.6-Jarvis-16.0.orig/libavutil/utils.c ffmpeg-2.8.6-Jarvis-16.0/libavutil/utils.c
+*** ffmpeg-2.8.6-Jarvis-16.0.orig/libavutil/utils.c	2016-02-03 21:33:07.000000000 +0100
+--- ffmpeg-2.8.6-Jarvis-16.0/libavutil/utils.c	2016-03-28 16:13:15.968681370 +0200
+***************
+*** 42,48 ****
+          return LIBAVUTIL_VERSION_INT;
+  
+  #if FF_API_VDPAU
+!     av_assert0(AV_PIX_FMT_VDA_VLD == 81); //check if the pix fmt enum has not had anything inserted or removed by mistake
+  #endif
+      av_assert0(AV_SAMPLE_FMT_DBLP == 9);
+      av_assert0(AVMEDIA_TYPE_ATTACHMENT == 4);
+--- 42,48 ----
+          return LIBAVUTIL_VERSION_INT;
+  
+  #if FF_API_VDPAU
+! //    av_assert0(AV_PIX_FMT_VDA_VLD == 81); //check if the pix fmt enum has not had anything inserted or removed by mistake
+  #endif
+      av_assert0(AV_SAMPLE_FMT_DBLP == 9);
+      av_assert0(AVMEDIA_TYPE_ATTACHMENT == 4);
+Only in ffmpeg-2.8.6-Jarvis-16.0/libpostproc: libpostproc.pc
+Only in ffmpeg-2.8.6-Jarvis-16.0/libswresample: libswresample.pc
+Only in ffmpeg-2.8.6-Jarvis-16.0/libswscale: libswscale.pc
+Only in ffmpeg-2.8.6-Jarvis-16.0: .version
