@@ -39,7 +39,8 @@ CDirectoryCache::CDir::CDir(DIR_CACHE_TYPE cacheType)
   m_cacheType = cacheType;
   m_lastAccess = 0;
   m_Items = new CFileItemList;
-  m_Items->SetFastLookup(false);
+  m_Items->SetIgnoreURLOptions(true);
+  m_Items->SetFastLookup(true);
 }
 
 CDirectoryCache::CDir::~CDir()

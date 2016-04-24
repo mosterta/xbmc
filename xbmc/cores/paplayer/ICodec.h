@@ -37,13 +37,9 @@ public:
   ICodec()
   {
     m_TotalTime = 0;
-    m_SampleRate = 0;
-    m_EncodedSampleRate = 0;
-    m_BitsPerSample = 0;
-    m_BitsPerCodedSample = 0;
-    m_DataFormat = AE_FMT_INVALID;
-    m_Channels = 0;
-    m_Bitrate = 0;
+    m_bitRate = 0;
+    m_bitsPerSample = 0;
+    m_bitsPerCodedSample = 0;
   };
   virtual ~ICodec() {};
 
@@ -70,13 +66,15 @@ public:
   // Should seek to the appropriate time (in ms) in the file, and return the
   // time to which we managed to seek (in the case where seeking is problematic)
   // This is used in FFwd/Rewd so can be called very often.
-  virtual int64_t Seek(int64_t iSeekTime)=0;
+  virtual bool Seek(int64_t iSeekTime)=0;
 
   // ReadPCM()
   // Decodes audio into pBuffer up to size bytes.  The actual amount of returned data
   // is given in actualsize.  Returns READ_SUCCESS on success.  Returns READ_EOF when
   // the data has been exhausted, and READ_ERROR on error.
   virtual int ReadPCM(BYTE *pBuffer, int size, int *actualsize)=0;
+
+  virtual int ReadRaw(uint8_t **pBuffer, int *bufferSize) { return READ_ERROR; }
 
   // CanInit()
   // Should return true if the codec can be initialized
@@ -93,24 +91,13 @@ public:
   virtual bool IsCaching()    const    {return false;}
   virtual int GetCacheLevel() const    {return -1;}
 
-  // GetChannelInfo()
-  // Return the channel layout and count information in an CAEChannelInfo object
-  // Implemented in PAPlayer.cpp to avoid an include here
-  virtual CAEChannelInfo GetChannelInfo(); 
-
   int64_t m_TotalTime;  // time in ms
-  int m_SampleRate;
-  int m_EncodedSampleRate;
-  int m_BitsPerSample;
-  int m_BitsPerCodedSample;
-  enum AEDataFormat m_DataFormat;
-  int m_Bitrate;
+  int m_bitRate;
+  int m_bitsPerSample;
+  int m_bitsPerCodedSample;
   std::string m_CodecName;
   MUSIC_INFO::CMusicInfoTag m_tag;
   XFILE::CFile m_file;
-
-protected:
-  int m_Channels; /* remove this soon, its being deprecated */
-
+  AEAudioFormat m_format;
 };
 

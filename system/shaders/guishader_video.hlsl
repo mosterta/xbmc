@@ -34,5 +34,3 @@ float4 PS(PS_INPUT input) : SV_TARGET
 {
   return adjustColorRange(texVideo.Sample(DynamicSampler, input.tex));
 }
-
-

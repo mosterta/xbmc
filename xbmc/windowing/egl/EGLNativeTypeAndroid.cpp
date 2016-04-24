@@ -24,15 +24,15 @@
 #include "EGLNativeTypeAndroid.h"
 #include "utils/log.h"
 #include "guilib/gui3d.h"
-#include "android/activity/XBMCApp.h"
+#include "platform/android/activity/XBMCApp.h"
 #include "utils/StringUtils.h"
-#include "android/jni/SystemProperties.h"
-#include "android/jni/Display.h"
-#include "android/jni/View.h"
-#include "android/jni/Window.h"
-#include "android/jni/WindowManager.h"
-#include "android/jni/Build.h"
-#include "android/jni/System.h"
+#include "platform/android/jni/SystemProperties.h"
+#include "platform/android/jni/Display.h"
+#include "platform/android/jni/View.h"
+#include "platform/android/jni/Window.h"
+#include "platform/android/jni/WindowManager.h"
+#include "platform/android/jni/Build.h"
+#include "platform/android/jni/System.h"
 
 #ifdef ALLWINNERA10
 #include "cores/VideoRenderers/LinuxRendererA10.h"
@@ -212,19 +212,21 @@ bool CEGLNativeTypeAndroid::ProbeResolutions(std::vector<RESOLUTION_INFO> &resol
       }
     }
 
-    if (refreshRates.size())
+    if (!refreshRates.empty())
     {
       for (unsigned int i = 0; i < refreshRates.size(); i++)
       {
+        if (refreshRates[i] < 20.0 || refreshRates[i] > 70.0)
+          continue;
         res.fRefreshRate = refreshRates[i];
         res.strMode      = StringUtils::Format("%dx%d @ %.2f%s - Full Screen", res.iScreenWidth, res.iScreenHeight, res.fRefreshRate,
                                                res.dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "");
         resolutions.push_back(res);
       }
     }
-    else
+    if (resolutions.empty())
     {
-      /* No refresh rate list available, just provide the current one */
+      /* No valid refresh rates available, just provide the current one */
       resolutions.push_back(res);
     }
     return true;

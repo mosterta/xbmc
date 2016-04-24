@@ -23,9 +23,6 @@
 #include "GUIWindowFullScreen.h"
 #include "Application.h"
 #include "messaging/ApplicationMessenger.h"
-#ifdef HAS_VIDEO_PLAYBACK
-#include "cores/VideoRenderers/RenderManager.h"
-#endif
 #include "GUIInfoManager.h"
 #include "guilib/GUIProgressControl.h"
 #include "guilib/GUILabelControl.h"
@@ -37,7 +34,6 @@
 #include "settings/MediaSettings.h"
 #include "settings/Settings.h"
 #include "FileItem.h"
-#include "video/VideoReferenceClock.h"
 #include "utils/CPUInfo.h"
 #include "guilib/LocalizeStrings.h"
 #include "threads/SingleLock.h"
@@ -182,8 +178,6 @@ bool CGUIWindowFullScreen::OnAction(const CAction &action)
 
   case ACTION_SHOW_OSD_TIME:
     m_bShowCurrentTime = !m_bShowCurrentTime;
-    if(!m_bShowCurrentTime)
-      g_infoManager.SetDisplayAfterSeek(0); //Force display off
     g_infoManager.SetShowTime(m_bShowCurrentTime);
     return true;
     break;
@@ -224,7 +218,7 @@ bool CGUIWindowFullScreen::OnAction(const CAction &action)
       if (m_bShowViewModeInfo)
       {
 #ifdef HAS_VIDEO_PLAYBACK
-        g_renderManager.SetViewMode(++CMediaSettings::GetInstance().GetCurrentVideoSettings().m_ViewMode);
+        g_application.m_pPlayer->SetRenderViewMode(++CMediaSettings::GetInstance().GetCurrentVideoSettings().m_ViewMode);
 #endif
       }
       m_bShowViewModeInfo = true;
@@ -253,7 +247,7 @@ bool CGUIWindowFullScreen::OnAction(const CAction &action)
 
 void CGUIWindowFullScreen::ClearBackground()
 {
-  if (g_renderManager.IsVideoLayer())
+  if (g_application.m_pPlayer->IsRenderingVideoLayer())
 #ifdef HAS_IMXVPU
     g_graphicsContext.Clear((16 << 16)|(8 << 8)|16);
 #else
@@ -292,8 +286,6 @@ void CGUIWindowFullScreen::OnWindowLoaded()
     pLabel->SetVisible(true);
     pLabel->SetLabel("$INFO(VIDEOPLAYER.TIME) / $INFO(VIDEOPLAYER.DURATION)");
   }
-
-  m_showCodec.Parse("player.showcodec", GetID());
 }
 
 bool CGUIWindowFullScreen::OnMessage(CGUIMessage& message)
@@ -310,17 +302,12 @@ bool CGUIWindowFullScreen::OnMessage(CGUIMessage& message)
         return true;
       }
       g_infoManager.SetShowInfo(false);
-      g_infoManager.SetShowCodec(false);
       m_bShowCurrentTime = false;
       g_infoManager.SetDisplayAfterSeek(0); // Make sure display after seek is off.
 
       // switch resolution
       g_graphicsContext.SetFullScreenVideo(true);
 
-#ifdef HAS_VIDEO_PLAYBACK
-      // make sure renderer is uptospeed
-      g_renderManager.Update();
-#endif
       // now call the base class to load our windows
       CGUIWindow::OnMessage(message);
 
@@ -341,11 +328,6 @@ bool CGUIWindowFullScreen::OnMessage(CGUIMessage& message)
       g_graphicsContext.SetFullScreenVideo(false);
       lock.Leave();
 
-#ifdef HAS_VIDEO_PLAYBACK
-      // make sure renderer is uptospeed
-      g_renderManager.Update();
-      g_renderManager.FrameFinish();
-#endif
       return true;
     }
   case GUI_MSG_SETFOCUS:
@@ -381,68 +363,10 @@ void CGUIWindowFullScreen::FrameMove()
 {
   if (g_application.m_pPlayer->GetPlaySpeed() != 1)
     g_infoManager.SetDisplayAfterSeek();
-  if (m_bShowCurrentTime)
-    g_infoManager.SetDisplayAfterSeek();
 
-  if (!g_application.m_pPlayer->HasPlayer()) return;
+  if (!g_application.m_pPlayer->HasPlayer())
+    return;
 
-  if( g_application.m_pPlayer->IsCaching() )
-  {
-    g_infoManager.SetDisplayAfterSeek(0); //Make sure these stuff aren't visible now
-  }
-
-  //------------------------
-  m_showCodec.Update();
-  if (m_showCodec)
-  {
-    // show audio codec info
-    std::string strAudio, strVideo, strGeneral;
-    g_application.m_pPlayer->GetAudioInfo(strAudio);
-    {
-      CGUIMessage msg(GUI_MSG_LABEL_SET, GetID(), LABEL_ROW1);
-      msg.SetLabel(strAudio);
-      OnMessage(msg);
-    }
-    // show video codec info
-    g_application.m_pPlayer->GetVideoInfo(strVideo);
-    {
-      CGUIMessage msg(GUI_MSG_LABEL_SET, GetID(), LABEL_ROW2);
-      msg.SetLabel(strVideo);
-      OnMessage(msg);
-    }
-    // show general info
-    g_application.m_pPlayer->GetGeneralInfo(strGeneral);
-    {
-      std::string strGeneralFPS;
-#if defined(TARGET_DARWIN)
-      // We show CPU usage for the entire process, as it's arguably more useful.
-      double dCPU = m_resourceCounter.GetCPUUsage();
-      std::string strCores;
-      strCores = StringUtils::Format("cpu:%.0f%%", dCPU);
-#else
-      std::string strCores = g_cpuInfo.GetCoresUsageString();
-#endif
-      int    missedvblanks;
-      double refreshrate;
-      double clockspeed;
-      std::string strClock;
-
-      if (g_VideoReferenceClock.GetClockInfo(missedvblanks, clockspeed, refreshrate))
-        strClock = StringUtils::Format("S( refresh:%.3f missed:%i speed:%+.3f%% %s )"
-                                       , refreshrate
-                                       , missedvblanks
-                                       , clockspeed - 100.0
-                                       , g_renderManager.GetVSyncState().c_str());
-
-      strGeneralFPS = StringUtils::Format("%s\nW( %s )\n%s"
-                                          , strGeneral.c_str()
-                                          , strCores.c_str(), strClock.c_str() );
-
-      CGUIMessage msg(GUI_MSG_LABEL_SET, GetID(), LABEL_ROW3);
-      msg.SetLabel(strGeneralFPS);
-      OnMessage(msg);
-    }
-  }
   //----------------------
   // ViewMode Information
   //----------------------
@@ -457,7 +381,9 @@ void CGUIWindowFullScreen::FrameMove()
     {
       // get the "View Mode" string
       std::string strTitle = g_localizeStrings.Get(629);
-      std::string strMode = g_localizeStrings.Get(630 + CMediaSettings::GetInstance().GetCurrentVideoSettings().m_ViewMode);
+      const auto& settings = CMediaSettings::GetInstance().GetCurrentVideoSettings();
+      int sId = settings.m_ViewMode == ViewModeStretch16x9Nonlin ? 644 : 630 + settings.m_ViewMode;
+      std::string strMode = g_localizeStrings.Get(sId);
       std::string strInfo = StringUtils::Format("%s : %s", strTitle.c_str(), strMode.c_str());
       CGUIMessage msg(GUI_MSG_LABEL_SET, GetID(), LABEL_ROW1);
       msg.SetLabel(strInfo);
@@ -465,7 +391,7 @@ void CGUIWindowFullScreen::FrameMove()
     }
     // show sizing information
     SPlayerVideoStreamInfo info;
-    g_application.m_pPlayer->GetVideoStreamInfo(info);
+    g_application.m_pPlayer->GetVideoStreamInfo(CURRENT_STREAM,info);
     {
       // Splitres scaling factor
       float xscale = (float)res.iScreenWidth  / (float)res.iWidth;
@@ -532,7 +458,7 @@ void CGUIWindowFullScreen::FrameMove()
     OnMessage(msg);
   }
 
-  if (m_showCodec || m_bShowViewModeInfo)
+  if (m_bShowViewModeInfo)
   {
     SET_CONTROL_VISIBLE(LABEL_ROW1);
     SET_CONTROL_VISIBLE(LABEL_ROW2);
@@ -553,13 +479,11 @@ void CGUIWindowFullScreen::FrameMove()
     SET_CONTROL_HIDDEN(LABEL_ROW3);
     SET_CONTROL_HIDDEN(BLUE_BAR);
   }
-
-  g_renderManager.FrameMove();
 }
 
 void CGUIWindowFullScreen::Process(unsigned int currentTime, CDirtyRegionList &dirtyregion)
 {
-  if (g_renderManager.IsGuiLayer())
+  if (g_application.m_pPlayer->IsRenderingGuiLayer())
     MarkDirtyRegion();
 
   CGUIWindow::Process(currentTime, dirtyregion);
@@ -572,7 +496,7 @@ void CGUIWindowFullScreen::Process(unsigned int currentTime, CDirtyRegionList &d
 void CGUIWindowFullScreen::Render()
 {
   g_graphicsContext.SetRenderingResolution(g_graphicsContext.GetVideoResolution(), false);
-  g_renderManager.Render(true, 0, 255);
+  g_application.m_pPlayer->Render(true, 255);
   g_graphicsContext.SetRenderingResolution(m_coordsRes, m_needsScaling);
   CGUIWindow::Render();
 }
@@ -581,10 +505,7 @@ void CGUIWindowFullScreen::RenderEx()
 {
   CGUIWindow::RenderEx();
   g_graphicsContext.SetRenderingResolution(g_graphicsContext.GetVideoResolution(), false);
-#ifdef HAS_VIDEO_PLAYBACK
-  g_renderManager.Render(false, 0, 255, false);
-  g_renderManager.FrameFinish();
-#endif
+  g_application.m_pPlayer->Render(false, 255, false);
 }
 
 void CGUIWindowFullScreen::ChangetheTimeCode(int remote)

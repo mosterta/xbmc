@@ -137,6 +137,7 @@ public:
   static const std::string SETTING_VIDEOPLAYER_USEMMAL;
   static const std::string SETTING_VIDEOPLAYER_USESTAGEFRIGHT;
   static const std::string SETTING_VIDEOPLAYER_LIMITGUIUPDATE;
+  static const std::string SETTING_VIDEOPLAYER_SUPPORTMVC;
   static const std::string SETTING_MYVIDEOS_SELECTACTION;
   static const std::string SETTING_MYVIDEOS_EXTRACTFLAGS;
   static const std::string SETTING_MYVIDEOS_EXTRACTCHAPTERTHUMBS;
@@ -171,7 +172,6 @@ public:
   static const std::string SETTING_SCRAPERS_MOVIESDEFAULT;
   static const std::string SETTING_SCRAPERS_TVSHOWSDEFAULT;
   static const std::string SETTING_SCRAPERS_MUSICVIDEOSDEFAULT;
-  static const std::string SETTING_PVRMANAGER_ENABLED;
   static const std::string SETTING_PVRMANAGER_HIDECONNECTIONLOSTWARNING;
   static const std::string SETTING_PVRMANAGER_SYNCCHANNELGROUPS;
   static const std::string SETTING_PVRMANAGER_BACKENDCHANNELORDER;
@@ -215,7 +215,7 @@ public:
   static const std::string SETTING_PVRPARENTAL_PIN;
   static const std::string SETTING_PVRPARENTAL_DURATION;
   static const std::string SETTING_PVRCLIENT_MENUHOOK;
-  static const std::string SETTING_PVRTIMERS_TIMERTYPEFILTER;
+  static const std::string SETTING_PVRTIMERS_HIDEDISABLEDTIMERS;
   static const std::string SETTING_MUSICLIBRARY_SHOWCOMPILATIONARTISTS;
   static const std::string SETTING_MUSICLIBRARY_DOWNLOADINFO;
   static const std::string SETTING_MUSICLIBRARY_ALBUMSSCRAPER;
@@ -296,10 +296,10 @@ public:
   static const std::string SETTING_VIDEOSCREEN_BLANKDISPLAYS;
   static const std::string SETTING_VIDEOSCREEN_STEREOSCOPICMODE;
   static const std::string SETTING_VIDEOSCREEN_PREFEREDSTEREOSCOPICMODE;
-  static const std::string SETTING_VIDEOSCREEN_VSYNC;
   static const std::string SETTING_VIDEOSCREEN_GUICALIBRATION;
   static const std::string SETTING_VIDEOSCREEN_TESTPATTERN;
   static const std::string SETTING_VIDEOSCREEN_LIMITEDRANGE;
+  static const std::string SETTING_VIDEOSCREEN_FRAMEPACKING;
   static const std::string SETTING_AUDIOOUTPUT_AUDIODEVICE;
   static const std::string SETTING_AUDIOOUTPUT_CHANNELS;
   static const std::string SETTING_AUDIOOUTPUT_CONFIG;
@@ -321,10 +321,10 @@ public:
   static const std::string SETTING_AUDIOOUTPUT_DTSPASSTHROUGH;
   static const std::string SETTING_AUDIOOUTPUT_TRUEHDPASSTHROUGH;
   static const std::string SETTING_AUDIOOUTPUT_DTSHDPASSTHROUGH;
-  static const std::string SETTING_AUDIOOUTPUT_SUPPORTSDTSHDCPUDECODING;
+  static const std::string SETTING_AUDIOOUTPUT_VOLUMESTEPS;
   static const std::string SETTING_INPUT_PERIPHERALS;
   static const std::string SETTING_INPUT_ENABLEMOUSE;
-  static const std::string SETTING_INPUT_ENABLEJOYSTICK;
+  static const std::string SETTING_INPUT_CONTROLLERCONFIG;
   static const std::string SETTING_INPUT_APPLEREMOTEMODE;
   static const std::string SETTING_INPUT_APPLEREMOTEALWAYSON;
   static const std::string SETTING_INPUT_APPLEREMOTESEQUENCETIME;
@@ -360,8 +360,11 @@ public:
   static const std::string SETTING_CACHEDVD_LAN;
   static const std::string SETTING_CACHEUNKNOWN_INTERNET;
   static const std::string SETTING_SYSTEM_PLAYLISTSPATH;
-  static const std::string SETTING_GENERAL_ADDONUPDATES;
-  static const std::string SETTING_GENERAL_ADDONNOTIFICATIONS;
+  static const std::string SETTING_ADDONS_AUTOUPDATES;
+  static const std::string SETTING_ADDONS_NOTIFICATIONS;
+  static const std::string SETTING_ADDONS_SHOW_RUNNING;
+  static const std::string SETTING_ADDONS_MANAGE_DEPENDENCIES;
+  static const std::string SETTING_ADDONS_ALLOW_UNKNOWN_SOURCES;
   static const std::string SETTING_GENERAL_ADDONFOREIGNFILTER;
   static const std::string SETTING_GENERAL_ADDONBROKENFILTER;
 

@@ -30,7 +30,7 @@
   #include <linux/sockios.h>
 #endif
 #ifdef TARGET_ANDROID
-#include "android/bionic_supplement/bionic_supplement.h"
+#include "platform/android/bionic_supplement/bionic_supplement.h"
 #include "sys/system_properties.h"
 #include <sys/wait.h>
 #endif
@@ -201,7 +201,7 @@ std::string CNetworkInterfaceLinux::GetCurrentDefaultGateway(void)
 
 #if defined(TARGET_DARWIN)
   FILE* pipe = popen("echo \"show State:/Network/Global/IPv4\" | scutil | grep Router", "r");
-  Sleep(100);
+  usleep(100000);
   if (pipe)
   {
     std::string tmpStr;
@@ -279,7 +279,7 @@ std::string CNetworkInterfaceLinux::GetCurrentDefaultGateway(void)
          continue;
 
       // search where the word begins
-      n = sscanf(line,  "%16s %128s %128s",
+      n = sscanf(line,  "%15s %127s %127s",
          iface, dst, gateway);
 
       if (n < 3)
@@ -473,7 +473,7 @@ std::vector<std::string> CNetworkLinux::GetNameServers(void)
 
 #if defined(TARGET_DARWIN)
   FILE* pipe = popen("scutil --dns | grep \"nameserver\" | tail -n2", "r");
-  Sleep(100);
+  usleep(100000);
   if (pipe)
   {
     std::vector<std::string> tmpStr;

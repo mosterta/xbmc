@@ -27,12 +27,14 @@
 #include "PasswordManager.h"
 #include "SMBDirectory.h"
 #include <libsmbclient.h>
+#include "filesystem/SpecialProtocol.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/Settings.h"
 #include "threads/SingleLock.h"
 #include "utils/log.h"
 #include "Util.h"
 #include "utils/StringUtils.h"
+#include "utils/URIUtils.h"
 #include "utils/TimeUtils.h"
 #include "commons/Exception.h"
 
@@ -62,7 +64,6 @@ bool CSMB::IsFirstInit = true;
 
 CSMB::CSMB()
 {
-  m_IdleTimeout = 0;
   m_context = NULL;
 #ifdef TARGET_POSIX
   m_OpenConnections = 0;
@@ -97,10 +98,12 @@ void CSMB::Init()
     // http://us1.samba.org/samba/docs/man/manpages-3/libsmbclient.7.html
     // http://us1.samba.org/samba/docs/man/manpages-3/smb.conf.5.html
     char smb_conf[MAX_PATH];
-    snprintf(smb_conf, sizeof(smb_conf), "%s/.smb", getenv("HOME"));
+    std::string home = CSpecialProtocol::TranslatePath("special://home");
+    URIUtils::RemoveSlashAtEnd(home);
+    snprintf(smb_conf, sizeof(smb_conf), "%s/.smb", home.c_str());
     if (mkdir(smb_conf, 0755) == 0)
     {
-      snprintf(smb_conf, sizeof(smb_conf), "%s/.smb/smb.conf", getenv("HOME"));
+      snprintf(smb_conf, sizeof(smb_conf), "%s/.smb/smb.conf", home.c_str());
       FILE* f = fopen(smb_conf, "w");
       if (f != NULL)
       {
@@ -116,7 +119,7 @@ void CSMB::Init()
         fprintf(f, "\tlanman auth = yes\n");
 
         fprintf(f, "\tsocket options = TCP_NODELAY IPTOS_LOWDELAY SO_RCVBUF=65536 SO_SNDBUF=65536\n");      
-        fprintf(f, "\tlock directory = %s/.smb/\n", getenv("HOME"));
+        fprintf(f, "\tlock directory = %s/.smb/\n", home.c_str());
 
         // set wins server if there's one. name resolve order defaults to 'lmhosts host wins bcast'.
         // if no WINS server has been specified the wins method will be ignored.
@@ -301,6 +304,7 @@ CSMBFile::CSMBFile()
   smb.Init();
   m_fd = -1;
   smb.AddActiveConnection();
+  m_allowRetry = true;
 }
 
 CSMBFile::~CSMBFile()
@@ -511,7 +515,7 @@ ssize_t CSMBFile::Read(void *lpBuf, size_t uiBufSize)
 
   ssize_t bytesRead = smbc_read(m_fd, lpBuf, (int)uiBufSize);
 
-  if ( bytesRead < 0 && errno == EINVAL )
+  if (m_allowRetry && bytesRead < 0 && errno == EINVAL )
   {
     CLog::Log(LOGERROR, "%s - Error( %" PRIdS ", %d, %s ) - Retrying", __FUNCTION__, bytesRead, errno, strerror(errno));
     bytesRead = smbc_read(m_fd, lpBuf, (int)uiBufSize);
@@ -638,4 +642,18 @@ std::string CSMBFile::GetAuthenticatedPath(const CURL &url)
   CURL authURL(url);
   CPasswordManager::GetInstance().AuthenticateURL(authURL);
   return smb.URLEncode(authURL);
+}
+
+int CSMBFile::IoControl(EIoControl request, void* param)
+{
+  if (request == IOCTRL_SEEK_POSSIBLE)
+    return 1;
+
+  if (request == IOCTRL_SET_RETRY)
+  {
+    m_allowRetry = *(bool*) param;
+    return 0;
+  }
+
+  return -1;
 }

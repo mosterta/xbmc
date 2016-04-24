@@ -1,8 +1,3 @@
-#ifndef WINDOW_SYSTEM_X11_H
-#define WINDOW_SYSTEM_X11_H
-
-#pragma once
-
 /*
  *      Copyright (C) 2005-2013 Team XBMC
  *      http://xbmc.org
@@ -23,20 +18,15 @@
  *
  */
 
-#include "system_gl.h"
-
-#if defined(HAS_GLX)
-#include <GL/glx.h>
-#endif
-
-#if defined(HAS_EGL)
-#include <EGL/egl.h>
-#endif
+#pragma once
 
 #include "windowing/WinSystem.h"
 #include "utils/Stopwatch.h"
 #include "threads/CriticalSection.h"
+#include "threads/SystemClock.h"
 #include "settings/lib/ISettingCallback.h"
+#include "X11/Xlib.h"
+#include "X11/Xutil.h"
 
 class IDispResource;
 
@@ -47,42 +37,32 @@ public:
   virtual ~CWinSystemX11();
 
   // CWinSystemBase
-  virtual bool InitWindowSystem();
-  virtual bool DestroyWindowSystem();
-  virtual bool CreateNewWindow(const std::string& name, bool fullScreen, RESOLUTION_INFO& res, PHANDLE_EVENT_FUNC userFunction);
-  virtual bool DestroyWindow();
-  virtual bool ResizeWindow(int newWidth, int newHeight, int newLeft, int newTop);
-  virtual bool SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool blankOtherDisplays);
-  virtual void UpdateResolutions();
-  virtual int  GetNumScreens() { return 1; }
-  virtual int  GetCurrentScreen() { return m_nScreen; }
-  virtual void ShowOSMouse(bool show);
-  virtual void ResetOSScreensaver();
-  virtual bool EnableFrameLimiter();
-  virtual void EnableSystemScreenSaver(bool bEnable);
+  bool InitWindowSystem() override;
+  bool DestroyWindowSystem() override;
+  bool CreateNewWindow(const std::string& name, bool fullScreen, RESOLUTION_INFO& res, PHANDLE_EVENT_FUNC userFunction) override;
+  bool DestroyWindow() override;
+  bool ResizeWindow(int newWidth, int newHeight, int newLeft, int newTop) override;
+  bool SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool blankOtherDisplays) override;
+  void UpdateResolutions() override;
+  int  GetNumScreens() override { return 1; }
+  int  GetCurrentScreen() override { return m_nScreen; }
+  void ShowOSMouse(bool show) override;
+  void ResetOSScreensaver() override;
+  void EnableSystemScreenSaver(bool bEnable) override;
 
-  virtual void NotifyAppActiveChange(bool bActivated);
-  virtual void NotifyAppFocusChange(bool bGaining);
+  void NotifyAppActiveChange(bool bActivated) override;
+  void NotifyAppFocusChange(bool bGaining) override;
 
-  virtual bool Minimize();
-  virtual bool Restore() ;
-  virtual bool Hide();
-  virtual bool Show(bool raise = true);
+  bool Minimize() override;
+  bool Restore() override;
+  bool Hide() override;
+  bool Show(bool raise = true) override;
   virtual void Register(IDispResource *resource);
   virtual void Unregister(IDispResource *resource);
-  virtual bool HasCalibration(const RESOLUTION_INFO &resInfo);
+  bool HasCalibration(const RESOLUTION_INFO &resInfo) override;
 
   // Local to WinSystemX11 only
   Display*  GetDisplay() { return m_dpy; }
-#if defined(HAS_GLX)
-  GLXWindow GetWindow() { return m_glWindow; }
-  GLXContext GetGlxContext() { return m_glContext; }
-#endif
-#if defined(HAS_EGL)
-  EGLDisplay GetEGLDisplay() const { return m_eglDisplay;}
-  EGLSurface GetEGLSurface() const { return m_eglSurface;}
-  EGLContext GetEGLContext() const { return m_eglContext;}
-#endif
   void NotifyXRREvent();
   void GetConnectedOutputs(std::vector<std::string> *outputs);
   bool IsCurrentOutput(std::string output);
@@ -90,34 +70,27 @@ public:
   int GetCrtc() { return m_crtc; }
 
 protected:
-  bool RefreshGlxContext(bool force);
-  void OnLostDevice();
-  bool SetWindow(int width, int height, bool fullscreen, const std::string &output);
+  virtual bool SetWindow(int width, int height, bool fullscreen, const std::string &output, int *winstate = NULL) = 0;
+  virtual XVisualInfo* GetVisual() = 0;
 
-  Window       m_glWindow, m_mainWindow;
-#if defined(HAS_GLX)
-  GLXContext   m_glContext;
-#endif
-#if defined(HAS_EGL)
-  EGLDisplay            m_eglDisplay;
-  EGLSurface            m_eglSurface;
-  EGLContext            m_eglContext;
-  EGLConfig             m_eglConfig;
-#endif
-  Display*     m_dpy;
-  Cursor       m_invisibleCursor;
-  Pixmap       m_icon;
-  bool         m_bIsRotated;
-  bool         m_bWasFullScreenBeforeMinimize;
-  bool         m_minimized;
-  bool         m_bIgnoreNextFocusMessage;
-  CCriticalSection             m_resourceSection;
+  void OnLostDevice();
+
+  Window m_glWindow, m_mainWindow;
+  Display *m_dpy;
+  Cursor m_invisibleCursor;
+  Pixmap m_icon;
+  bool m_bIsRotated;
+  bool m_bWasFullScreenBeforeMinimize;
+  bool m_minimized;
+  bool m_bIgnoreNextFocusMessage;
+  CCriticalSection m_resourceSection;
   std::vector<IDispResource*>  m_resources;
-  std::string                  m_currentOutput;
-  std::string                  m_userOutput;
-  bool                         m_windowDirty;
-  bool                         m_bIsInternalXrr;
-  bool                         m_newGlContext;
+  bool m_delayDispReset;
+  XbmcThreads::EndTime m_dispResetTimer;
+  std::string m_currentOutput;
+  std::string m_userOutput;
+  bool m_windowDirty;
+  bool m_bIsInternalXrr;
   int m_MouseX, m_MouseY;
   int m_crtc;
 
@@ -130,6 +103,3 @@ private:
 
   CStopWatch m_screensaverReset;
 };
-
-#endif // WINDOW_SYSTEM_H
-

@@ -559,11 +559,11 @@ bool CGUIDialogAudioDSPManager::OnContextButton(int itemNumber, CONTEXT_BUTTON b
     * Open audio dsp addon mode help text dialog
     */
     AE_DSP_ADDON addon;
-    if (CActiveAEDSP::GetInstance().GetAudioDSPAddon((int)pItem->GetProperty("AddonId").asInteger(), addon))
+    if (CServiceBroker::GetADSP().GetAudioDSPAddon((int)pItem->GetProperty("AddonId").asInteger(), addon))
     {
       CGUIDialogTextViewer* pDlgInfo = (CGUIDialogTextViewer*)g_windowManager.GetWindow(WINDOW_DIALOG_TEXT_VIEWER);
       pDlgInfo->SetHeading(g_localizeStrings.Get(15062) + " - " + pItem->GetProperty("Name").asString());
-      pDlgInfo->SetText(addon->GetString((uint32_t)pItem->GetProperty("Help").asInteger()));
+      pDlgInfo->SetText(g_localizeStrings.GetAddonString(addon->ID(), (uint32_t)pItem->GetProperty("Help").asInteger()));
       pDlgInfo->Open();
     }
   }
@@ -655,7 +655,7 @@ bool CGUIDialogAudioDSPManager::OnContextButton(int itemNumber, CONTEXT_BUTTON b
     if (hookId > 0)
     {
       AE_DSP_ADDON addon;
-      if (CActiveAEDSP::GetInstance().GetAudioDSPAddon((int)pItem->GetProperty("AddonId").asInteger(), addon))
+      if (CServiceBroker::GetADSP().GetAudioDSPAddon((int)pItem->GetProperty("AddonId").asInteger(), addon))
       {
         AE_DSP_MENUHOOK       hook;
         AE_DSP_MENUHOOK_DATA  hookData;
@@ -792,7 +792,7 @@ void CGUIDialogAudioDSPManager::SaveList(void)
   /* persist all modes */
   if (UpdateDatabase(pDlgBusy))
   {
-    CActiveAEDSP::GetInstance().TriggerModeUpdate();
+    CServiceBroker::GetADSP().TriggerModeUpdate();
 
     m_bContainsChanges = false;
     SetItemsUnchanged();
@@ -959,23 +959,23 @@ CFileItem *CGUIDialogAudioDSPManager::helper_CreateModeListItem(CActiveAEDSPMode
   const int AddonID = ModePointer->AddonID();
 
   std::string addonName;
-  if (!CActiveAEDSP::GetInstance().GetAudioDSPAddonName(AddonID, addonName))
+  if (!CServiceBroker::GetADSP().GetAudioDSPAddonName(AddonID, addonName))
   {
     return pItem;
   }
 
   AE_DSP_ADDON addon;
-  if (!CActiveAEDSP::GetInstance().GetAudioDSPAddon(AddonID, addon))
+  if (!CServiceBroker::GetADSP().GetAudioDSPAddon(AddonID, addon))
   {
     return pItem;
   }
 
-  std::string modeName = addon->GetString(ModePointer->ModeName());
+  std::string modeName = g_localizeStrings.GetAddonString(addon->ID(), ModePointer->ModeName());
 
   std::string description;
   if (ModePointer->ModeDescription() > -1)
   {
-    description = addon->GetString(ModePointer->ModeDescription());
+    description = g_localizeStrings.GetAddonString(addon->ID(), ModePointer->ModeDescription());
   }
   else
   {
@@ -1033,7 +1033,7 @@ int CGUIDialogAudioDSPManager::helper_GetDialogId(CActiveAEDSPModePtr &ModePoint
     AE_DSP_MENUHOOKS hooks;
 
     // Find first general settings dialog about mode
-    if (CActiveAEDSP::GetInstance().GetMenuHooks(ModePointer->AddonID(), AE_DSP_MENUHOOK_SETTING, hooks))
+    if (CServiceBroker::GetADSP().GetMenuHooks(ModePointer->AddonID(), AE_DSP_MENUHOOK_SETTING, hooks))
     {
       for (unsigned int i = 0; i < hooks.size() && dialogId == 0; i++)
       {
@@ -1045,7 +1045,7 @@ int CGUIDialogAudioDSPManager::helper_GetDialogId(CActiveAEDSPModePtr &ModePoint
     }
 
     // If nothing was present, check for playback settings
-    if (dialogId == 0 && CActiveAEDSP::GetInstance().GetMenuHooks(ModePointer->AddonID(), MenuHook, hooks))
+    if (dialogId == 0 && CServiceBroker::GetADSP().GetMenuHooks(ModePointer->AddonID(), MenuHook, hooks))
     {
       for (unsigned int i = 0; i < hooks.size() && (dialogId == 0 || dialogId != -1); i++)
       {
@@ -1066,7 +1066,7 @@ int CGUIDialogAudioDSPManager::helper_GetDialogId(CActiveAEDSPModePtr &ModePoint
     if (dialogId == 0)
       CLog::Log(LOGERROR, "DSP Dialog Manager - %s - Present marked settings dialog of mode %s on addon %s not found",
                             __FUNCTION__,
-                            Addon->GetString(ModePointer->ModeName()).c_str(),
+                            g_localizeStrings.GetAddonString(Addon->ID(), ModePointer->ModeName()).c_str(),
                             AddonName.c_str());
   }
 

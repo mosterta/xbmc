@@ -23,7 +23,7 @@
 #include <cstdlib>
 #include <utility>
 
-#include "cores/dvdplayer/DVDFileInfo.h"
+#include "cores/VideoPlayer/DVDFileInfo.h"
 #include "FileItem.h"
 #include "filesystem/DirectoryCache.h"
 #include "filesystem/StackDirectory.h"
@@ -131,7 +131,9 @@ bool CThumbExtractor::DoWork()
       }
     }
   }
-  else if (!m_item.HasVideoInfoTag() || !m_item.GetVideoInfoTag()->HasStreamDetails())
+  else if (!m_item.IsPlugin() &&
+           (!m_item.HasVideoInfoTag() ||
+           !m_item.GetVideoInfoTag()->HasStreamDetails()))
   {
     // No tag or no details set, so extract them
     CLog::Log(LOGDEBUG,"%s - trying to extract filestream details from video file %s", __FUNCTION__, CURL::GetRedacted(m_item.GetPath()).c_str());

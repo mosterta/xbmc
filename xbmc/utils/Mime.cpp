@@ -50,6 +50,7 @@ std::map<std::string, std::string> fillMimeTypes()
   mimeTypes.insert(std::pair<std::string, std::string>("aip",       "text/x-audiosoft-intra"));
   mimeTypes.insert(std::pair<std::string, std::string>("ani",       "application/x-navi-animation"));
   mimeTypes.insert(std::pair<std::string, std::string>("aos",       "application/x-nokia-9000-communicator-add-on-software"));
+  mimeTypes.insert(std::pair<std::string, std::string>("apng",      "image/apng"));
   mimeTypes.insert(std::pair<std::string, std::string>("aps",       "application/mime"));
   mimeTypes.insert(std::pair<std::string, std::string>("arc",       "application/octet-stream"));
   mimeTypes.insert(std::pair<std::string, std::string>("arj",       "application/arj"));
@@ -188,6 +189,7 @@ std::map<std::string, std::string> fillMimeTypes()
   mimeTypes.insert(std::pair<std::string, std::string>("java",      "text/x-java-source"));
   mimeTypes.insert(std::pair<std::string, std::string>("jcm",       "application/x-java-commerce"));
   mimeTypes.insert(std::pair<std::string, std::string>("jfif",      "image/jpeg"));
+  mimeTypes.insert(std::pair<std::string, std::string>("jp2",       "image/jp2"));
   mimeTypes.insert(std::pair<std::string, std::string>("jfif-tbnl", "image/jpeg"));
   mimeTypes.insert(std::pair<std::string, std::string>("jpe",       "image/jpeg"));
   mimeTypes.insert(std::pair<std::string, std::string>("jpeg",      "image/jpeg"));
@@ -389,6 +391,7 @@ std::map<std::string, std::string> fillMimeTypes()
   mimeTypes.insert(std::pair<std::string, std::string>("step",      "application/step"));
   mimeTypes.insert(std::pair<std::string, std::string>("stl",       "application/sla"));
   mimeTypes.insert(std::pair<std::string, std::string>("stp",       "application/step"));
+  mimeTypes.insert(std::pair<std::string, std::string>("sup",       "application/x-pgs"));
   mimeTypes.insert(std::pair<std::string, std::string>("sv4cpio",   "application/x-sv4cpio"));
   mimeTypes.insert(std::pair<std::string, std::string>("sv4crc",    "application/x-sv4crc"));
   mimeTypes.insert(std::pair<std::string, std::string>("svf",       "image/vnd.dwg"));
@@ -450,6 +453,7 @@ std::map<std::string, std::string> fillMimeTypes()
   mimeTypes.insert(std::pair<std::string, std::string>("wb1",       "application/x-qpro"));
   mimeTypes.insert(std::pair<std::string, std::string>("wbmp",      "image/vnd.wap.wbmp"));
   mimeTypes.insert(std::pair<std::string, std::string>("web",       "application/vnd.xara"));
+  mimeTypes.insert(std::pair<std::string, std::string>("webp",      "image/webp"));
   mimeTypes.insert(std::pair<std::string, std::string>("wiz",       "application/msword"));
   mimeTypes.insert(std::pair<std::string, std::string>("wk1",       "application/x-123"));
   mimeTypes.insert(std::pair<std::string, std::string>("wma",       "audio/x-ms-wma"));

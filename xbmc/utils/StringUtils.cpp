@@ -33,7 +33,7 @@
 #include "StringUtils.h"
 #include "CharsetConverter.h"
 #if defined(TARGET_ANDROID)
-#include "android/jni/JNIThreading.h"
+#include "platform/android/jni/JNIThreading.h"
 #endif
 #include "utils/fstrcmp.h"
 #include "Util.h"
@@ -403,6 +403,10 @@ void StringUtils::ToCapitalize(std::wstring &str)
 
 bool StringUtils::EqualsNoCase(const std::string &str1, const std::string &str2)
 {
+  // before we do the char-by-char comparison, first compare sizes of both strings.
+  // This led to a 33% improvement in benchmarking on average. (size() just returns a member of std::string)
+  if (str1.size() != str2.size())
+    return false;
   return EqualsNoCase(str1.c_str(), str2.c_str());
 }
 
@@ -510,6 +514,17 @@ std::string& StringUtils::TrimRight(std::string &str, const char* const chars)
   size_t nidx = str.find_last_not_of(chars);
   str.erase(str.npos == nidx ? 0 : ++nidx);
   return str;
+}
+
+int StringUtils::ReturnDigits(const std::string& str)
+{
+  std::stringstream ss;
+  for (const auto& character : str)
+  {
+    if (isdigit(character))
+      ss << character;
+  }
+  return atoi(ss.str().c_str());
 }
 
 std::string& StringUtils::RemoveDuplicatedSpacesAndTabs(std::string& str)
@@ -744,6 +759,28 @@ std::vector<std::string> StringUtils::Split(const std::string& input, const char
   return results;
 }
 
+std::vector<std::string> StringUtils::SplitMulti(const std::string& input, const char* delimiters, size_t iMaxStrings /*= 0*/)
+{
+  std::vector<std::string> results;
+  if (input.empty())
+    return results;
+
+  size_t nextDelim;
+  size_t textPos = 0;
+  do
+  {
+    if (--iMaxStrings == 0)
+    {
+      results.push_back(input.substr(textPos));
+      break;
+    }
+    nextDelim = input.find_first_of(delimiters, textPos);
+    results.push_back(input.substr(textPos, nextDelim - textPos));
+    textPos = nextDelim + 1;
+  } while (nextDelim != std::string::npos);
+
+  return results;
+}
 
 // returns the number of occurrences of strFind in strInput.
 int StringUtils::FindNumber(const std::string& strInput, const std::string &strFind)
@@ -870,13 +907,13 @@ std::string StringUtils::SecondsToTimeString(long lSeconds, TIME_FORMAT format)
     format = (hh >= 1) ? TIME_FORMAT_HH_MM_SS : TIME_FORMAT_MM_SS;
   std::string strHMS;
   if (format & TIME_FORMAT_HH)
-    strHMS += StringUtils::Format("%02.2i", hh);
+    strHMS += StringUtils::Format("%2.2i", hh);
   else if (format & TIME_FORMAT_H)
     strHMS += StringUtils::Format("%i", hh);
   if (format & TIME_FORMAT_MM)
-    strHMS += StringUtils::Format(strHMS.empty() ? "%02.2i" : ":%02.2i", mm);
+    strHMS += StringUtils::Format(strHMS.empty() ? "%2.2i" : ":%2.2i", mm);
   if (format & TIME_FORMAT_SS)
-    strHMS += StringUtils::Format(strHMS.empty() ? "%02.2i" : ":%02.2i", ss);
+    strHMS += StringUtils::Format(strHMS.empty() ? "%2.2i" : ":%2.2i", ss);
   return strHMS;
 }
 

@@ -22,13 +22,11 @@
 #include <memory>
 #include <utility>
 
-#include "addons/include/xbmc_pvr_types.h"
+#include "addons/kodi-addon-dev-kit/include/kodi/xbmc_pvr_types.h"
 #include "FileItem.h"
 #include "threads/CriticalSection.h"
 #include "utils/ISerializable.h"
 #include "utils/Observer.h"
-
-#define PVR_INVALID_CHANNEL_UID -1
 
 class CVariant;
 
@@ -304,7 +302,7 @@ namespace PVR
      *
      * The stream input type
      * If it is empty, ffmpeg will try to scan the stream to find the right input format.
-     * See "xbmc/cores/dvdplayer/Codecs/ffmpeg/libavformat/allformats.c" for a
+     * See "xbmc/cores/VideoPlayer/Codecs/ffmpeg/libavformat/allformats.c" for a
      * list of the input formats.
      *
      * @return The stream input type

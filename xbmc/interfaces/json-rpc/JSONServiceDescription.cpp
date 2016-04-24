@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2013 Team XBMC
- *      http://xbmc.org
+ *      Copyright (C) 2016 Team Kodi
+ *      http://kodi.tv
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with XBMC; see the file COPYING.  If not, see
+ *  along with Kodi; see the file COPYING.  If not, see
  *  <http://www.gnu.org/licenses/>.
  *
  */
@@ -80,6 +80,7 @@ JsonRpcMethodMap CJSONServiceDescription::m_methodMaps[] = {
   
   { "Player.SetAudioStream",                        CPlayerOperations::SetAudioStream },
   { "Player.SetSubtitle",                           CPlayerOperations::SetSubtitle },
+  { "Player.SetVideoStream",                        CPlayerOperations::SetVideoStream },
 
 // Playlist
   { "Playlist.GetPlaylists",                        CPlaylistOperations::GetPlaylists },
@@ -95,10 +96,12 @@ JsonRpcMethodMap CJSONServiceDescription::m_methodMaps[] = {
   { "Files.GetSources",                             CFileOperations::GetRootDirectory },
   { "Files.GetDirectory",                           CFileOperations::GetDirectory },
   { "Files.GetFileDetails",                         CFileOperations::GetFileDetails },
+  { "Files.SetFileDetails",                         CFileOperations::SetFileDetails },
   { "Files.PrepareDownload",                        CFileOperations::PrepareDownload },
   { "Files.Download",                               CFileOperations::Download },
 
 // Music Library
+  { "AudioLibrary.GetProperties",                   CAudioLibrary::GetProperties },
   { "AudioLibrary.GetArtists",                      CAudioLibrary::GetArtists },
   { "AudioLibrary.GetArtistDetails",                CAudioLibrary::GetArtistDetails },
   { "AudioLibrary.GetAlbums",                       CAudioLibrary::GetAlbums },
@@ -110,6 +113,7 @@ JsonRpcMethodMap CJSONServiceDescription::m_methodMaps[] = {
   { "AudioLibrary.GetRecentlyPlayedAlbums",         CAudioLibrary::GetRecentlyPlayedAlbums },
   { "AudioLibrary.GetRecentlyPlayedSongs",          CAudioLibrary::GetRecentlyPlayedSongs },
   { "AudioLibrary.GetGenres",                       CAudioLibrary::GetGenres },
+  { "AudioLibrary.GetRoles",                        CAudioLibrary::GetRoles },
   { "AudioLibrary.SetArtistDetails",                CAudioLibrary::SetArtistDetails },
   { "AudioLibrary.SetAlbumDetails",                 CAudioLibrary::SetAlbumDetails },
   { "AudioLibrary.SetSongDetails",                  CAudioLibrary::SetSongDetails },
@@ -134,6 +138,7 @@ JsonRpcMethodMap CJSONServiceDescription::m_methodMaps[] = {
   { "VideoLibrary.GetRecentlyAddedMovies",          CVideoLibrary::GetRecentlyAddedMovies },
   { "VideoLibrary.GetRecentlyAddedEpisodes",        CVideoLibrary::GetRecentlyAddedEpisodes },
   { "VideoLibrary.GetRecentlyAddedMusicVideos",     CVideoLibrary::GetRecentlyAddedMusicVideos },
+  { "VideoLibrary.GetInProgressTVShows",            CVideoLibrary::GetInProgressTVShows },
   { "VideoLibrary.SetMovieDetails",                 CVideoLibrary::SetMovieDetails },
   { "VideoLibrary.SetMovieSetDetails",              CVideoLibrary::SetMovieSetDetails },
   { "VideoLibrary.SetTVShowDetails",                CVideoLibrary::SetTVShowDetails },
@@ -178,6 +183,9 @@ JsonRpcMethodMap CJSONServiceDescription::m_methodMaps[] = {
   { "PVR.GetTimerDetails",                          CPVROperations::GetTimerDetails },
   { "PVR.GetRecordings",                            CPVROperations::GetRecordings },
   { "PVR.GetRecordingDetails",                      CPVROperations::GetRecordingDetails },
+  { "PVR.AddTimer",                                 CPVROperations::AddTimer },
+  { "PVR.DeleteTimer",                              CPVROperations::DeleteTimer },
+  { "PVR.ToggleTimer",                              CPVROperations::ToggleTimer },
   { "PVR.Record",                                   CPVROperations::Record },
   { "PVR.Scan",                                     CPVROperations::Scan },
 

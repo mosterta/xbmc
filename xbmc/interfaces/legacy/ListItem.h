@@ -190,10 +190,12 @@ namespace XBMCAddon
        *     - date          : string (%d.%m.%Y / 01.01.2009) - file date
        * - Video Values:
        *     - genre         : string (Comedy)
+       *     - country       : string (Germany)
        *     - year          : integer (2009)
        *     - episode       : integer (4)
        *     - season        : integer (1)
        *     - top250        : integer (192)
+       *     - setid         : integer (14)
        *     - tracknumber   : integer (3)
        *     - rating        : float (6.4) - range is 0..10
        *     - userrating    : integer (9) - range is 1..10
@@ -216,7 +218,9 @@ namespace XBMCAddon
        *     - tvshowtitle   : string (Heroes)
        *     - premiered     : string (2005-03-04)
        *     - status        : string (Continuing) - status of a TVshow
-       *     - code          : string (tt0110293) - IMDb code
+       *     - set           : string (Batman Collection) - name of the collection
+       *     - imdbnumber    : string (tt0110293) - IMDb code
+       *     - code          : string (101) - Production code
        *     - aired         : string (2008-12-07)
        *     - credits       : string (Andy Kaufman) - writing credits
        *     - lastplayed    : string (%Y-%m-%d %h:%m:%s = 2009-04-05 23:16:04)
@@ -235,10 +239,12 @@ namespace XBMCAddon
        *     - album         : string (Pulse)
        *     - artist        : string (Muse)
        *     - title         : string (American Pie)
-       *     - rating        : string (3) - single character between 0 and 5
+       *     - rating        : float - range is between 0 and 10
+       *     - userrating    : integer - range is 1..10
        *     - lyrics        : string (On a dark desert highway...)
        *     - playcount     : integer (2) - number of times this item has been played
        *     - lastplayed    : string (%Y-%m-%d %h:%m:%s = 2009-04-05 23:16:04)
+       *     - mediatype     : string - "music", "song", "album", "artist"
        * - Picture Values:
        *     - title         : string (In the last summer-1)
        *     - picturepath   : string (/home/username/pictures/img001.jpg)
@@ -279,7 +285,7 @@ namespace XBMCAddon
        * items               : list - [(label, action,)*] A list of tuples consisting of label and action pairs.
        *   - label           : string or unicode - item's label.
        *   - action          : string or unicode - any built-in function to perform.
-       * replaceItems        : [opt] bool - True=only your items will show/False=your items will be added to context menu(Default).
+       * replaceItems        : [opt] bool - Deprecated.
        * \n
        * List of functions - http://kodi.wiki/view/List_of_Built_In_Functions \n
        * \n

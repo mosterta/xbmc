@@ -23,7 +23,8 @@
 #include "CoreAudioChannelLayout.h"
 #include "CoreAudioHardware.h"
 #include "utils/log.h"
-#include "osx/DarwinUtils.h"
+#include "platform/darwin/DarwinUtils.h"
+#include <unistd.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CCoreAudioDevice
@@ -201,7 +202,7 @@ bool CCoreAudioDevice::RemoveIOProc()
 
   m_IoProc = NULL; // Clear the reference no matter what
 
-  Sleep(100);
+  usleep(100000);
 
   return true;
 }

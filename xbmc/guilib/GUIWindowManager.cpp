@@ -1,5 +1,5 @@
 /*
- *      Copyright (C) 2005-2015 Team XBMC
+ *      Copyright (C) 2005-2015 Team Kodi
  *      http://kodi.tv
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -73,7 +73,6 @@
 #include "video/windows/GUIWindowFullScreen.h"
 #include "video/dialogs/GUIDialogVideoOSD.h"
 
-
 // Dialog includes
 #include "music/dialogs/GUIDialogMusicOSD.h"
 #include "music/dialogs/GUIDialogVisualisationPresetList.h"
@@ -96,7 +95,6 @@
 #include "dialogs/GUIDialogSeekBar.h"
 #include "dialogs/GUIDialogKaiToast.h"
 #include "dialogs/GUIDialogVolumeBar.h"
-#include "dialogs/GUIDialogMuteBug.h"
 #include "dialogs/GUIDialogNumeric.h"
 #include "dialogs/GUIDialogGamepad.h"
 #include "dialogs/GUIDialogSubMenu.h"
@@ -120,6 +118,7 @@
 #include "pvr/windows/GUIWindowPVRRecordings.h"
 #include "pvr/windows/GUIWindowPVRGuide.h"
 #include "pvr/windows/GUIWindowPVRTimers.h"
+#include "pvr/windows/GUIWindowPVRTimerRules.h"
 #include "pvr/windows/GUIWindowPVRSearch.h"
 #include "pvr/dialogs/GUIDialogPVRChannelManager.h"
 #include "pvr/dialogs/GUIDialogPVRChannelsOSD.h"
@@ -140,7 +139,10 @@
 #include "settings/dialogs/GUIDialogAudioDSPSettings.h"
 
 #include "peripherals/dialogs/GUIDialogPeripheralSettings.h"
-#include "addons/AddonCallbacksGUI.h"
+#include "addons/binary/interfaces/AddonInterfaces.h"
+
+/* Game related include files */
+#include "games/controllers/windows/GUIControllerWindow.h"
 
 using namespace PVR;
 using namespace PERIPHERALS;
@@ -205,7 +207,6 @@ void CGUIWindowManager::CreateWindows()
   Add(new CGUIDialogNumeric);
   Add(new CGUIDialogGamepad);
   Add(new CGUIDialogButtonMenu);
-  Add(new CGUIDialogMuteBug);
   Add(new CGUIDialogPlayerControls);
   Add(new CGUIDialogSlider);
   Add(new CGUIDialogMusicOSD);
@@ -250,11 +251,13 @@ void CGUIWindowManager::CreateWindows()
   Add(new CGUIWindowPVRRecordings(false));
   Add(new CGUIWindowPVRGuide(false));
   Add(new CGUIWindowPVRTimers(false));
+  Add(new CGUIWindowPVRTimerRules(false));
   Add(new CGUIWindowPVRSearch(false));
   Add(new CGUIWindowPVRChannels(true));
   Add(new CGUIWindowPVRRecordings(true));
   Add(new CGUIWindowPVRGuide(true));
   Add(new CGUIWindowPVRTimers(true));
+  Add(new CGUIWindowPVRTimerRules(true));
   Add(new CGUIDialogPVRRadioRDSInfo);
   Add(new CGUIWindowPVRSearch(true));
   Add(new CGUIDialogPVRGuideInfo);
@@ -285,6 +288,8 @@ void CGUIWindowManager::CreateWindows()
   Add(new CGUIWindowSplash);
 
   Add(new CGUIWindowEventLog);
+
+  Add(new GAME::CGUIControllerWindow);
 }
 
 bool CGUIWindowManager::DestroyWindows()
@@ -342,11 +347,13 @@ bool CGUIWindowManager::DestroyWindows()
     Delete(WINDOW_TV_RECORDINGS);
     Delete(WINDOW_TV_GUIDE);
     Delete(WINDOW_TV_TIMERS);
+    Delete(WINDOW_TV_TIMER_RULES);
     Delete(WINDOW_TV_SEARCH);
     Delete(WINDOW_RADIO_CHANNELS);
     Delete(WINDOW_RADIO_RECORDINGS);
     Delete(WINDOW_RADIO_GUIDE);
     Delete(WINDOW_RADIO_TIMERS);
+    Delete(WINDOW_RADIO_TIMER_RULES);
     Delete(WINDOW_RADIO_SEARCH);
     Delete(WINDOW_DIALOG_PVR_GUIDE_INFO);
     Delete(WINDOW_DIALOG_PVR_RECORDING_INFO);
@@ -385,6 +392,7 @@ bool CGUIWindowManager::DestroyWindows()
     Delete(WINDOW_PROGRAMS);
     Delete(WINDOW_PICTURES);
     Delete(WINDOW_WEATHER);
+    Delete(WINDOW_DIALOG_GAME_CONTROLLERS);
 
     Delete(WINDOW_SETTINGS_MYPICTURES);
     Remove(WINDOW_SETTINGS_MYPROGRAMS);
@@ -808,7 +816,14 @@ void CGUIWindowManager::ActivateWindow_Internal(int iWindowID, const std::vector
 void CGUIWindowManager::CloseDialogs(bool forceClose) const
 {
   CSingleLock lock(g_graphicsContext);
-  for (const auto& dialog : m_activeDialogs)
+
+  //This is to avoid an assert about out of bounds iterator
+  //when m_activeDialogs happens to be empty
+  if (m_activeDialogs.empty())
+    return;
+
+  auto activeDialogs = m_activeDialogs;
+  for (const auto& dialog : activeDialogs)
   {
     dialog->Close(forceClose);
   }
@@ -817,7 +832,11 @@ void CGUIWindowManager::CloseDialogs(bool forceClose) const
 void CGUIWindowManager::CloseInternalModalDialogs(bool forceClose) const
 {
   CSingleLock lock(g_graphicsContext);
-  for (const auto& dialog : m_activeDialogs)
+  if (m_activeDialogs.empty())
+    return;
+
+  auto activeDialogs = m_activeDialogs;
+  for (const auto& dialog : activeDialogs)
   {
     if (dialog->IsModalDialog() && !IsAddonWindow(dialog->GetID()) && !IsPythonWindow(dialog->GetID()))
       dialog->Close(forceClose);
@@ -858,8 +877,8 @@ void CGUIWindowManager::OnApplicationMessage(ThreadMessage* pMsg)
   case TMSG_GUI_ADDON_DIALOG:
   {
     if (pMsg->lpVoid)
-    { // TODO: This is ugly - really these python dialogs should just be normal XBMC dialogs
-      static_cast<ADDON::CGUIAddonWindowDialog *>(pMsg->lpVoid)->Show_Internal(pMsg->param2 > 0);
+    {
+      ADDON::CAddonInterfaces::OnApplicationMessage(pMsg);
     }
   }
   break;
@@ -1044,7 +1063,7 @@ void CGUIWindowManager::RenderEx() const
 bool CGUIWindowManager::Render()
 {
   assert(g_application.IsCurrentThread());
-  CSingleLock lock(g_graphicsContext);
+  CSingleExit lock(g_graphicsContext);
 
   CDirtyRegionList dirtyRegions = m_tracker.GetDirtyRegions();
 
@@ -1057,7 +1076,7 @@ bool CGUIWindowManager::Render()
   }
   else if (g_advancedSettings.m_guiAlgorithmDirtyRegions == DIRTYREGION_SOLVER_FILL_VIEWPORT_ON_CHANGE)
   {
-    if (dirtyRegions.size() > 0)
+    if (!dirtyRegions.empty())
     {
       RenderPass();
       hasRendered = true;
@@ -1232,7 +1251,7 @@ bool CGUIWindowManager::HasModalDialog(const std::vector<DialogModalityType>& ty
         (*it)->IsModalDialog() &&
         !(*it)->IsAnimating(ANIM_TYPE_WINDOW_CLOSE))
     {
-      if (types.size() > 0)
+      if (!types.empty())
       {
         CGUIDialog *dialog = static_cast<CGUIDialog*>(*it);
         for (const auto &type : types)

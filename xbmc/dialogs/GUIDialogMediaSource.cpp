@@ -39,9 +39,10 @@
 #include "guilib/LocalizeStrings.h"
 #include "PasswordManager.h"
 #include "URL.h"
+#include "pvr/recordings/PVRRecordingsPath.h"
 
 #if defined(TARGET_ANDROID)
-#include "android/activity/XBMCApp.h"
+#include "platform/android/activity/XBMCApp.h"
 #include "filesystem/File.h"
 #endif
 
@@ -229,7 +230,6 @@ void CGUIDialogMediaSource::OnPathBrowse(int item)
   if (m_name != CUtil::GetTitleFromPath(m_paths->Get(item)->GetPath()))
     m_bNameChanged = true;
 
-  std::string strStreams = g_localizeStrings.Get(33039); //"% Streams"
   std::string strDevices = g_localizeStrings.Get(33040); //"% Devices"
 
   if (m_type == "music")
@@ -253,9 +253,19 @@ void CGUIDialogMediaSource::OnPathBrowse(int item)
     share1.m_ignore = true;
     extraShares.push_back(share1);
 
-    share1.strPath = "sap://";
-    share1.strName = StringUtils::Format(strStreams.c_str(), "SAP"); //"SAP Streams"
-    extraShares.push_back(share1);
+    // add the recordings dir as needed
+    if (CPVRDirectory::HasRadioRecordings())
+    {
+      share1.strPath = PVR::CPVRRecordingsPath::PATH_ACTIVE_RADIO_RECORDINGS;
+      share1.strName = g_localizeStrings.Get(19017); // Recordings
+      extraShares.push_back(share1);
+    }
+    if (CPVRDirectory::HasDeletedRadioRecordings())
+    {
+      share1.strPath = PVR::CPVRRecordingsPath::PATH_DELETED_RADIO_RECORDINGS;
+      share1.strName = g_localizeStrings.Get(19184); // Deleted recordings
+      extraShares.push_back(share1);
+    }
 
     if (CSettings::GetInstance().GetString(CSettings::SETTING_AUDIOCDS_RECORDINGPATH) != "")
     {
@@ -285,21 +295,17 @@ void CGUIDialogMediaSource::OnPathBrowse(int item)
     share1.strName = g_localizeStrings.Get(20012);
     extraShares.push_back(share1);
 
-    share1.strPath = "sap://";
-    share1.strName = StringUtils::Format(strStreams.c_str(), "SAP"); //"SAP Streams"
-    extraShares.push_back(share1);
-
     // add the recordings dir as needed
-    if (CPVRDirectory::HasRecordings())
+    if (CPVRDirectory::HasTVRecordings())
     {
-      share1.strPath = "pvr://recordings/active/";
-      share1.strName = g_localizeStrings.Get(19017); // TV Recordings
+      share1.strPath = PVR::CPVRRecordingsPath::PATH_ACTIVE_TV_RECORDINGS;
+      share1.strName = g_localizeStrings.Get(19017); // Recordings
       extraShares.push_back(share1);
     }
-    if (CPVRDirectory::HasDeletedRecordings())
+    if (CPVRDirectory::HasDeletedTVRecordings())
     {
-      share1.strPath = "pvr://recordings/deleted/";
-      share1.strName = g_localizeStrings.Get(19108); // Deleted TV Recordings
+      share1.strPath = PVR::CPVRRecordingsPath::PATH_DELETED_TV_RECORDINGS;
+      share1.strName = g_localizeStrings.Get(19184); // Deleted recordings
       extraShares.push_back(share1);
     }
   }
@@ -461,20 +467,34 @@ void CGUIDialogMediaSource::SetShare(const CMediaSource &share)
 void CGUIDialogMediaSource::SetTypeOfMedia(const std::string &type, bool editNotAdd)
 {
   m_type = type;
-  int typeStringID = -1;
-  if (type == "music")
-    typeStringID = 249; // "Music"
-  else if (type == "video")
-    typeStringID = 291;  // "Video"
-  else if (type == "programs")
-    typeStringID = 350;  // "Programs"
-  else if (type == "pictures")
-    typeStringID = 1213;  // "Pictures"
-  else // if (type == "files");
-    typeStringID = 744;  // "Files"
-  std::string format;
-  format = StringUtils::Format(g_localizeStrings.Get(editNotAdd ? 1028 : 1020).c_str(), g_localizeStrings.Get(typeStringID).c_str());
-  SET_CONTROL_LABEL(CONTROL_HEADING, format);
+  std::string heading;
+  if (editNotAdd)
+  {
+    if (type == "video")
+      heading = g_localizeStrings.Get(10053);
+    else if (type == "music")
+      heading = g_localizeStrings.Get(10054);
+    else if (type == "pictures")
+      heading = g_localizeStrings.Get(10055);
+    else if (type == "programs")
+      heading = g_localizeStrings.Get(10056);
+    else
+      heading = g_localizeStrings.Get(10057);
+  }
+  else
+  {
+    if (type == "video")
+      heading = g_localizeStrings.Get(10048);
+    else if (type == "music")
+      heading = g_localizeStrings.Get(10049);
+    else if (type == "pictures")
+      heading = g_localizeStrings.Get(10050);
+    else if (type == "programs")
+      heading = g_localizeStrings.Get(10051);
+    else
+      heading = g_localizeStrings.Get(10052);
+  }
+  SET_CONTROL_LABEL(CONTROL_HEADING, heading);
 }
 
 int CGUIDialogMediaSource::GetSelectedItem()

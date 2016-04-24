@@ -1,9 +1,8 @@
-#ifndef _EMU_KERNEL32_H_
-#define _EMU_KERNEL32_H_
+#pragma once
 
 /*
- *      Copyright (C) 2005-2013 Team XBMC
- *      http://xbmc.org
+ *      Copyright (C) 2005-2015 Team Kodi
+ *      http://kodi.tv
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +15,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with XBMC; see the file COPYING.  If not, see
+ *  along with Kodi; see the file COPYING.  If not, see
  *  <http://www.gnu.org/licenses/>.
  *
  */
@@ -591,9 +590,11 @@ typedef long LONG_PTR;
 //All kernel32 function should use WINAPI calling convention.
 //When doing emulation or interception, the calling convention should
 //match exactly the target dlls suppose to use.   Monkeyhappy
+#ifdef TARGET_WINDOWS
 extern "C" HANDLE WINAPI dllFindFirstFileA(LPCTSTR lpFileName, LPWIN32_FIND_DATA lpFindFileData);
 extern "C" BOOL WINAPI dllFindNextFileA(HANDLE hFindFile, LPWIN32_FIND_DATA lpFindFileData);
 extern "C" BOOL WINAPI dllFindClose(HANDLE hFile);
+#endif
 extern "C" UINT WINAPI dllGetAtomNameA( ATOM nAtom, LPTSTR lpBuffer, int nSize);
 extern "C" ATOM WINAPI dllFindAtomA( LPCTSTR lpString);
 extern "C" ATOM WINAPI dllAddAtomA( LPCTSTR lpString);
@@ -718,4 +719,3 @@ extern "C" LPVOID WINAPI dllLockResource(HGLOBAL hResData);
 extern "C" SIZE_T WINAPI dllGlobalSize(HGLOBAL hMem);
 extern "C" DWORD  WINAPI dllSizeofResource(HMODULE hModule, HRSRC hResInfo);
 
-#endif // _EMU_KERNEL32_H_

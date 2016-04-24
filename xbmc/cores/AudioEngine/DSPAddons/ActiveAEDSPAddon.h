@@ -40,8 +40,7 @@ namespace ActiveAE
   class CActiveAEDSPAddon : public ADDON::CAddonDll<DllAudioDSP, AudioDSP, AE_DSP_PROPERTIES>
   {
   public:
-    CActiveAEDSPAddon(const ADDON::AddonProps& props);
-    CActiveAEDSPAddon(const cp_extension_t *ext);
+    explicit CActiveAEDSPAddon(ADDON::AddonProps props);
     ~CActiveAEDSPAddon(void);
 
     virtual void OnDisabled();
@@ -51,7 +50,6 @@ namespace ActiveAE
     virtual void OnPostInstall(bool restart, bool update);
     virtual void OnPreUnInstall();
     virtual void OnPostUnInstall();
-    virtual bool CanInstall();
 
     /** @name Audio DSP add-on methods */
     //@{
@@ -411,13 +409,9 @@ namespace ActiveAE
 
     /* cached data */
     std::string               m_strAudioDSPName;        /*!< the cached audio DSP version */
-    bool                      m_bGotAudioDSPName;       /*!< true if the audio DSP name has already been fetched */
     std::string               m_strAudioDSPVersion;     /*!< the cached audio DSP version */
-    bool                      m_bGotAudioDSPVersion;    /*!< true if the audio DSP version has already been fetched */
     std::string               m_strFriendlyName;        /*!< the cached friendly name */
-    bool                      m_bGotFriendlyName;       /*!< true if the friendly name has already been fetched */
     AE_DSP_ADDON_CAPABILITIES m_addonCapabilities;      /*!< the cached add-on capabilities */
-    bool                      m_bGotAddonCapabilities;  /*!< true if the add-on capabilities have already been fetched */
 
     /* stored strings to make sure const char* members in AE_DSP_PROPERTIES stay valid */
     std::string               m_strUserPath;            /*!< @brief translated path to the user profile */
@@ -425,11 +419,6 @@ namespace ActiveAE
 
     CCriticalSection          m_critSection;
 
-    bool                      m_isPreProcessing;
-    bool                      m_isPreResampling;
-    bool                      m_isMasterProcessing;
-    bool                      m_isPostResampling;
-    bool                      m_isPostProcessing;
     ADDON::AddonVersion       m_apiVersion;
   };
 }

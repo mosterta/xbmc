@@ -22,6 +22,7 @@
 #include "dialogs/GUIDialogOK.h"
 #include "dialogs/GUIDialogYesNo.h"
 #include "dialogs/GUIDialogSelect.h"
+#include "dialogs/GUIDialogContextMenu.h"
 #include "dialogs/GUIDialogTextViewer.h"
 #include "guilib/GUIWindowManager.h"
 #include "dialogs/GUIDialogFileBrowser.h"
@@ -35,6 +36,9 @@
 #include "WindowException.h"
 #include "messaging/ApplicationMessenger.h"
 #include "Dialog.h"
+#ifdef TARGET_POSIX
+#include "linux/XTimeUtils.h"
+#endif
 
 using namespace KODI::MESSAGING;
 
@@ -81,6 +85,22 @@ namespace XBMCAddon
       return pDialog->IsConfirmed();
     }
 
+    int Dialog::contextmenu(const std::vector<String>& list)
+    {
+      DelayedCallGuard dcguard(languageHook);
+      CGUIDialogContextMenu* pDialog= (CGUIDialogContextMenu*)g_windowManager.GetWindow(WINDOW_DIALOG_CONTEXT_MENU);
+      if (pDialog == NULL)
+        throw WindowException("Error: Window is NULL, this is not possible :-)");
+
+      CContextButtons choices;
+      for(unsigned int i = 0; i < list.size(); i++)
+      {
+        choices.Add(i, list[i]);
+      }
+      return pDialog->Show(choices);
+    }
+
+
     int Dialog::select(const String& heading, const std::vector<String>& list, int autoclose)
     {
       DelayedCallGuard dcguard(languageHook);
@@ -103,7 +123,7 @@ namespace XBMCAddon
 
       pDialog->Open();
 
-      return pDialog->GetSelectedLabel();
+      return pDialog->GetSelectedItem();
     }
 
 

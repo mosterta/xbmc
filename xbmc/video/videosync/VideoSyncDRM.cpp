@@ -162,10 +162,10 @@ void CVideoSyncDRM::EventHandler(int fd, unsigned int frame, unsigned int sec,
   int vblanks = MathUtils::round_int(diff * info->videoSync->m_fps);
   info->start = now;
 
-  info->videoSync->UpdateClock(vblanks, now);
+  info->videoSync->UpdateClock(vblanks, now, info->videoSync->m_refClock);
 }
 
-void CVideoSyncDRM::OnResetDevice()
+void CVideoSyncDRM::OnResetDisplay()
 {
   m_abort = true;
 }

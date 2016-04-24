@@ -49,8 +49,12 @@
 #include "utils/log.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
+#ifdef TARGET_POSIX
+#include "linux/XTimeUtils.h"
+#endif
 
 #ifdef TARGET_WINDOWS
+#pragma comment(lib, "python27.lib")
 extern "C" FILE *fopen_utf8(const char *_Filename, const char *_Mode);
 #else
 #define fopen_utf8 fopen
@@ -202,7 +206,7 @@ bool CPythonInvoker::execute(const std::string &script, const std::vector<std::s
         "modules installed to python path as fallback. This behaviour will be removed in future "
         "version.", GetId());
     ADDON::VECADDONS addons;
-    ADDON::CAddonMgr::GetInstance().GetAddons(ADDON::ADDON_SCRIPT_MODULE, addons);
+    ADDON::CAddonMgr::GetInstance().GetAddons(addons, ADDON::ADDON_SCRIPT_MODULE);
     for (unsigned int i = 0; i < addons.size(); ++i)
       addPath(CSpecialProtocol::TranslatePath(addons[i]->LibPath()));
   }

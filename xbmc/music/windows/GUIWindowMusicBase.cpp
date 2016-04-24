@@ -22,6 +22,7 @@
 #include "system.h"
 #include "GUIUserMessages.h"
 #include "GUIWindowMusicBase.h"
+#include "dialogs/GUIDialogMediaSource.h"
 #include "music/dialogs/GUIDialogMusicInfo.h"
 #include "playlists/PlayListFactory.h"
 #include "Util.h"
@@ -65,6 +66,9 @@
 #include "CueDocument.h"
 #include "Autorun.h"
 
+#ifdef TARGET_POSIX
+#include "linux/XTimeUtils.h"
+#endif
 
 using namespace XFILE;
 using namespace MUSICDATABASEDIRECTORY;
@@ -317,12 +321,10 @@ void CGUIWindowMusicBase::OnItemInfoAll(int iItem, bool bCurrent /* = false */, 
   std::string strPath = m_vecItems->GetPath();
   if (bCurrent)
     strPath = m_vecItems->Get(iItem)->GetPath();
-
-  if (dir.HasAlbumInfo(strPath) ||
-      CMusicDatabaseDirectory::GetDirectoryChildType(strPath) == 
-      MUSICDATABASEDIRECTORY::NODE_TYPE_ALBUM)
+  
+  if (StringUtils::EqualsNoCase(m_vecItems->GetContent(), "albums"))
     g_application.StartMusicAlbumScan(strPath,refresh);
-  else
+  else if (StringUtils::EqualsNoCase(m_vecItems->GetContent(), "artists"))
     g_application.StartMusicArtistScan(strPath,refresh);
 }
 
@@ -539,9 +541,10 @@ bool CGUIWindowMusicBase::ShowAlbumInfo(const CFileItem *pItem, bool bShowInfo /
         continue;
       }
       else if (pDlgAlbumInfo->HasUpdatedThumb())
-      {
         UpdateThumb(album, album.strPath);
-      }
+      else if (pDlgAlbumInfo->NeedsUpdate())
+        Refresh(true); // update our file list
+
     }
     break;
   }
@@ -667,7 +670,7 @@ void CGUIWindowMusicBase::OnQueueItem(int iItem)
 
     g_playlistPlayer.Reset();
     g_playlistPlayer.SetCurrentPlaylist(playlist);
-    g_playlistPlayer.Play(iOldSize); // start playing at the first new item
+    g_playlistPlayer.Play(iOldSize, ""); // start playing at the first new item
   }
 }
 
@@ -832,12 +835,10 @@ void CGUIWindowMusicBase::GetContextButtons(int itemNumber, CContextButtons &but
   if (itemNumber >= 0 && itemNumber < m_vecItems->Size())
     item = m_vecItems->Get(itemNumber);
 
-  if (item && !item->GetProperty("pluginreplacecontextitems").asBoolean())
+  if (item)
   {
     if (item && !item->IsParentFolder())
     {
-      if (!m_vecItems->IsPlugin() && (item->IsPlugin() || item->IsScript()))
-        buttons.Add(CONTEXT_BUTTON_INFO,24003); // Add-on info
       if (item->CanQueue() && !item->IsAddonsPath() && !item->IsScript())
       {
         buttons.Add(CONTEXT_BUTTON_QUEUE_ITEM, 13347); //queue
@@ -850,9 +851,9 @@ void CGUIWindowMusicBase::GetContextButtons(int itemNumber, CContextButtons &but
         }
         else
         { // check what players we have, if we have multiple display play with option
-          VECPLAYERCORES vecCores;
-          CPlayerCoreFactory::GetInstance().GetPlayers(*item, vecCores);
-          if (vecCores.size() >= 1)
+          std::vector<std::string> players;
+          CPlayerCoreFactory::GetInstance().GetPlayers(*item, players);
+          if (players.size() >= 1)
             buttons.Add(CONTEXT_BUTTON_PLAY_WITH, 15213); // Play With...
         }
         if (item->IsSmartPlayList())
@@ -865,10 +866,7 @@ void CGUIWindowMusicBase::GetContextButtons(int itemNumber, CContextButtons &but
         else if (item->IsPlayList() || m_vecItems->IsPlayList())
           buttons.Add(CONTEXT_BUTTON_EDIT, 586);
       }
-      // Add the scan button(s)
-      if (g_application.IsMusicScanning())
-        buttons.Add(CONTEXT_BUTTON_STOP_SCANNING, 13353); // Stop Scanning
-      else if (!m_vecItems->IsMusicDb() && !m_vecItems->IsInternetStream()           &&
+      if (!m_vecItems->IsMusicDb() && !m_vecItems->IsInternetStream()           &&
           !item->IsPath("add") && !item->IsParentFolder() &&
           !item->IsPlugin() && !item->IsMusicDb()         &&
           !item->IsLibraryFolder() &&
@@ -901,9 +899,7 @@ void CGUIWindowMusicBase::GetContextButtons(int itemNumber, CContextButtons &but
 
 void CGUIWindowMusicBase::GetNonContextButtons(CContextButtons &buttons)
 {
-  if (!m_vecItems->IsVirtualDirectoryRoot())
-    buttons.Add(CONTEXT_BUTTON_GOTO_ROOT, 20128);
-  if (ActiveAE::CActiveAEDSP::GetInstance().IsProcessing())
+  if (CServiceBroker::GetADSP().IsProcessing())
     buttons.Add(CONTEXT_BUTTON_ACTIVE_ADSP_SETTINGS, 15047);
 }
 
@@ -932,12 +928,6 @@ bool CGUIWindowMusicBase::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
     OnItemInfo(itemNumber);
     return true;
 
-  case CONTEXT_BUTTON_SONG_INFO:
-    {
-      ShowSongInfo(item.get());
-      return true;
-    }
-
   case CONTEXT_BUTTON_EDIT:
     {
       std::string playlist = item->IsPlayList() ? item->GetPath() : m_vecItems->GetPath(); // save path as activatewindow will destroy our items
@@ -961,26 +951,16 @@ bool CGUIWindowMusicBase::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
 
   case CONTEXT_BUTTON_PLAY_WITH:
     {
-      VECPLAYERCORES vecCores;  // base class?
-      CPlayerCoreFactory::GetInstance().GetPlayers(*item, vecCores);
-      g_application.m_eForcedNextPlayer = CPlayerCoreFactory::GetInstance().SelectPlayerDialog(vecCores);
-      if( g_application.m_eForcedNextPlayer != EPC_NONE )
-        OnClick(itemNumber);
+      std::vector<std::string> players;
+      CPlayerCoreFactory::GetInstance().GetPlayers(*item, players);
+      std::string player = CPlayerCoreFactory::GetInstance().SelectPlayerDialog(players);
+      if (!player.empty())
+        OnClick(itemNumber, player);
       return true;
     }
 
   case CONTEXT_BUTTON_PLAY_PARTYMODE:
     g_partyModeManager.Enable(PARTYMODECONTEXT_MUSIC, item->GetPath());
-    return true;
-
-  case CONTEXT_BUTTON_STOP_SCANNING:
-    {
-      g_application.StopMusicScan();
-      return true;
-    }
-
-  case CONTEXT_BUTTON_GOTO_ROOT:
-    Update("");
     return true;
 
   case CONTEXT_BUTTON_ACTIVE_ADSP_SETTINGS:
@@ -1015,6 +995,11 @@ bool CGUIWindowMusicBase::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
   }
 
   return CGUIMediaWindow::OnContextButton(itemNumber, button);
+}
+
+bool CGUIWindowMusicBase::OnAddMediaSource()
+{
+  return CGUIDialogMediaSource::ShowAndAddMediaSource("music");
 }
 
 void CGUIWindowMusicBase::OnRipCD()
@@ -1144,7 +1129,7 @@ void CGUIWindowMusicBase::LoadPlayList(const std::string& strPlayList)
   }
 }
 
-bool CGUIWindowMusicBase::OnPlayMedia(int iItem)
+bool CGUIWindowMusicBase::OnPlayMedia(int iItem, const std::string &player)
 {
   CFileItemPtr pItem = m_vecItems->Get(iItem);
 
@@ -1173,7 +1158,7 @@ bool CGUIWindowMusicBase::OnPlayMedia(int iItem)
     g_playlistPlayer.Play();
     return true;
   }
-  return CGUIMediaWindow::OnPlayMedia(iItem);
+  return CGUIMediaWindow::OnPlayMedia(iItem, player);
 }
 
 void CGUIWindowMusicBase::UpdateThumb(const CAlbum &album, const std::string &path)

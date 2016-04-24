@@ -21,6 +21,7 @@
 #include "PeripheralBus.h"
 #include "guilib/LocalizeStrings.h"
 #include "peripherals/Peripherals.h"
+#include "peripherals/devices/Peripheral.h"
 #include "utils/StringUtils.h"
 #include "utils/Variant.h"
 #include "utils/log.h"
@@ -220,24 +221,21 @@ void CPeripheralBus::Process(void)
   m_bIsStarted = false;
 }
 
-bool CPeripheralBus::Initialise(void)
+void CPeripheralBus::Initialise(void)
 {
   CSingleLock lock(m_critSection);
-  if (!m_bIsStarted)
+  if (m_bIsStarted)
+    return;
+
+  m_bIsStarted = true;
+
+  if (m_bNeedsPolling)
   {
-    /* do an initial scan of the bus */
-    m_bIsStarted = ScanForDevices();
-
-    if (m_bIsStarted && m_bNeedsPolling)
-    {
-      lock.Leave();
-      m_triggerEvent.Reset();
-      Create();
-      SetPriority(-1);
-    }
+    lock.Leave();
+    m_triggerEvent.Reset();
+    Create();
+    SetPriority(-1);
   }
-
-  return m_bIsStarted;
 }
 
 void CPeripheralBus::Register(CPeripheral *peripheral)
@@ -303,7 +301,7 @@ void CPeripheralBus::GetDirectory(const std::string &strPath, CFileItemList &ite
       strDetails = StringUtils::Format("%s: %s", g_localizeStrings.Get(126).c_str(), g_localizeStrings.Get(13106).c_str());
 
     peripheralFile->SetProperty("version", strVersion);
-    peripheralFile->SetProperty("Addon.Summary", strDetails);
+    peripheralFile->SetLabel2(strDetails);
     peripheralFile->SetIconImage("DefaultAddon.png");
     items.Add(peripheralFile);
   }

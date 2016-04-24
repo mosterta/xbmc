@@ -38,7 +38,7 @@ CNfoFile::NFOResult CNfoFile::Create(const std::string& strPath, const ScraperPt
 {
   m_info = info; // assume we can use these settings
   m_type = ScraperTypeFromContent(info->Content());
-  if (FAILED(Load(strPath)))
+  if (Load(strPath) != 0)
     return NO_NFO;
 
   CFileItemList items;
@@ -95,7 +95,7 @@ CNfoFile::NFOResult CNfoFile::Create(const std::string& strPath, const ScraperPt
 
   // Add all scrapers except selected and default
   VECADDONS addons;
-  CAddonMgr::GetInstance().GetAddons(m_type,addons);
+  CAddonMgr::GetInstance().GetAddons(addons, m_type);
 
   for (unsigned i = 0; i < addons.size(); ++i)
   {

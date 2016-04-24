@@ -27,11 +27,13 @@
 class CVideoSyncPi : public CVideoSync, IDispResource
 {
 public:
+  CVideoSyncPi(CVideoReferenceClock *clock) : CVideoSync(clock) {};
   virtual bool Setup(PUPDATECLOCK func);
   virtual void Run(volatile bool& stop);
   virtual void Cleanup();
   virtual float GetFps();
-  virtual void OnResetDevice();
+  virtual void OnResetDisplay();
+
 private:
   volatile bool m_abort;
 };

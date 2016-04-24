@@ -31,6 +31,11 @@
 #pragma comment(lib, "ssh.lib")
 #endif
 
+#if defined(TARGET_DARWIN_IOS)
+#include "utils/StringUtils.h"
+#include "platform/darwin/DarwinUtils.h"
+#endif
+
 #ifndef S_ISDIR
 #define S_ISDIR(m) ((m & _S_IFDIR) != 0)
 #endif
@@ -96,7 +101,7 @@ static const char * SFTPErrorText(int sftp_error)
 
 CSFTPSession::CSFTPSession(const std::string &host, unsigned int port, const std::string &username, const std::string &password)
 {
-  CLog::Log(LOGINFO, "SFTPSession: Creating new session on host '%s:%d' with user '%s'", host.c_str(), port, username.c_str());
+  CLog::Log(LOGINFO, "SFTPSession: Creating new session on host '%s:%d'", host.c_str(), port);
   CSingleLock lock(m_critSect);
   if (!Connect(host, port, username, password))
     Disconnect();
@@ -378,7 +383,15 @@ bool CSFTPSession::Connect(const std::string &host, unsigned int port, const std
     CLog::Log(LOGERROR, "SFTPSession: Failed to set port '%d' for session", port);
     return false;
   }
-
+#if defined(TARGET_DARWIN_IOS)
+  std::string home = CDarwinUtils::GetUserHomeDirectory();
+  std::string sshFolder = StringUtils::Format("%s/.ssh", home.c_str());
+  if (ssh_options_set(m_session, SSH_OPTIONS_SSH_DIR, sshFolder.c_str()) < 0)
+  {
+    CLog::Log(LOGERROR, "SFTPSession: Failed to set .ssh folder to '%s' for session", sshFolder.c_str());
+    return false;
+  }
+#endif
   ssh_options_set(m_session, SSH_OPTIONS_LOG_VERBOSITY, 0);
   ssh_options_set(m_session, SSH_OPTIONS_TIMEOUT, &timeout);  
 #else

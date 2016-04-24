@@ -1,8 +1,10 @@
+#pragma once
+
 /*
  *      Copyright (c) 2002 d7o3g4q and RUNTiME
  *      Portions Copyright (c) by the authors of ffmpeg and xvid
- *      Copyright (C) 2012-2013 Team XBMC
- *      http://xbmc.org
+ *      Copyright (C) 2012-2015 Team Kodi
+ *      http://kodi.tv
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,17 +17,10 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with XBMC; see the file COPYING.  If not, see
+ *  along with Kodi; see the file COPYING.  If not, see
  *  <http://www.gnu.org/licenses/>.
  *
  */
-
-#ifndef __OPENMAXAUDIORENDER_H__
-#define __OPENMAXAUDIORENDER_H__
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 
 #include "cores/AudioEngine/Utils/AEAudioFormat.h"
 #include "cores/AudioEngine/Utils/AEUtil.h"
@@ -45,12 +40,25 @@ extern "C" {
 #define AUDIO_BUFFER_SECONDS 3
 #define VIS_PACKET_SIZE 512
 
-#define OMX_IS_RAW(x)       \
-(                           \
-  (x) == AE_FMT_AC3   ||    \
-  (x) == AE_FMT_EAC3  ||    \
-  (x) == AE_FMT_DTS         \
-)
+typedef struct tGUID
+{
+  DWORD Data1;
+  WORD  Data2, Data3;
+  BYTE  Data4[8];
+} __attribute__((__packed__)) GUID;
+
+typedef struct tWAVEFORMATEXTENSIBLE
+{
+  WAVEFORMATEX Format;
+  union
+  {
+    WORD wValidBitsPerSample;
+    WORD wSamplesPerBlock;
+    WORD wReserved;
+  } Samples;
+  DWORD dwChannelMask;
+  GUID SubFormat;
+} __attribute__((__packed__)) WAVEFORMATEXTENSIBLE;
 
 class COMXAudio
 {
@@ -60,12 +68,11 @@ public:
   float GetCacheTime();
   float GetCacheTotal();
   COMXAudio();
-  bool Initialize(AEAudioFormat format, OMXClock *clock, CDVDStreamInfo &hints, CAEChannelInfo channelMap, bool bUsePassthrough, bool bUseHWDecode);
+  bool Initialize(AEAudioFormat format, OMXClock *clock, CDVDStreamInfo &hints, CAEChannelInfo channelMap, bool bUsePassthrough);
   bool PortSettingsChanged();
   ~COMXAudio();
 
-  unsigned int AddPackets(const void* data, unsigned int len);
-  unsigned int AddPackets(const void* data, unsigned int len, double dts, double pts, unsigned int frame_size);
+  unsigned int AddPackets(const void* data, unsigned int len, double dts, double pts, unsigned int frame_size, bool &settings_changed);
   unsigned int GetSpace();
   bool Deinitialize();
 
@@ -83,8 +90,7 @@ public:
 
   void Process();
 
-  void SetCodingType(AEDataFormat dataFormat);
-  static bool CanHWDecode(AVCodecID codec);
+  void SetCodingType(AEAudioFormat format);
 
   static void PrintChannels(OMX_AUDIO_CHANNELTYPE eChannelMapping[]);
   void PrintPCM(OMX_AUDIO_PARAM_PCMMODETYPE *pcm, std::string direction);
@@ -100,7 +106,6 @@ private:
   bool          m_Mute;
   long          m_drc;
   bool          m_Passthrough;
-  bool          m_HWDecode;
   unsigned int  m_BytesPerSec;
   unsigned int  m_InputBytesPerSec;
   unsigned int  m_BufferLen;
@@ -140,7 +145,6 @@ private:
   OMX_AUDIO_PARAM_PCMMODETYPE m_pcm_input;
   OMX_AUDIO_PARAM_DTSTYPE     m_dtsParam;
   WAVEFORMATEXTENSIBLE        m_wave_header;
-  AEAudioFormat m_format;
 protected:
   COMXCoreComponent m_omx_render_analog;
   COMXCoreComponent m_omx_render_hdmi;
@@ -156,5 +160,4 @@ protected:
 
   CCriticalSection m_critSection;
 };
-#endif
 

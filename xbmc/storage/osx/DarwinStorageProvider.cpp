@@ -29,9 +29,9 @@
 #include <DiskArbitration/DiskArbitration.h>
 #include <IOKit/storage/IOCDMedia.h>
 #include <IOKit/storage/IODVDMedia.h>
-#include "osx/DarwinUtils.h"  
+#include "platform/darwin/DarwinUtils.h"  
 #endif
-#include "osx/CocoaInterface.h"
+#include "platform/darwin/osx/CocoaInterface.h"
 
 bool CDarwinStorageProvider::m_event = false;
 

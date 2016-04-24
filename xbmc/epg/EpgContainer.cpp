@@ -50,7 +50,6 @@ CEpgContainer::CEpgContainer(void) :
   m_bIsInitialising = true;
   m_iNextEpgId = 0;
   m_bPreventUpdates = false;
-  m_bMarkForPersist = false;
   m_updateEvent.Reset();
   m_bStarted = false;
   m_bLoaded = false;
@@ -109,8 +108,6 @@ void CEpgContainer::Clear(bool bClearDb /* = false */)
     {
       epgEntry.second->UnregisterObserver(this);
     }
-    m_epgEvents.clear();
-    m_epgScans.clear();
     m_epgs.clear();
     m_iNextEpgUpdate  = 0;
     m_bStarted = false;
@@ -206,8 +203,6 @@ bool CEpgContainer::Stop(void)
 
 void CEpgContainer::Notify(const Observable &obs, const ObservableMessage msg)
 {
-  if (msg == ObservableMessageEpg)
-    UpdateEpgEvents();
   SetChanged();
   NotifyObservers(msg);
 }
@@ -268,14 +263,6 @@ void CEpgContainer::LoadFromDB(void)
   }
 
   m_bLoaded = bLoaded;
-}
-
-bool CEpgContainer::MarkTablesForPersist(void)
-{
-  /* Set m_bMarkForPersist to persist tables on the next Process() run but only
-  if epg.ignoredbforclient is set, otherwise persistAll does already persisting. */
-  CSingleLock lock(m_critSection);
-  return m_bMarkForPersist = CSettings::GetInstance().GetBool(CSettings::SETTING_EPG_IGNOREDBFORCLIENT);
 }
 
 bool CEpgContainer::PersistTables(void)
@@ -368,13 +355,6 @@ void CEpgContainer::Process(void)
     if (!m_bStop)
       CheckPlayingEvents();
 
-    /* Check if PVR requests an update of Epg Channels */
-    if (m_bMarkForPersist)
-    {
-      PersistTables();
-      m_bMarkForPersist = false;
-    }
-
     /* check for changes that need to be saved every 60 seconds */
     if (iNow - iLastSave > 60)
     {
@@ -396,13 +376,17 @@ CEpgPtr CEpgContainer::GetById(int iEpgId) const
   return epgEntry != m_epgs.end() ? epgEntry->second : NULL;
 }
 
-CEpgInfoTagPtr CEpgContainer::GetTagById(unsigned int iBroadcastId) const
+CEpgInfoTagPtr CEpgContainer::GetTagById(const CPVRChannelPtr &channel, unsigned int iBroadcastId) const
 {
   CEpgInfoTagPtr retval;
-  CSingleLock lock(m_critSection);
-  const auto &infoTag = m_epgEvents.find(iBroadcastId);
-  if (infoTag != m_epgEvents.end())
-    retval = infoTag->second;
+
+  if (!channel || iBroadcastId == EPG_TAG_INVALID_UID)
+    return retval;
+
+  const CEpgPtr epg(channel->GetEPG());
+  if (epg)
+    retval = epg->GetTagByBroadcastId(iBroadcastId);
+
   return retval;
 }
 
@@ -525,7 +509,6 @@ bool CEpgContainer::DeleteEpg(const CEpg &epg, bool bDeleteFromDatabase /* = fal
     m_database.Delete(*epgEntry->second);
 
   epgEntry->second->UnregisterObserver(this);
-  CleanupEpgEvents(epgEntry->second);
   m_epgs.erase(epgEntry);
 
   return true;
@@ -826,68 +809,3 @@ void CEpgContainer::UpdateRequest(int clientID, unsigned int channelID)
   m_updateRequests.push_back(request);
 }
 
-void CEpgContainer::UpdateEpgEvents()
-{
-  CLog::Log(LOGDEBUG, "EPGContainer - %s", __FUNCTION__);
-  CSingleLock lock(m_critSection);
-  CDateTime now = CDateTime::GetUTCDateTime();
-  int count = 0;
-
-  // Purge old events from the map with daily frequency and in according with EPG setting 'LingerTime'
-  if (!m_lastEpgEventPurge.IsValid() || m_lastEpgEventPurge < (now - CDateTimeSpan(1,0,0,0)))
-  {
-    CDateTime purgeTime = now - CDateTimeSpan(0, g_advancedSettings.m_iEpgLingerTime / 60, g_advancedSettings.m_iEpgLingerTime % 60, 0);
-    for (auto event = m_epgEvents.begin(); event != m_epgEvents.end();)
-    {
-      if (event->second->EndAsUTC() < purgeTime)
-      {
-        event = m_epgEvents.erase(event);
-        ++count;
-      }
-      else
-        ++event;
-    }
-    m_lastEpgEventPurge = now;
-    CLog::Log(LOGDEBUG, "EPGContainer - %s - %d item(s) purged", __FUNCTION__, count);
-  }
-
-  // Fill updated entries
-  count = 0;
-  for (const auto &epgEntry : m_epgs)
-  {
-    if (!epgEntry.second->IsValid())
-      continue;
-
-    int epgId = epgEntry.second->EpgID();
-    CDateTime epgScanTime = epgEntry.second->GetLastScanTime();
-
-    const auto &scan = m_epgScans.find(epgId);
-    if (scan != m_epgScans.end() && scan->second == epgScanTime)
-      continue;
-
-    if (scan == m_epgScans.end())
-      m_epgScans.insert(std::make_pair(epgId, epgScanTime));
-    else
-      scan->second = epgScanTime;
-
-    auto events = epgEntry.second->GetAllEventsWithBroadcastId();
-    for (const auto &infoTag : events)
-    {
-      m_epgEvents[infoTag->UniqueBroadcastID()] = infoTag;
-      ++count;
-    }
-  }
-  CLog::Log(LOGDEBUG, "EPGContainer - %s - %d item(s) updated", __FUNCTION__, count);
-}
-
-void CEpgContainer::CleanupEpgEvents(const CEpgPtr& epg)
-{
-  CSingleLock lock(m_critSection);
-  if (epg)
-  {
-    m_epgScans.erase(epg->EpgID());
-    auto events = epg->GetAllEventsWithBroadcastId();
-    for (const auto &infoTag : events)
-      m_epgEvents.erase(infoTag->UniqueBroadcastID());
-  }
-}

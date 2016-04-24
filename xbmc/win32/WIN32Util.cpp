@@ -42,13 +42,16 @@
 
 #include <cassert>
 
-#define DLL_ENV_PATH "special://xbmc/system/;" \
+// special://xbmc/system/players/dvdplayer/ is temporal solution needs to be deleted
+// after dependencies will be changed to extract to a videoplayer folder
+#define DLL_ENV_PATH "special://xbmc/;" \
+                     "special://xbmc/system/;" \
+                     "special://xbmc/system/players/VideoPlayer/;" \
                      "special://xbmc/system/players/dvdplayer/;" \
                      "special://xbmc/system/players/paplayer/;" \
                      "special://xbmc/system/cdrip/;" \
                      "special://xbmc/system/python/;" \
-                     "special://xbmc/system/webserver/;" \
-                     "special://xbmc/"
+                     "special://xbmc/system/webserver/"
 
 #include <locale.h>
 
@@ -571,7 +574,15 @@ void CWIN32Util::ExtendDllPath()
 
   vecEnv = StringUtils::Split(DLL_ENV_PATH, ";");
   for (int i=0; i<(int)vecEnv.size(); ++i)
-    strEnv.append(";" + CSpecialProtocol::TranslatePath(vecEnv[i]));
+  {
+    std::string strPath; std::wstring strPathW;
+
+    strPath = CSpecialProtocol::TranslatePath(vecEnv[i]);
+    g_charsetConverter.utf8ToW(strPath, strPathW);
+
+    strEnv.append(";" + strPath);
+    AddDllDirectory(strPathW.c_str());
+  }
 
   if (CEnvironment::setenv("PATH", strEnv) == 0)
     CLog::Log(LOGDEBUG,"Setting system env PATH to %s",strEnv.c_str());
@@ -603,7 +614,6 @@ HRESULT CWIN32Util::ToggleTray(const char cDriveLetter)
     DWORD dwDummy;
     dwReq = (GetDriveStatus(strVolFormat, true) == 1) ? IOCTL_STORAGE_LOAD_MEDIA : IOCTL_STORAGE_EJECT_MEDIA;
     bRet = DeviceIoControl( hDrive, dwReq, NULL, 0, NULL, 0, &dwDummy, NULL);
-    CloseHandle( hDrive );
   }
   // Windows doesn't seem to send always DBT_DEVICEREMOVECOMPLETE
   // unmount it here too as it won't hurt
@@ -615,6 +625,7 @@ HRESULT CWIN32Util::ToggleTray(const char cDriveLetter)
     share.strName = share.strPath;
     g_mediaManager.RemoveAutoSource(share);
   }
+  CloseHandle(hDrive);
   return bRet? S_OK : S_FALSE;
 }
 
