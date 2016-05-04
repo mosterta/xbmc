@@ -1,4 +1,4 @@
-; package.list should contain all file names of packages which are already in the "new" package format (the package contains the paths to the libraries 
+; package.list should contain all file names of packages which are already in the "new" package format (the package contains the paths to the libraries
 ; and headers relative to the XBMC root directory, stored in a zip container)
 ; example sqlite-3.7.12.1-win32.7z:
 ; -> (package name)\(relative path to file)
@@ -20,26 +20,23 @@ libbluray-0.8.1-win32-vc120.7z
 libcdio-0.83-win32-2.7z
 libcec-3.0.0-win32-2.7z
 libexpat_2.0.1-win32.7z
-libflac-1.2.1-win32.7z
 libfribidi-0.19.2-win32.7z
 libiconv-1.14-win32-vc140-v2.7z
 libjpeg-turbo-1.2.0-win32.7z
 liblzo-2.04-win32.7z
 libmicrohttpd-0.9.48-win32-vc140-v2.7z
 libnfs-1.10.0-win32.7z
-libogg-vc100-1.2.0-win32.7z
 libplist-1.7-win32-3.7z
 libpng-1.5.13-win32.7z
 librtmp-20150114-git-a107ce-win32.7z
 libshairplay-52fd9db-win32.7z
 libssh-0.5.0-1-win32.zip
-libvorbis-vc100-1.3.1-win32.7z
 libxml2-2.7.8_1-win32.7z
 libxslt-1.1.26_1-win32.7z
 libyajl-2.0.1-win32.7z
 libzlib-vc100-1.2.5-win32.7z
 mysql-connector-c-6.1.6-win32-vc140.7z
-openssl-1.0.2g-win32-vc140.7z
+openssl-1.0.2g-win32-vc140-v2.7z
 pcre-8.37-win32-vc140-v3.7z
 pillow-3.1.0-win32-vc140.7z
 python-2.7.11-win32-vc140-v2.7z

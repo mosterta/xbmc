@@ -25,6 +25,12 @@
 #include "guilib/gui3d.h"
 #include "utils/StringUtils.h"
 
+#include <sys/ioctl.h>
+#include <drv_display_sun4i.h>
+#ifndef CEDARV_FRAME_HAS_PHY_ADDR
+#include <os_adapter.h>
+#endif
+
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
 #include "cores/VideoRenderers/LinuxRendererA10.h"
 struct mali_native_window {
@@ -163,3 +169,192 @@ bool CEGLNativeTypeA10::ShowWindow(bool show)
 {
   return false;
 }
+
+
+static int             g_hfb = -1;
+static int             g_hdisp = -1;
+static int             g_screenid = 0;
+static int             g_syslayer = 0x64;
+static int             g_hlayer = 0;
+static int             g_width;
+static int             g_height;
+static CRect           g_srcRect;
+static CRect           g_dstRect;
+static int             g_lastnr;
+static int             g_decnr;
+static int             g_wridx;
+static int             g_rdidx;
+static pthread_mutex_t g_dispq_mutex;
+
+bool A10VLInit(int &width, int &height, double &refreshRate)
+{
+  unsigned long       args[4];
+  __disp_layer_info_t layera;
+  unsigned int        i;
+
+  pthread_mutex_init(&g_dispq_mutex, NULL);
+
+  g_hfb = open("/dev/fb0", O_RDWR);
+
+  g_hdisp = open("/dev/disp", O_RDWR);
+  if (g_hdisp == -1)
+  {
+    CLog::Log(LOGERROR, "A10: open /dev/disp failed. (%d)", errno);
+    return false;
+  }
+
+  args[0] = g_screenid;
+  args[1] = 0;
+  args[2] = 0;
+  args[3] = 0;
+  width  = g_width  = ioctl(g_hdisp, DISP_CMD_SCN_GET_WIDTH , args);
+  height = g_height = ioctl(g_hdisp, DISP_CMD_SCN_GET_HEIGHT, args);
+
+  i = ioctl(g_hdisp, DISP_CMD_HDMI_GET_MODE, args);
+
+  switch(i)
+  {
+  case DISP_TV_MOD_720P_50HZ:
+  case DISP_TV_MOD_1080I_50HZ:
+  case DISP_TV_MOD_1080P_50HZ:
+    refreshRate = 50.0;
+    break;
+  case DISP_TV_MOD_720P_60HZ:
+  case DISP_TV_MOD_1080I_60HZ:
+  case DISP_TV_MOD_1080P_60HZ:
+    refreshRate = 60.0;
+    break;
+  case DISP_TV_MOD_1080P_24HZ:
+    refreshRate = 24.0;
+    break;
+  default:
+    CLog::Log(LOGERROR, "A10: display mode %d is unknown. Assume refreh rate 60Hz\n", i);
+    refreshRate = 60.0;
+    break;
+  }
+
+  if ((g_height > 720) && (getenv("A10AB") == NULL))
+  {
+    //set workmode scaler (system layer)
+    args[0] = g_screenid;
+    args[1] = g_syslayer;
+    args[2] = (unsigned long) (&layera);
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args);
+    layera.mode = DISP_LAYER_WORK_MODE_SCALER;
+    args[0] = g_screenid;
+    args[1] = g_syslayer;
+    args[2] = (unsigned long) (&layera);
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args);
+  }
+  else
+  {
+    //set workmode normal (system layer)
+    args[0] = g_screenid;
+    args[1] = g_syslayer;
+    args[2] = (unsigned long) (&layera);
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args);
+    //source window information
+    layera.src_win.x      = 0;
+    layera.src_win.y      = 0;
+    layera.src_win.width  = g_width;
+    layera.src_win.height = g_height;
+    //screen window information
+    layera.scn_win.x      = 0;
+    layera.scn_win.y      = 0;
+    layera.scn_win.width  = g_width;
+    layera.scn_win.height = g_height;
+    layera.mode = DISP_LAYER_WORK_MODE_NORMAL;
+    args[0] = g_screenid;
+    args[1] = g_syslayer;
+    args[2] = (unsigned long) (&layera);
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args);
+
+  }
+
+  for (i = 0x65; i <= 0x67; i++)
+  {
+    //release possibly lost allocated layers
+    args[0] = g_screenid;
+    args[1] = i;
+    args[2] = 0;
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
+  }
+
+  // Hack: avoid blue picture background
+//  if (!A10VLBlueScreenFix())
+//    return false;
+
+  args[0] = g_screenid;
+  args[1] = DISP_LAYER_WORK_MODE_SCALER;
+  args[2] = 0;
+  args[3] = 0;
+  g_hlayer = ioctl(g_hdisp, DISP_CMD_LAYER_REQUEST, args);
+  if (g_hlayer <= 0)
+  {
+    g_hlayer = 0;
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_REQUEST failed.\n");
+    return false;
+  }
+
+  memset(&g_srcRect, 0, sizeof(g_srcRect));
+  memset(&g_dstRect, 0, sizeof(g_dstRect));
+
+  g_lastnr = -1;
+  g_decnr  = 0;
+  g_rdidx  = 0;
+  g_wridx  = 0;
+
+#if !defined(HAVE_LIBVDPAU)
+  for (i = 0; i < DISPQS; i++)
+    g_dispq[i].pict.id = -1;
+#endif
+
+  return true;
+}
+
+void A10VLExit()
+{
+  unsigned long args[4];
+
+  if (g_hlayer)
+  {
+    //stop video
+    args[0] = g_screenid;
+    args[1] = g_hlayer;
+    args[2] = 0;
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_VIDEO_STOP, args);
+
+    //close layer
+    args[0] = g_screenid;
+    args[1] = g_hlayer;
+    args[2] = 0;
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_LAYER_CLOSE, args);
+
+    //release layer
+    args[0] = g_screenid;
+    args[1] = g_hlayer;
+    args[2] = 0;
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
+    g_hlayer = 0;
+  }
+  if (g_hdisp != -1)
+  {
+    close(g_hdisp);
+    g_hdisp = -1;
+  }
+  if (g_hfb != -1)
+  {
+    close(g_hfb);
+    g_hfb = -1;
+  }
+}
+
+

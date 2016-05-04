@@ -458,9 +458,9 @@ bool CPVRClients::HasTimerSupport(int iClientId)
   return false;
 }
 
-PVR_ERROR CPVRClients::GetTimers(CPVRTimers *timers)
+bool CPVRClients::GetTimers(CPVRTimers *timers, std::vector<int> &failedClients)
 {
-  PVR_ERROR error(PVR_ERROR_NO_ERROR);
+  bool bSuccess(true);
   PVR_CLIENTMAP clients;
   GetCreatedClients(clients);
 
@@ -472,11 +472,12 @@ PVR_ERROR CPVRClients::GetTimers(CPVRTimers *timers)
         currentError != PVR_ERROR_NO_ERROR)
     {
       CLog::Log(LOGERROR, "PVR - %s - cannot get timers from client '%d': %s",__FUNCTION__, (*itrClients).first, CPVRClient::ToString(currentError));
-      error = currentError;
+      bSuccess = false;
+      failedClients.push_back((*itrClients).first);
     }
   }
 
-  return error;
+  return bSuccess;
 }
 
 PVR_ERROR CPVRClients::AddTimer(const CPVRTimerInfoTag &timer)
@@ -1225,20 +1226,6 @@ bool CPVRClients::SupportsTimers() const
   return false;
 }
 
-bool CPVRClients::SupportsTimers() const
-{
-  PVR_CLIENTMAP clients;
-  GetConnectedClients(clients);
-
-  for (const auto &entry : clients)
-  {
-    if (entry.second->SupportsTimers())
-      return true;
-  }
-
-  return false;
-}
-
 bool CPVRClients::SupportsChannelGroups(int iClientId) const
 {
   PVR_CLIENT client;
@@ -1628,4 +1615,44 @@ void CPVRClients::ConnectionStateChange(int clientId, std::string &strConnection
     }
     g_PVRManager.Start();
   }
+}
+
+void CPVRClients::OnSystemSleep()
+{
+  PVR_CLIENTMAP clients;
+  GetCreatedClients(clients);
+
+  /* propagate event to each client */
+  for (auto &client : clients)
+    client.second->OnSystemSleep();
+}
+
+void CPVRClients::OnSystemWake()
+{
+  PVR_CLIENTMAP clients;
+  GetCreatedClients(clients);
+
+  /* propagate event to each client */
+  for (auto &client : clients)
+    client.second->OnSystemWake();
+}
+
+void CPVRClients::OnPowerSavingActivated()
+{
+  PVR_CLIENTMAP clients;
+  GetCreatedClients(clients);
+
+  /* propagate event to each client */
+  for (auto &client : clients)
+    client.second->OnPowerSavingActivated();
+}
+
+void CPVRClients::OnPowerSavingDeactivated()
+{
+  PVR_CLIENTMAP clients;
+  GetCreatedClients(clients);
+
+  /* propagate event to each client */
+  for (auto &client : clients)
+    client.second->OnPowerSavingDeactivated();
 }

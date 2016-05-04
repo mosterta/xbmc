@@ -56,6 +56,8 @@ using namespace VDPAU;
 
 #define VDPAU_DEBUG 0
 
+#define ARSIZE(X)  (sizeof(X))/(sizeof(X[0]))
+
 CDecoder::Desc decoder_profiles[] = {
 {"MPEG1",        VDP_DECODER_PROFILE_MPEG1},
 {"MPEG2_SIMPLE", VDP_DECODER_PROFILE_MPEG2_SIMPLE},

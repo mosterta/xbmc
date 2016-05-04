@@ -57,14 +57,12 @@ std::unique_ptr<CPVRClient> CPVRClient::FromExtension(AddonProps props, const cp
   std::string strAvahiType = CAddonMgr::GetInstance().GetExtValue(ext->configuration, "@avahi_type");
   std::string strAvahiIpSetting = CAddonMgr::GetInstance().GetExtValue(ext->configuration, "@avahi_ip_setting");
   std::string strAvahiPortSetting = CAddonMgr::GetInstance().GetExtValue(ext->configuration, "@avahi_port_setting");
-  bool bNeedsConfiguration = !(CAddonMgr::GetInstance().GetExtValue(ext->configuration, "@needs_configuration") == "false");
   return std::unique_ptr<CPVRClient>(new CPVRClient(std::move(props), strAvahiType,
-      strAvahiIpSetting, strAvahiPortSetting, bNeedsConfiguration));
+      strAvahiIpSetting, strAvahiPortSetting));
 }
 
 CPVRClient::CPVRClient(AddonProps props)
   : CAddonDll<DllPVRClient, PVRClient, PVR_PROPERTIES>(std::move(props)),
-    m_bNeedsConfiguration(false),
     m_apiVersion("0.0.0"),
     m_bAvahiServiceAdded(false)
 {
@@ -72,12 +70,11 @@ CPVRClient::CPVRClient(AddonProps props)
 }
 
 CPVRClient::CPVRClient(AddonProps props, const std::string& strAvahiType, const std::string& strAvahiIpSetting,
-    const std::string& strAvahiPortSetting, bool bNeedsConfiguration)
+    const std::string& strAvahiPortSetting)
   : CAddonDll<DllPVRClient, PVRClient, PVR_PROPERTIES>(std::move(props)),
     m_strAvahiType(strAvahiType),
     m_strAvahiIpSetting(strAvahiIpSetting),
     m_strAvahiPortSetting(strAvahiPortSetting),
-    m_bNeedsConfiguration(bNeedsConfiguration),
     m_apiVersion("0.0.0"),
     m_bAvahiServiceAdded(false)
 {
@@ -104,13 +101,6 @@ void CPVRClient::OnEnabled()
   CPVRManager::GetInstance().Clients()->UpdateAddons();
 }
 
-void CPVRClient::SaveSettings()
-{
-  CAddon::SaveSettings();
-  ReCreate();
-  CPVRManager::GetInstance().Clients()->UpdateAddons();
-}
-
 void CPVRClient::OnPostInstall(bool update, bool modal)
 {
   CAddon::OnPostInstall(update, modal);
@@ -128,6 +118,13 @@ void CPVRClient::OnPostUnInstall()
 {
   CAddon::OnPostUnInstall();
   CPVRManager::GetInstance().Clients()->UpdateAddons();
+}
+
+ADDON::AddonPtr CPVRClient::GetRunningInstance() const
+{
+  ADDON::AddonPtr addon;
+  CPVRManager::GetInstance().Clients()->GetClient(ID(), addon);
+  return addon;
 }
 
 void CPVRClient::ResetProperties(int iClientId /* = PVR_INVALID_CLIENT_ID */)
@@ -2025,4 +2022,52 @@ bool CPVRClient::IsRealTimeStream(void) const
     catch (std::exception &e) { LogException(e, __FUNCTION__); }
   }
   return bReturn;
+}
+
+void CPVRClient::OnSystemSleep(void)
+{
+  if (!m_bReadyToUse)
+    return;
+
+  try
+  {
+    m_pStruct->OnSystemSleep();
+  }
+  catch (std::exception &e) { LogException(e, __FUNCTION__); }
+}
+
+void CPVRClient::OnSystemWake(void)
+{
+  if (!m_bReadyToUse)
+    return;
+
+  try
+  {
+    m_pStruct->OnSystemWake();
+  }
+  catch (std::exception &e) { LogException(e, __FUNCTION__); }
+}
+
+void CPVRClient::OnPowerSavingActivated(void)
+{
+  if (!m_bReadyToUse)
+    return;
+
+  try
+  {
+    m_pStruct->OnPowerSavingActivated();
+  }
+  catch (std::exception &e) { LogException(e, __FUNCTION__); }
+}
+
+void CPVRClient::OnPowerSavingDeactivated(void)
+{
+  if (!m_bReadyToUse)
+    return;
+
+  try
+  {
+    m_pStruct->OnPowerSavingDeactivated();
+  }
+  catch (std::exception &e) { LogException(e, __FUNCTION__); }
 }

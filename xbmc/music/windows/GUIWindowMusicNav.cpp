@@ -38,6 +38,7 @@
 #include "guilib/GUIWindowManager.h"
 #include "dialogs/GUIDialogOK.h"
 #include "guilib/GUIKeyboardFactory.h"
+#include "view/GUIViewState.h"
 #include "input/Key.h"
 #include "dialogs/GUIDialogYesNo.h"
 #include "guilib/GUIEditControl.h"
@@ -333,6 +334,8 @@ bool CGUIWindowMusicNav::GetDirectory(const std::string &strDirectory, CFileItem
       items.SetContent("songs");
     else if (node == NODE_TYPE_GENRE)
       items.SetContent("genres");
+    else if (node == NODE_TYPE_ROLE)
+      items.SetContent("roles");
     else if (node == NODE_TYPE_YEAR)
       items.SetContent("years");
     else

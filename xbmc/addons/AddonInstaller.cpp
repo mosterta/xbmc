@@ -614,7 +614,6 @@ bool CAddonInstallJob::DoWork()
   CAddonMgr::GetInstance().FindAddons();
 
   if (!CAddonMgr::GetInstance().GetAddon(m_addon->ID(), m_addon, ADDON_UNKNOWN, false))
-  if (CAddonMgr::GetInstance().GetAddon(m_addon->ID(), local, ADDON_UNKNOWN, false))
   {
     CLog::Log(LOGERROR, "CAddonInstallJob[%s]: failed to reload addon", m_addon->ID().c_str());
     return false;

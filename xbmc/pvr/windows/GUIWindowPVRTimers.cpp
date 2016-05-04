@@ -18,10 +18,10 @@
  *
  */
 
-#include "utils/StringUtils.h"
-#include "pvr/timers/PVRTimers.h"
-
 #include "GUIWindowPVRTimers.h"
+#include "utils/URIUtils.h"
+#include "pvr/timers/PVRTimers.h"
+#include "FileItem.h"
 
 using namespace PVR;
 
@@ -33,11 +33,14 @@ CGUIWindowPVRTimers::CGUIWindowPVRTimers(bool bRadio) :
 std::string CGUIWindowPVRTimers::GetDirectoryPath(void)
 {
   const std::string basePath(CPVRTimersPath(m_bRadio, false).GetPath());
-  return StringUtils::StartsWith(m_vecItems->GetPath(), basePath) ? m_vecItems->GetPath() : basePath;
+  return URIUtils::PathHasParent(m_vecItems->GetPath(), basePath) ? m_vecItems->GetPath() : basePath;
 }
 
+#if 0
   if (!g_PVRClients->SupportsTimers())
   {
     CGUIDialogOK::ShowAndGetInput(CVariant{19033}, CVariant{19215}); // "Information", "The PVR backend does not support timers."
     return false;
   }
+#endif
+

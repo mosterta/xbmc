@@ -1239,6 +1239,12 @@ void YUVBuffer::StartRender()
   if (!m_locked)
     return;
 
+  if (m_bPending)
+  {
+    PerformCopy();
+    m_bPending = false;
+  }
+
   m_locked = false;
 
   for (unsigned i = 0; i < m_activeplanes; i++)
@@ -1256,6 +1262,7 @@ void YUVBuffer::StartDecode()
     return;
 
   m_locked = true;
+  m_bPending = false;
 
   for(unsigned i = 0; i < m_activeplanes; i++)
   {
@@ -1376,7 +1383,7 @@ bool YUVBuffer::CopyFromDXVA(ID3D11VideoDecoderOutputView* pView)
                                     resource,
                                     D3D11CalcSubresource(0, vpivd.Texture2D.ArraySlice, 1),
                                     nullptr);
-    PerformCopy();
+    m_bPending = true;
   }
   SAFE_RELEASE(resource);
 

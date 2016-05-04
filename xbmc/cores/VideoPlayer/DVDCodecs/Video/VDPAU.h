@@ -40,13 +40,12 @@
 
 #include "system_gl.h"
 #define GLX_GLXEXT_PROTOTYPES
-#include <GL/glx.h>
-#include <GL/glext.h>
-
 #include "DVDVideoCodec.h"
 #include "DVDVideoCodecFFmpeg.h"
 #include "libavcodec/vdpau.h"
 #if HAS_GL
+#include <GL/glx.h>
+#include <GL/glext.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #endif

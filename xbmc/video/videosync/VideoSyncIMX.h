@@ -36,7 +36,6 @@ public:
   virtual void OnResetDisplay();
 private:
   volatile bool m_abort;
-  int m_fddcic;
 };
 
 #endif

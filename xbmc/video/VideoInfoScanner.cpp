@@ -499,7 +499,8 @@ namespace VIDEO
 
   INFO_RET CVideoInfoScanner::RetrieveInfoForTvShow(CFileItem *pItem, bool bDirNames, ScraperPtr &info2, bool useLocal, CScraperUrl* pURL, bool fetchEpisodes, CGUIDialogProgress* pDlgProgress)
   {
-    if (pItem->m_bIsFolder && IsExcluded(pItem->GetPath()))
+    const std::vector<std::string> &regexps = g_advancedSettings.m_tvshowExcludeFromScanRegExps;
+    if (pItem->m_bIsFolder && IsExcluded(pItem->GetPath(), regexps))
     {
       CLog::Log(LOGWARNING, "Skipping show '%s' with '.nomedia' file in its directory, it won't be added to the library.", CURL::GetRedacted(pItem->GetPath()).c_str());
       return INFO_NOT_NEEDED;

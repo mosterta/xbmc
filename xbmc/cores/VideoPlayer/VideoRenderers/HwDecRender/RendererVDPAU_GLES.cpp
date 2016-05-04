@@ -29,12 +29,12 @@
 #include "utils/GLUtils.h"
 #include "windowing/WindowingFactory.h"
 
-CRendererVDPAU::CRendererVDPAU()
+CRendererVDPAU_GLES::CRendererVDPAU_GLES()
 {
 
 }
 
-CRendererVDPAU::~CRendererVDPAU()
+CRendererVDPAU_GLES::~CRendererVDPAU_GLES()
 {
   for (int i = 0; i < NUM_BUFFERS; ++i)
   {
@@ -42,7 +42,7 @@ CRendererVDPAU::~CRendererVDPAU()
   }
 }
 
-void CRendererVDPAU::AddVideoPictureHW(DVDVideoPicture &picture, int index)
+void CRendererVDPAU_GLES::AddVideoPictureHW(DVDVideoPicture &picture, int index)
 {
   VDPAU::CVdpauRenderPicture *vdpau = picture.vdpau;
   YUVBUFFER &buf = m_buffers[index];
@@ -52,7 +52,7 @@ void CRendererVDPAU::AddVideoPictureHW(DVDVideoPicture &picture, int index)
   buf.hwDec = pic;
 }
 
-void CRendererVDPAU::ReleaseBuffer(int idx)
+void CRendererVDPAU_GLES::ReleaseBuffer(int idx)
 {
   YUVBUFFER &buf = m_buffers[idx];
   if (buf.hwDec)
@@ -60,7 +60,7 @@ void CRendererVDPAU::ReleaseBuffer(int idx)
   buf.hwDec = NULL;
 }
 
-CRenderInfo CRendererVDPAU::GetRenderInfo()
+CRenderInfo CRendererVDPAU_GLES::GetRenderInfo()
 {
   CRenderInfo info;
   info.formats = m_formats;
@@ -69,7 +69,7 @@ CRenderInfo CRendererVDPAU::GetRenderInfo()
   return info;
 }
 
-bool CRendererVDPAU::Supports(ERENDERFEATURE feature)
+bool CRendererVDPAU_GLES::Supports(ERENDERFEATURE feature)
 {
   if(feature == RENDERFEATURE_BRIGHTNESS ||
      feature == RENDERFEATURE_CONTRAST)
@@ -99,7 +99,7 @@ bool CRendererVDPAU::Supports(ERENDERFEATURE feature)
   return false;
 }
 
-bool CRendererVDPAU::Supports(EINTERLACEMETHOD method)
+bool CRendererVDPAU_GLES::Supports(EINTERLACEMETHOD method)
 {
   VDPAU::CVdpauRenderPicture *VDPAUPic = (VDPAU::CVdpauRenderPicture*)m_buffers[m_iYV12RenderBuffer].hwDec;
   if(VDPAUPic && VDPAUPic->vdpau)
@@ -107,7 +107,7 @@ bool CRendererVDPAU::Supports(EINTERLACEMETHOD method)
   return false;
 }
 
-bool CRendererVDPAU::Supports(ESCALINGMETHOD method)
+bool CRendererVDPAU_GLES::Supports(ESCALINGMETHOD method)
 {
   if (m_format == RENDER_FMT_VDPAU_420)
     return CLinuxRendererGL::Supports(method);
@@ -147,7 +147,7 @@ bool CRendererVDPAU::Supports(ESCALINGMETHOD method)
   return false;
 }
 
-bool CRendererVDPAU::LoadShadersHook()
+bool CRendererVDPAU_GLES::LoadShadersHook()
 {
   if (m_format == RENDER_FMT_VDPAU)
   {
@@ -159,7 +159,7 @@ bool CRendererVDPAU::LoadShadersHook()
   return false;
 }
 
-bool CRendererVDPAU::RenderHook(int idx)
+bool CRendererVDPAU_GLES::RenderHook(int idx)
 {
   UpdateVideoFilter();
 
@@ -201,7 +201,7 @@ bool CRendererVDPAU::RenderHook(int idx)
   return true;
 }
 
-bool CRendererVDPAU::CreateTexture(int index)
+bool CRendererVDPAU_GLES::CreateTexture(int index)
 {
   if (m_format == RENDER_FMT_VDPAU)
     return CreateVDPAUTexture(index);
@@ -211,7 +211,7 @@ bool CRendererVDPAU::CreateTexture(int index)
     return false;
 }
 
-void CRendererVDPAU::DeleteTexture(int index)
+void CRendererVDPAU_GLES::DeleteTexture(int index)
 {
   if (m_format == RENDER_FMT_VDPAU)
     DeleteVDPAUTexture(index);
@@ -219,7 +219,7 @@ void CRendererVDPAU::DeleteTexture(int index)
     DeleteVDPAUTexture420(index);
 }
 
-bool CRendererVDPAU::UploadTexture(int index)
+bool CRendererVDPAU_GLES::UploadTexture(int index)
 {
   if (m_format == RENDER_FMT_VDPAU)
     return UploadVDPAUTexture(index);
@@ -229,7 +229,7 @@ bool CRendererVDPAU::UploadTexture(int index)
     return false;
 }
 
-bool CRendererVDPAU::CreateVDPAUTexture(int index)
+bool CRendererVDPAU_GLES::CreateVDPAUTexture(int index)
 {
   YV12Image &im     = m_buffers[index].image;
   YUVFIELDS &fields = m_buffers[index].fields;
@@ -252,7 +252,7 @@ bool CRendererVDPAU::CreateVDPAUTexture(int index)
   return true;
 }
 
-void CRendererVDPAU::DeleteVDPAUTexture(int index)
+void CRendererVDPAU_GLES::DeleteVDPAUTexture(int index)
 {
   YUVPLANE &plane = m_buffers[index].fields[FIELD_FULL][0];
 
@@ -263,7 +263,7 @@ void CRendererVDPAU::DeleteVDPAUTexture(int index)
   plane.id = 0;
 }
 
-bool CRendererVDPAU::UploadVDPAUTexture(int index)
+bool CRendererVDPAU_GLES::UploadVDPAUTexture(int index)
 {
   VDPAU::CVdpauRenderPicture *vdpau = (VDPAU::CVdpauRenderPicture*)m_buffers[index].hwDec;
 
@@ -305,7 +305,7 @@ bool CRendererVDPAU::UploadVDPAUTexture(int index)
   return true;
 }
 
-bool CRendererVDPAU::CreateVDPAUTexture420(int index)
+bool CRendererVDPAU_GLES::CreateVDPAUTexture420(int index)
 {
   YV12Image &im     = m_buffers[index].image;
   YUVFIELDS &fields = m_buffers[index].fields;
@@ -334,7 +334,7 @@ bool CRendererVDPAU::CreateVDPAUTexture420(int index)
   return true;
 }
 
-void CRendererVDPAU::DeleteVDPAUTexture420(int index)
+void CRendererVDPAU_GLES::DeleteVDPAUTexture420(int index)
 {
   YUVFIELDS &fields = m_buffers[index].fields;
 
@@ -349,7 +349,7 @@ void CRendererVDPAU::DeleteVDPAUTexture420(int index)
   fields[2][1].id = 0;
 }
 
-bool CRendererVDPAU::UploadVDPAUTexture420(int index)
+bool CRendererVDPAU_GLES::UploadVDPAUTexture420(int index)
 {
   VDPAU::CVdpauRenderPicture *vdpau = (VDPAU::CVdpauRenderPicture*)m_buffers[index].hwDec;
   YV12Image &im = m_buffers[index].image;

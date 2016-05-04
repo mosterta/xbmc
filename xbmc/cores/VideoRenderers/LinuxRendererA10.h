@@ -28,10 +28,10 @@
 #include "xbmc/guilib/FrameBufferObject.h"
 #include "xbmc/guilib/Shader.h"
 #include "settings/VideoSettings.h"
-#include "RenderFlags.h"
+#include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
 #include "guilib/GraphicContext.h"
-#include "BaseRenderer.h"
-#include "xbmc/cores/dvdplayer/DVDCodecs/Video/DVDVideoCodec.h"
+#include "cores/VideoPlayer/VideoRenderers/BaseRenderer.h"
+#include "xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodec.h"
 #if not defined (HAVE_LIBVDPAU)
 #include "xbmc/cores/dvdplayer/DVDCodecs/Video/DVDVideoCodecA10.h"
 #endif
@@ -135,7 +135,7 @@ public:
   virtual int          GetImage(YV12Image *image, int source = AUTOSOURCE, bool readonly = false);
   virtual void         ReleaseImage(int source, bool preserve = false);
   virtual void         FlipPage(int source);
-  virtual unsigned int PreInit();
+  virtual void         PreInit();
   virtual void         UnInit();
   virtual void         Reset(); /* resets renderer after seek for example */
   virtual void         ReorderDrawPoints();

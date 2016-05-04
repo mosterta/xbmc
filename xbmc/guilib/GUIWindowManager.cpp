@@ -87,6 +87,7 @@
 #include "settings/dialogs/GUIDialogContentSettings.h"
 #include "dialogs/GUIDialogBusy.h"
 #include "dialogs/GUIDialogKeyboardGeneric.h"
+#include "dialogs/GUIDialogKeyboardTouch.h"
 #include "dialogs/GUIDialogYesNo.h"
 #include "dialogs/GUIDialogOK.h"
 #include "dialogs/GUIDialogProgress.h"
@@ -199,6 +200,7 @@ void CGUIWindowManager::CreateWindows()
   Add(new CGUIDialogProgress);
   Add(new CGUIDialogExtendedProgressBar);
   Add(new CGUIDialogKeyboardGeneric);
+  Add(new CGUIDialogKeyboardTouch);
   Add(new CGUIDialogVolumeBar);
   Add(new CGUIDialogSeekBar);
   Add(new CGUIDialogSubMenu);
@@ -320,6 +322,7 @@ bool CGUIWindowManager::DestroyWindows()
     Delete(WINDOW_DIALOG_SELECT);
     Delete(WINDOW_DIALOG_OK);
     Delete(WINDOW_DIALOG_KEYBOARD);
+    Delete(WINDOW_DIALOG_KEYBOARD_TOUCH);
     Delete(WINDOW_FULLSCREEN_VIDEO);
     Delete(WINDOW_DIALOG_PROFILE_SETTINGS);
     Delete(WINDOW_DIALOG_LOCK_SETTINGS);
@@ -403,6 +406,9 @@ bool CGUIWindowManager::DestroyWindows()
     Remove(WINDOW_SETTINGS_SERVICE);
     Remove(WINDOW_SETTINGS_APPEARANCE);
     Remove(WINDOW_SETTINGS_MYPVR);
+    Remove(WINDOW_SETTINGS_PLAYER);
+    Remove(WINDOW_SETTINGS_LIBRARY);
+    Remove(WINDOW_SETTINGS_INTERFACE);
     Remove(WINDOW_DIALOG_KAI_TOAST);
 
     Remove(WINDOW_DIALOG_SEEK_BAR);
@@ -847,7 +853,7 @@ void CGUIWindowManager::OnApplicationMessage(ThreadMessage* pMsg)
 {
   switch (pMsg->dwMessage)
   {
-  case TMSG_GUI_DIALOG_OPEN:  
+  case TMSG_GUI_DIALOG_OPEN:
   {
     if (pMsg->lpVoid)
       static_cast<CGUIDialog*>(pMsg->lpVoid)->Open(pMsg->strParam);
@@ -1034,7 +1040,7 @@ void CGUIWindowManager::RenderPass() const
   // we render the dialogs based on their render order.
   std::vector<CGUIWindow *> renderList = m_activeDialogs;
   stable_sort(renderList.begin(), renderList.end(), RenderOrderSortFunction);
-  
+
   for (iDialog it = renderList.begin(); it != renderList.end(); ++it)
   {
     if ((*it)->IsDialogRunning())

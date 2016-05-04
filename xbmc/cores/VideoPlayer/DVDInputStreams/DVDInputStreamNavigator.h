@@ -179,8 +179,6 @@ public:
   std::string GetDVDTitleString();
   std::string GetDVDSerialString();
 
-  void CheckButtons();
-
   DVDNavVideoStreamInfo GetVideoStreamInfo();
 
   void CheckButtons();

@@ -348,9 +348,10 @@ namespace PVR
     /*!
      * @brief Get all timers from clients
      * @param timers Store the timers in this container.
-     * @return The amount of timers that were added.
+     * @param failedClients in case of errors will contain the ids of the clients for which the timers could not be obtained.
+     * @return true on success for all clients, false in case of error for at least one client.
      */
-    PVR_ERROR GetTimers(CPVRTimers *timers);
+    bool GetTimers(CPVRTimers *timers, std::vector<int> &failedClients);
 
     /*!
      * @brief Add a new timer to a backend.
@@ -678,6 +679,14 @@ namespace PVR
 
     void ConnectionStateChange(int clientId, std::string &strConnectionString, PVR_CONNECTION_STATE newState,
                                std::string &strMessage);
+
+    /*!
+     * @brief Propagate event to clients
+     */
+    void OnSystemSleep();
+    void OnSystemWake();
+    void OnPowerSavingActivated();
+    void OnPowerSavingDeactivated();
 
   private:
     /*!

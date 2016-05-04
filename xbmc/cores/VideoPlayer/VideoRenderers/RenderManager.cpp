@@ -38,15 +38,16 @@
 #include "HwDecRender/RendererVAAPI.h"
 #include "HwDecRender/RendererVDPAU.h"
 #if defined(TARGET_DARWIN_OSX)
-#include "HwDecRender/RendererVDA.h"
+#include "HwDecRender/RendererVTBGL.h"
 #endif
 #elif HAS_GLES == 2
+  #include "HwDecRender/RendererVDPAU_GLES.h"
   #include "LinuxRendererGLES.h"
 #if defined(HAS_MMAL)
 #include "HwDecRender/MMALRenderer.h"
 #endif
-#if defined(HAVE_VIDEOTOOLBOXDECODER)
-#include "HwDecRender/RendererVTB.h"
+#if defined(TARGET_DARWIN_IOS)
+#include "HwDecRender/RendererVTBGLES.h"
 #endif
 #if defined(HAS_IMXVPU)
 #include "HwDecRender/RendererIMX.h"
@@ -517,14 +518,12 @@ void CRenderManager::CreateRenderer()
     else if (m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420)
     {
 #if defined(HAVE_LIBVDPAU)
-      m_pRenderer = new CRendererVDPAU;
+      m_pRenderer = new CRendererVDPAU_GLES;
 #endif
     }
     else if (m_format == RENDER_FMT_CVBREF)
     {
-#if defined(TARGET_DARWIN_OSX)
-      m_pRenderer = new CRendererVDA;
-#elif defined(HAVE_VIDEOTOOLBOXDECODER)
+#if defined(TARGET_DARWIN)
       m_pRenderer = new CRendererVTB;
 #endif
     }

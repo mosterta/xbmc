@@ -1834,7 +1834,8 @@ void CApplication::Render()
 
   if (!extPlayerActive && g_graphicsContext.IsFullScreenVideo() && !m_pPlayer->IsPausedPlayback())
   {
-#ifdef ALLWINNERA10
+#if 0
+//#ifdef ALLWINNERA10
       if (IsInScreenSaver())
       {
         //so the mk802 does not burn down the house when i'm sleeping :)
@@ -2805,6 +2806,13 @@ void CApplication::Stop(int exitCode)
     }
     else
       CLog::Log(LOGNOTICE, "Not saving settings (settings.xml is not present)");
+
+    // kodi may crash or deadlock during exit (shutdown / reboot) due to
+    // either a bug in core or misbehaving addons. so try saving
+    // skin settings early
+    CLog::Log(LOGNOTICE, "Saving skin settings");
+    if (g_SkinInfo != nullptr)
+      g_SkinInfo->SaveSettings();
 
     m_bStop = true;
     m_AppFocused = false;

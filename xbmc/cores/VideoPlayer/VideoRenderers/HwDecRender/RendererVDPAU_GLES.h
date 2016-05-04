@@ -24,13 +24,13 @@
 
 #ifdef HAVE_LIBVDPAU
 
-#include "cores/VideoPlayer/VideoRenderers/LinuxRendererGL.h"
+#include "cores/VideoPlayer/VideoRenderers/LinuxRendererGLES.h"
 
-class CRendererVDPAU : public CLinuxRendererGL
+class CRendererVDPAU_GLES : public CLinuxRendererGLES
 {
 public:
-  CRendererVDPAU();
-  virtual ~CRendererVDPAU();
+  CRendererVDPAU_GLES();
+  virtual ~CRendererVDPAU_GLES();
 
   // Player functions
   virtual void AddVideoPictureHW(DVDVideoPicture &picture, int index);

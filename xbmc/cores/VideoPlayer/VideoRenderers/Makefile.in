@@ -21,9 +21,5 @@ SRCS += LinuxRendererGLES.cpp
 SRCS += OverlayRendererGL.cpp
 endif
 
-SRCS += LinuxRendererA10.cpp
-
-LIB = VideoRenderer.a
-
 include @abs_top_srcdir@/Makefile.include
 -include $(patsubst %.cpp,%.P,$(patsubst %.c,%.P,$(patsubst %.S,,$(SRCS)))) 
