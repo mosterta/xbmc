@@ -27,8 +27,6 @@ option(ENABLE_CEC         "Enable CEC support?" ON)
 if(UNIX)
   if(NOT APPLE)
     option(ENABLE_INTERNAL_FFMPEG "Enable internal ffmpeg?" ON)
-  else()
-    option(ENABLE_VTB "Enable VTB support?" OFF)
   endif()
   option(FFMPEG_PATH        "Path to external ffmpeg?" "")
   option(ENABLE_INTERNAL_CROSSGUID "Enable internal crossguid?" ON)
@@ -95,7 +93,7 @@ list(APPEND DEPLIBS ${CMAKE_THREAD_LIBS_INIT})
 # Required dependencies
 set(required_deps Sqlite3 FreeType PCRE Cpluff LibDvd
                   TinyXML Python Yajl Xslt
-                  JPEG Lzo2 Fribidi TagLib FFMPEG CrossGUID)
+                  Lzo2 Fribidi TagLib FFMPEG CrossGUID)
 if(NOT WIN32)
   list(APPEND required_deps LibSmbClient ZLIB)
 else()
@@ -170,10 +168,6 @@ if(ENABLE_AIRTUNES)
   if(SHAIRPLAY_FOUND)
     core_require_dyload_dep(Shairplay)
   endif()
-endif()
-
-if(ENABLE_VTB)
-  list(APPEND DEP_DEFINES -DHAVE_VIDEOTOOLBOXDECODER=1)
 endif()
 
 if(NOT WIN32)
@@ -287,14 +281,14 @@ if(CORE_SYSTEM_NAME STREQUAL linux)
   core_link_library(sse4 system/libsse4)
 endif()
 
-core_link_library(XBMC_addon addons/library.xbmc.addon/libXBMC_addon)
-core_link_library(XBMC_codec addons/library.xbmc.codec/libXBMC_codec)
-core_link_library(XBMC_pvr addons/library.xbmc.pvr/libXBMC_pvr)
-core_link_library(KODI_adsp addons/library.kodi.adsp/libKODI_adsp)
-core_link_library(KODI_audioengine addons/library.kodi.audioengine/libKODI_audioengine)
-core_link_library(KODI_guilib addons/library.kodi.guilib/libKODI_guilib)
-core_link_library(KODI_inputstream addons/library.kodi.inputstream/libKODI_inputstream)
-core_link_library(KODI_peripheral addons/library.kodi.peripheral/libKODI_peripheral)
+core_link_library(XBMC_addon addons/library.xbmc.addon/libXBMC_addon nowrap)
+core_link_library(XBMC_codec addons/library.xbmc.codec/libXBMC_codec nowrap)
+core_link_library(XBMC_pvr addons/library.xbmc.pvr/libXBMC_pvr nowrap)
+core_link_library(KODI_adsp addons/library.kodi.adsp/libKODI_adsp nowrap)
+core_link_library(KODI_audioengine addons/library.kodi.audioengine/libKODI_audioengine nowrap)
+core_link_library(KODI_guilib addons/library.kodi.guilib/libKODI_guilib nowrap)
+core_link_library(KODI_inputstream addons/library.kodi.inputstream/libKODI_inputstream nowrap)
+core_link_library(KODI_peripheral addons/library.kodi.peripheral/libKODI_peripheral nowrap)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/system/players/VideoPlayer)
 add_custom_target(wrap-libraries ALL DEPENDS ${WRAP_FILES})
@@ -359,11 +353,28 @@ if(ENABLE_X11 AND XRANDR_FOUND)
 endif()
 
 # XBMCHelper
-if(CORE_SYSTEM_TYPE STREQUAL darwin)
+if(CORE_SYSTEM_NAME STREQUAL darwin)
   add_subdirectory(${CORE_SOURCE_DIR}/tools/EventClients/Clients/OSXRemote build/XBMCHelper)
 endif()
 
 include(scripts/${CORE_SYSTEM_NAME}/install.cmake)
+
+# Prepare add-on build env
+foreach(binding ${addon_bindings})
+  get_filename_component(file ${binding} NAME)
+  set(BINDING_TARGET ${CORE_BUILD_DIR}/include/${APP_NAME_LC}/${file})
+  configure_file(${binding} ${BINDING_TARGET} COPYONLY)
+endforeach()
+
+set(APP_LIB_DIR ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/lib/${APP_NAME_LC})
+set(APP_INCLUDE_DIR ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/include/${APP_NAME_LC})
+set(CXX11_SWITCH "-std=c++11")
+configure_file(${PROJECT_SOURCE_DIR}/kodi-config.cmake.in
+               ${CORE_BUILD_DIR}/lib/${APP_NAME_LC}/${APP_NAME_LC}-config.cmake @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/scripts/common/addon-helpers.cmake
+               ${CORE_BUILD_DIR}/lib/${APP_NAME_LC}/addon-helpers.cmake COPYONLY)
+configure_file(${PROJECT_SOURCE_DIR}/scripts/common/addoptions.cmake
+               ${CORE_BUILD_DIR}/lib/${APP_NAME_LC}/addoptions.cmake COPYONLY)
 
 # Status
 message(STATUS "#---- CONFIGURATION ----#")
