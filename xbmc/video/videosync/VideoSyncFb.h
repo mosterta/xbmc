@@ -27,12 +27,12 @@
 class CVideoSyncFb : public CVideoSync, IDispResource
 {
 public:
-  CVideoSyncFb(int fbNum);
+  CVideoSyncFb(CVideoReferenceClock *clock, int fbNum);
   virtual bool Setup(PUPDATECLOCK func);
   virtual void Run(volatile bool& stop);
   virtual void Cleanup();
   virtual float GetFps();
-  virtual void OnResetDevice();
+  virtual void OnResetDisplay();
 private:
   volatile bool m_abort;
   int m_fd_fb;

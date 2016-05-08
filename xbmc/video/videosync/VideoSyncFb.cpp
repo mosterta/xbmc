@@ -34,7 +34,7 @@
 
 using namespace std;
 
-CVideoSyncFb::CVideoSyncFb(int fbNum) : CVideoSync(), IDispResource(), m_fbNum(fbNum)
+CVideoSyncFb::CVideoSyncFb(CVideoReferenceClock *clock, int fbNum) : CVideoSync(clock), m_fbNum(fbNum)
 {
 }
 
@@ -63,13 +63,13 @@ void CVideoSyncFb::Run(volatile bool& stop)
   {
     ioctl(m_fd_fb, FBIO_WAITFORVSYNC);
     uint64_t now = CurrentHostCounter();
-    UpdateClock(1, now);
+    UpdateClock(1, now, m_refClock);
   }
 }
 
 void CVideoSyncFb::Cleanup()
 {
-  CLog::Log(LOGDEBUG, "CVideoReferenceClock: cleaning up RPi");
+  CLog::Log(LOGDEBUG, "CVideoReferenceClock: cleaning up Fb%d", m_fbNum);
   if(m_fd_fb >= 0)
      close(m_fd_fb);
   g_Windowing.Unregister(this);
@@ -82,7 +82,7 @@ float CVideoSyncFb::GetFps()
   return m_fps;
 }
 
-void CVideoSyncFb::OnResetDevice()
+void CVideoSyncFb::OnResetDisplay()
 {
   m_abort = true;
 }
