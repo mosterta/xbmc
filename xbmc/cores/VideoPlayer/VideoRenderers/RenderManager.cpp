@@ -522,7 +522,9 @@ void CRenderManager::CreateRenderer()
     }
     else if (m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420)
     {
-#if defined(HAVE_LIBVDPAU)
+#if defined(HAVE_LIBVDPAU) && defined(HAS_GL)
+      m_pRenderer = new CRendererVDPAU; 
+#elif defined(HAVE_LIBVDPAU) && HAS_GLES == 2
       m_pRenderer = new CRendererVDPAU_GLES;
 #endif
     }

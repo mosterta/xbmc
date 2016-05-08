@@ -82,6 +82,7 @@ enum RenderMethod
 {
   RENDER_GLSL   = 0x001,
   RENDER_SW     = 0x004,
+  RENDER_VDPAU  = 0x008,
   RENDER_POT    = 0x010,
   RENDER_OMXEGL = 0x040,
   RENDER_CVREF  = 0x080,
@@ -186,7 +187,8 @@ protected:
   // renderers
   void RenderMultiPass(int index, int field);     // multi pass glsl renderer
   void RenderSinglePass(int index, int field);    // single pass glsl renderer
-  
+  void RenderProgressiveWeave(int renderBuffer, int field); // render using vdpau hardware
+
   // hooks for HwDec Renderered
   virtual bool LoadShadersHook() { return false; }
   virtual bool RenderHook(int idx) { return false; }

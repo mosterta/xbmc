@@ -32,7 +32,10 @@
 #endif
 
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
-#include "cores/VideoRenderers/LinuxRendererA10.h"
+//#include "cores/VideoRenderers/LinuxRendererA10.h"
+bool A10VLInit(int &width, int &height, double &refreshRate);
+void A10VLExit();
+
 struct mali_native_window {
         unsigned short width;
         unsigned short height;
@@ -178,8 +181,6 @@ static int             g_syslayer = 0x64;
 static int             g_hlayer = 0;
 static int             g_width;
 static int             g_height;
-static CRect           g_srcRect;
-static CRect           g_dstRect;
 static int             g_lastnr;
 static int             g_decnr;
 static int             g_wridx;
@@ -300,9 +301,6 @@ bool A10VLInit(int &width, int &height, double &refreshRate)
     CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_REQUEST failed.\n");
     return false;
   }
-
-  memset(&g_srcRect, 0, sizeof(g_srcRect));
-  memset(&g_dstRect, 0, sizeof(g_dstRect));
 
   g_lastnr = -1;
   g_decnr  = 0;

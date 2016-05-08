@@ -16,6 +16,7 @@ SRCS += RendererIMX.cpp
 SRCS += RendererOpenMax.cpp
 SRCS += RendererMediaCodec.cpp
 SRCS += RendererMediaCodecSurface.cpp
+SRCS += RendererVDPAU_GLES.cpp
 endif
 
 ifeq (@USE_LIBAMCODEC@,1)

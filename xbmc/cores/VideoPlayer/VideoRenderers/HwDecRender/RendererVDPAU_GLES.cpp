@@ -18,7 +18,7 @@
  *
  */
 
-#include "RendererVDPAU.h"
+#include "RendererVDPAU_GLES.h"
 
 #ifdef HAVE_LIBVDPAU
 
@@ -78,7 +78,6 @@ bool CRendererVDPAU_GLES::Supports(ERENDERFEATURE feature)
       return true;
 
     return (m_renderMethod & RENDER_GLSL)
-        || (m_renderMethod & RENDER_ARB)
         || ((m_renderMethod & RENDER_SW) && g_Windowing.IsExtSupported("GL_ARB_imaging") == GL_TRUE);
   }
   else if (feature == RENDERFEATURE_NOISE ||
@@ -110,7 +109,7 @@ bool CRendererVDPAU_GLES::Supports(EINTERLACEMETHOD method)
 bool CRendererVDPAU_GLES::Supports(ESCALINGMETHOD method)
 {
   if (m_format == RENDER_FMT_VDPAU_420)
-    return CLinuxRendererGL::Supports(method);
+    return CLinuxRendererGLES::Supports(method);
 
   //nearest neighbor doesn't work on YUY2 and UYVY
   if (method == VS_SCALINGMETHOD_NEAREST &&
@@ -153,7 +152,6 @@ bool CRendererVDPAU_GLES::LoadShadersHook()
   {
     CLog::Log(LOGNOTICE, "GL: Using VDPAU render method");
     m_renderMethod = RENDER_VDPAU;
-    m_fullRange = false;
     return true;
   }
   return false;
@@ -179,18 +177,18 @@ bool CRendererVDPAU_GLES::RenderHook(int idx)
     case RQ_MULTIPASS:
       if (m_currentField == FIELD_FULL)
         RenderProgressiveWeave(idx, m_currentField);
-      else
-      {
-        RenderToFBO(idx, m_currentField);
-        RenderFromFBO();
-      }
+//      else
+//      {
+//        RenderToFBO(idx, m_currentField);
+//        RenderFromFBO();
+//      }
       VerifyGLState();
       break;
     }
   }
   else
   {
-    RenderRGB(idx, m_currentField);
+//    RenderRGB(idx, m_currentField);
   }
 
   YUVBUFFER &buf = m_buffers[idx];
@@ -310,7 +308,6 @@ bool CRendererVDPAU_GLES::CreateVDPAUTexture420(int index)
   YV12Image &im     = m_buffers[index].image;
   YUVFIELDS &fields = m_buffers[index].fields;
   YUVPLANE &plane = fields[0][0];
-  GLuint    *pbo    = m_buffers[index].pbo;
 
   DeleteVDPAUTexture420(index);
 
@@ -323,11 +320,6 @@ bool CRendererVDPAU_GLES::CreateVDPAUTexture420(int index)
   im.plane[0] = NULL;
   im.plane[1] = NULL;
   im.plane[2] = NULL;
-
-  for(int p=0; p<3; p++)
-  {
-    pbo[p] = None;
-  }
 
   plane.id = 1;
 
@@ -392,10 +384,16 @@ bool CRendererVDPAU_GLES::UploadVDPAUTexture420(int index)
   // set textures
   fields[1][0].id = vdpau->texture[0];
   fields[1][1].id = vdpau->texture[2];
-  fields[1][2].id = vdpau->texture[2];
+  fields[1][2].id = vdpau->texture[4];
   fields[2][0].id = vdpau->texture[1];
   fields[2][1].id = vdpau->texture[3];
-  fields[2][2].id = vdpau->texture[3];
+  fields[2][2].id = vdpau->texture[5];
+  if(vdpau->numTextures == 4)
+  {
+     fields[0][2].id = vdpau->texture[2];
+     fields[1][2].id = vdpau->texture[2];
+     fields[2][2].id = vdpau->texture[3];
+  }
 
   glEnable(m_textureTarget);
   for (int f = FIELD_TOP; f <= FIELD_BOT; f++)
