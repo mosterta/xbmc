@@ -862,12 +862,7 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
     {
     case RQ_LOW:
     case RQ_SINGLEPASS:
-
-/*       if (m_format == RENDER_FMT_VDPAU_420 && m_currentField == FIELD_FULL)
-          RenderSinglePass(index, FIELD_TOP);
-       else
-*/          RenderSinglePass(index, m_currentField);
-
+      RenderSinglePass(index, m_currentField);
       VerifyGLState();
       break;
 
