@@ -32,9 +32,6 @@
 #endif
 
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
-//#include "cores/VideoRenderers/LinuxRendererA10.h"
-bool A10VLInit(int &width, int &height, double &refreshRate);
-void A10VLExit();
 
 struct mali_native_window {
         unsigned short width;
@@ -45,12 +42,20 @@ static struct mali_native_window g_fbwin;
 static double       g_refreshRate;
 #endif
 
+static int             g_hfb = -1;
+static int             g_hdisp = -1;
+static int             m_screenid = 0;
+//static int             g_syslayer = 0x64;
+static int             g_hlayer = 0;
+static int             g_width;
+static int             g_height;
+
 CEGLNativeTypeA10::CEGLNativeTypeA10()
 {
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
   int width, height;
 
-  A10VLInit(width, height, g_refreshRate);
+  VLInit(width, height, g_refreshRate);
   g_fbwin.width  = width;
   g_fbwin.height = height;
 #endif
@@ -59,7 +64,7 @@ CEGLNativeTypeA10::CEGLNativeTypeA10()
 CEGLNativeTypeA10::~CEGLNativeTypeA10()
 {
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID) 
-  A10VLExit();
+  VLExit();
 #endif
 } 
 
@@ -173,27 +178,33 @@ bool CEGLNativeTypeA10::ShowWindow(bool show)
   return false;
 }
 
+bool CEGLNativeTypeA10::GetVideoLayerHandle(void*& handle)
+{
+  bool ret = false;
+  if(m_hVideoLayer != 0)
+  {
+    handle = (void*)m_hVideoLayer;
+    ret = true;
+  }
+  return ret;
+}
 
-static int             g_hfb = -1;
-static int             g_hdisp = -1;
-static int             g_screenid = 0;
-static int             g_syslayer = 0x64;
-static int             g_hlayer = 0;
-static int             g_width;
-static int             g_height;
-static int             g_lastnr;
-static int             g_decnr;
-static int             g_wridx;
-static int             g_rdidx;
-static pthread_mutex_t g_dispq_mutex;
+bool CEGLNativeTypeA10::GetDispIdHandle(void*& handle)
+{
+  bool ret = false;
+  if(m_hVideoLayer != 0)
+  {
+    handle = (void*)g_hdisp;
+    ret = true;
+  }
+  return ret;
+}
 
-bool A10VLInit(int &width, int &height, double &refreshRate)
+bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
 {
   unsigned long       args[4];
   __disp_layer_info_t layera;
   unsigned int        i;
-
-  pthread_mutex_init(&g_dispq_mutex, NULL);
 
   g_hfb = open("/dev/fb0", O_RDWR);
 
@@ -203,8 +214,16 @@ bool A10VLInit(int &width, int &height, double &refreshRate)
     CLog::Log(LOGERROR, "A10: open /dev/disp failed. (%d)", errno);
     return false;
   }
+#if 0
+  int ver = SUNXI_DISP_VERSION;
+  if (ioctl(g_hdisp, DISP_CMD_VERSION, &ver) < 0)
+  {
+    CLog::Log(LOGERROR, "A10: version failed. (%d)", errno);
+    return false;
+  }
+#endif
 
-  args[0] = g_screenid;
+  args[0] = m_screenid;
   args[1] = 0;
   args[2] = 0;
   args[3] = 0;
@@ -234,17 +253,23 @@ bool A10VLInit(int &width, int &height, double &refreshRate)
     break;
   }
 
+  if (ioctl(g_hfb, FBIOGET_LAYER_HDL_0, &m_hGuiLayer))
+  {
+    CLog::Log(LOGERROR, "A10: get fb0 layer handle failed. (%d)", errno);
+    return false;
+  }
+
   if ((g_height > 720) && (getenv("A10AB") == NULL))
   {
     //set workmode scaler (system layer)
-    args[0] = g_screenid;
-    args[1] = g_syslayer;
+    args[0] = m_screenid;
+    args[1] = m_hGuiLayer;
     args[2] = (unsigned long) (&layera);
     args[3] = 0;
     ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args);
     layera.mode = DISP_LAYER_WORK_MODE_SCALER;
-    args[0] = g_screenid;
-    args[1] = g_syslayer;
+    args[0] = m_screenid;
+    args[1] = m_hGuiLayer;
     args[2] = (unsigned long) (&layera);
     args[3] = 0;
     ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args);
@@ -252,8 +277,8 @@ bool A10VLInit(int &width, int &height, double &refreshRate)
   else
   {
     //set workmode normal (system layer)
-    args[0] = g_screenid;
-    args[1] = g_syslayer;
+    args[0] = m_screenid;
+    args[1] = m_hGuiLayer;
     args[2] = (unsigned long) (&layera);
     args[3] = 0;
     ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args);
@@ -268,80 +293,169 @@ bool A10VLInit(int &width, int &height, double &refreshRate)
     layera.scn_win.width  = g_width;
     layera.scn_win.height = g_height;
     layera.mode = DISP_LAYER_WORK_MODE_NORMAL;
-    args[0] = g_screenid;
-    args[1] = g_syslayer;
+    args[0] = m_screenid;
+    args[1] = m_hGuiLayer;
     args[2] = (unsigned long) (&layera);
     args[3] = 0;
     ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args);
 
   }
 
+  
   for (i = 0x65; i <= 0x67; i++)
   {
     //release possibly lost allocated layers
-    args[0] = g_screenid;
+    args[0] = m_screenid;
     args[1] = i;
     args[2] = 0;
     args[3] = 0;
     ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
   }
 
-  // Hack: avoid blue picture background
-//  if (!A10VLBlueScreenFix())
-//    return false;
-
-  args[0] = g_screenid;
+  args[0] = m_screenid;
   args[1] = DISP_LAYER_WORK_MODE_SCALER;
   args[2] = 0;
   args[3] = 0;
-  g_hlayer = ioctl(g_hdisp, DISP_CMD_LAYER_REQUEST, args);
-  if (g_hlayer <= 0)
+  m_hVideoLayer = ioctl(g_hdisp, DISP_CMD_LAYER_REQUEST, args);
+  if (m_hVideoLayer <= 0)
   {
-    g_hlayer = 0;
+    m_hVideoLayer = 0;
     CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_REQUEST failed.\n");
     return false;
   }
 
-  g_lastnr = -1;
-  g_decnr  = 0;
-  g_rdidx  = 0;
-  g_wridx  = 0;
-
-#if !defined(HAVE_LIBVDPAU)
-  for (i = 0; i < DISPQS; i++)
-    g_dispq[i].pict.id = -1;
+#if 0
+  args[0] = m_screenid;
+  args[1] = m_hVideoLayer;
+  if (ioctl(g_hdisp, DISP_CMD_LAYER_OPEN, &args) < 0)
+  {
+    printf("layer open failed\n");
+  }
 #endif
+#if 1
+  __disp_colorkey_t ck;
+  ck.ck_max.red = ck.ck_min.red = 0x0;
+  ck.ck_max.green = ck.ck_min.green = 0x0;
+  ck.ck_max.blue = ck.ck_min.blue = 0x0;
+  ck.ck_max.alpha = ck.ck_min.alpha = 0xff;
+  ck.red_match_rule = 2;
+  ck.green_match_rule = 2;
+  ck.blue_match_rule = 2;
+
+  args[0] = m_hGuiLayer;
+  args[1] = (unsigned long)(&ck);
+  ioctl(g_hdisp, DISP_CMD_SET_COLORKEY, args);
+#endif
+
+#if 0
+  args[0] = m_screenid;
+  args[1] = m_hVideoLayer;
+  args[2] = (unsigned long) (&layera);
+  args[3] = 0;
+  ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args);
+  layera.src_win.x      = 0;
+  layera.src_win.y      = 0;
+  layera.src_win.width  = g_width;
+  layera.src_win.height = g_height;
+    //screen window information
+  layera.scn_win.x      = 0;
+  layera.scn_win.y      = 0;
+  layera.scn_win.width  = g_width;
+  layera.scn_win.height = g_height;
+  layera.mode = DISP_LAYER_WORK_MODE_SCALER;
+  layera.alpha_en = 1;
+  layera.alpha_val = 0xff;
+  layera.pipe = 1;
+  args[0] = m_screenid;
+  args[1] = m_hVideoLayer;
+  args[2] = (unsigned long) (&layera);
+  args[3] = 0;
+  ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args);
+#endif
+
+  args[0] = m_screenid;
+  args[1] = m_hVideoLayer;
+  args[2] = 0;
+  args[3] = 0;
+  if (ioctl(g_hdisp, DISP_CMD_LAYER_TOP, args))
+  {
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_BOTTOM video layer failed.\n");
+    return false;
+  }
+
+  args[0] = m_screenid;
+  args[1] = m_hGuiLayer;
+  args[2] = 0;
+  args[3] = 0;
+  if (ioctl(g_hdisp, DISP_CMD_LAYER_TOP, args))
+  {
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_BOTTOM video layer failed.\n");
+    return false;
+  }
+  
+  args[0] = m_screenid;
+  args[1] = m_hGuiLayer;
+  if (ioctl(g_hdisp, DISP_CMD_LAYER_ALPHA_OFF, &args) < 0)
+  {
+    printf("alpha on failed\n");
+  }
+
+  args[0] = m_screenid;
+  args[1] = m_hGuiLayer;
+  args[2] = 0x0;
+  if (ioctl(g_hdisp,DISP_CMD_LAYER_SET_ALPHA_VALUE,(void*)args) < 0)
+  {
+    printf("set alpha value failed\n");
+  }
 
   return true;
 }
 
-void A10VLExit()
+void CEGLNativeTypeA10::VLExit()
 {
   unsigned long args[4];
 
-  if (g_hlayer)
+  if (m_hVideoLayer)
   {
     //stop video
-    args[0] = g_screenid;
-    args[1] = g_hlayer;
+    args[0] = m_screenid;
+    args[1] = m_hVideoLayer;
     args[2] = 0;
     args[3] = 0;
     ioctl(g_hdisp, DISP_CMD_VIDEO_STOP, args);
 
     //close layer
-    args[0] = g_screenid;
-    args[1] = g_hlayer;
+    args[0] = m_screenid;
+    args[1] = m_hVideoLayer;
     args[2] = 0;
     args[3] = 0;
     ioctl(g_hdisp, DISP_CMD_LAYER_CLOSE, args);
 
     //release layer
-    args[0] = g_screenid;
-    args[1] = g_hlayer;
+    args[0] = m_screenid;
+    args[1] = m_hVideoLayer;
     args[2] = 0;
     args[3] = 0;
     ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
-    g_hlayer = 0;
+    m_hVideoLayer = 0;
+  }
+  if (m_hGuiLayer)
+  {
+    //close layer
+    args[0] = m_screenid;
+    args[1] = m_hGuiLayer;
+    args[2] = 0;
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_LAYER_CLOSE, args);
+
+    //release layer
+    args[0] = m_screenid;
+    args[1] = m_hGuiLayer;
+    args[2] = 0;
+    args[3] = 0;
+    ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
+    m_hGuiLayer = 0;
+
   }
   if (g_hdisp != -1)
   {

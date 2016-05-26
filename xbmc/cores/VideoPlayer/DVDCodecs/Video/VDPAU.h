@@ -75,8 +75,11 @@ extern "C" {
 #define FULLHD_WIDTH                       1920
 #define MAX_PIC_Q_LENGTH                   20 //for non-interop_yuv this controls the max length of the decoded pic to render completion Q
 
-#define GL_NV_vdpau_sim_interop 1
-#define GL_OES_EGL_sync         1
+//#define GL_NV_vdpau_sim_interop 0
+#define Cedar_vdpau_interop     1
+#define ALLWINNER_FRAME_sync    1
+//#define GL_OES_EGL_sync         0
+#undef GL_NV_vdpau_interop 
 
 #if defined(GL_NV_vdpau_sim_interop)
 #ifndef GL_APIENTRYP
@@ -106,6 +109,31 @@ typedef void (GL_APIENTRYP PFNGLVDPAUUNMAPSURFACESNVPROC) (GLsizei numSurface, c
 typedef void (GL_APIENTRYP PFNGLVDPAUUNREGISTERSURFACENVPROC) (GLvdpauSurfaceNV surface);
 
 typedef VdpStatus (*PVDPDEVICEOPENGLESNVOPEN)(EGLDisplay _eglDisplay, VdpGetProcAddress **get_proc_address);
+#endif
+
+#if defined(Cedar_vdpau_interop)
+typedef uint32_t vdpauSurfaceCedar;
+typedef struct cdRect
+{
+  uint32_t       x;
+  uint32_t       y;
+  uint32_t       width;
+  uint32_t       height;
+} cdRect_t;
+
+typedef void (GL_APIENTRYP PFNGLVDPAUCONFIGURESURFACECEDAR)(vdpauSurfaceCedar surface, int hLayer, int dispFd, cdRect_t srcRect, cdRect_t dstRect);
+typedef void (GL_APIENTRYP PFNGLVDPAUPRESENTSURFACECEDAR)(vdpauSurfaceCedar surface, int hLayer, int dispFd, int frameId);
+typedef void (GL_APIENTRYP PFNGLVDPAUUNMAPSURFACESCEDAR)(GLsizei numSurfaces, const vdpauSurfaceCedar *surfaces);
+typedef void (GL_APIENTRYP PFNGLVDPAUINITCEDAR)(const void *vdpDevice, const void *getProcAddress);
+typedef void (GL_APIENTRYP PFNGLVDPAUFINICEDAR)(void);
+typedef vdpauSurfaceCedar (GL_APIENTRYP PFNGLVDPAUREGISTERVIDEOSURFACECEDAR) (const void *vdpSurface);
+typedef vdpauSurfaceCedar (GL_APIENTRYP PFNGLVDPAUREGISTEROUTPUTSURFACECEDAR) (const void *vdpSurface);
+typedef int (GL_APIENTRYP PFNGLVDPAUISSURFACECEDAR) (vdpauSurfaceCedar surface);
+typedef void (GL_APIENTRYP PFNGLVDPAUUNREGISTERSURFACECEDAR) (vdpauSurfaceCedar surface);
+typedef void (GL_APIENTRYP PFNGLVDPAUMAPSURFACESCEDAR) (GLsizei numSurfaces, const vdpauSurfaceCedar *surfaces);
+typedef void (GL_APIENTRYP PFNGLVDPAUUNMAPSURFACESCEDAR) (GLsizei numSurfaces, const vdpauSurfaceCedar *surfaces);
+typedef int (GL_APIENTRYP PFNGLVDPAUGETFRAMEIDCEDAR) (int hLayer, int dispFd);
+
 #endif
 
 namespace VDPAU
@@ -277,11 +305,15 @@ public:
   static const int MAX_NUM_TEXTURES = 6;
   int numTextures;
   GLuint texture[MAX_NUM_TEXTURES];
+  int surfaceCedar;
   uint32_t sourceIdx;
   bool valid;
   CDecoder *vdpau;
   CVdpauRenderPicture* Acquire();
   long Release();
+#if ALLWINNER_FRAME_sync
+  int frameId;
+#endif
 private:
   void ReturnUnused();
   bool usefence;
@@ -423,6 +455,9 @@ struct VdpauBufferPool
 #if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop)
     GLvdpauSurfaceNV glVdpauSurface;
 #endif
+#if defined(Cedar_vdpau_interop)
+    vdpauSurfaceCedar glVdpauSurfaceCedar;
+#endif
     VdpVideoSurface sourceVuv;
     VdpOutputSurface sourceRgb;
   };
@@ -496,7 +531,7 @@ protected:
   CVdpauRenderPicture *ProcessMixerPicture();
   void QueueReturnPicture(CVdpauRenderPicture *pic);
   void ProcessReturnPicture(CVdpauRenderPicture *pic);
-  bool ProcessSyncPicture();
+  bool ProcessSyncPicture(bool cleanup = false);
   bool Init();
   bool Uninit();
   void Flush();
@@ -550,11 +585,27 @@ protected:
   PVDPDEVICEOPENGLESNVOPEN nv_ndpau_device_open;
 #endif
 
-
-#ifdef GL_NV_vdpau_sim_interop
+#if defined(GL_NV_vdpau_sim_interop) || defined (Cedar_vdpau_interop)
   void *m_dlVdpauNvHandle;
   void* GLNVGetProcAddress(const char * func);
 #endif
+  
+#if defined(Cedar_vdpau_interop)
+  PFNGLVDPAUINITCEDAR glVDPAUInitCedar;
+  PFNGLVDPAUFINICEDAR glVDPAUFiniCedar;
+  PFNGLVDPAUREGISTEROUTPUTSURFACECEDAR glVDPAURegisterOutputSurfaceCedar;
+  PFNGLVDPAUREGISTERVIDEOSURFACECEDAR glVDPAURegisterVideoSurfaceCedar;
+  PFNGLVDPAUISSURFACECEDAR glVDPAUIsSurfaceCedar;
+  PFNGLVDPAUUNREGISTERSURFACECEDAR glVDPAUUnregisterSurfaceCedar;
+//  PFNGLVDPAUSURFACEACCESSCEDAR glVDPAUSurfaceAccessCedar;
+  PFNGLVDPAUMAPSURFACESCEDAR glVDPAUMapSurfacesCedar;
+  PFNGLVDPAUUNMAPSURFACESCEDAR glVDPAUUnmapSurfacesCedar;
+//  PFNGLVDPAUGETSURFACEIVCEDAR glVDPAUGetSurfaceivCedar;
+  PFNGLVDPAUCONFIGURESURFACECEDAR glVDPAUConfigureSurfaceCedar;
+  PFNGLVDPAUPRESENTSURFACECEDAR glVDPAUPresentSurfaceCedar;
+  PFNGLVDPAUGETFRAMEIDCEDAR glVDPAUGetFrameIdCedar;
+#endif
+
 };
 
 //-----------------------------------------------------------------------------

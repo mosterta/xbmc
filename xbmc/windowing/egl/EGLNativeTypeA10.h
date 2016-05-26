@@ -46,4 +46,14 @@ public:
   virtual bool  GetPreferredResolution(RESOLUTION_INFO *res) const;
 
   virtual bool  ShowWindow(bool show);
+  virtual bool  GetVideoLayerHandle(void*& handle);
+  virtual bool  GetDispIdHandle(void* &handle);
+
+private:
+  bool VLInit(int &width, int &height, double &refreshRate);
+  void VLExit();
+
+  int m_hVideoLayer;
+  int m_hGuiLayer;
+  int m_screenId;
 };

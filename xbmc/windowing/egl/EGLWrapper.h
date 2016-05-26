@@ -65,7 +65,9 @@ public:
   bool SurfaceAttrib(EGLDisplay display, EGLSurface surface, EGLint  attribute, EGLint  value);
 
   static void* GetProcAddress(const char* function);
-
+  bool GetVideoLayerHandle(void* &handle);
+  bool GetDispIdHandle(void* &handle);
+  
 private:
 
   CEGLNativeType *m_nativeTypes;

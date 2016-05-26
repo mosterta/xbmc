@@ -437,5 +437,19 @@ bool CEGLWrapper::SurfaceAttrib(EGLDisplay display, EGLSurface surface, EGLint a
     return false;
   return eglSurfaceAttrib(display, surface, attribute, value);
 }
+bool CEGLWrapper::GetVideoLayerHandle(void* &handle)
+{
+  if (!m_nativeTypes)
+    return false;
+
+  return m_nativeTypes->GetVideoLayerHandle(handle);
+}
+bool CEGLWrapper::GetDispIdHandle(void* &handle)
+{
+  if (!m_nativeTypes)
+    return false;
+  
+  return m_nativeTypes->GetDispIdHandle(handle);
+}
 #endif
 

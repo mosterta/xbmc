@@ -70,6 +70,10 @@
 #include "HwDecRender/RendererMediaCodecSurface.h"
 #endif
 
+#if defined (ALLWINNERA10)
+#include "HwDecRender/RendererVDPAUAllwinner.h"
+#endif
+
 #if defined(TARGET_POSIX)
 #include "linux/XTimeUtils.h"
 #endif
@@ -523,7 +527,9 @@ void CRenderManager::CreateRenderer()
     else if (m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420)
     {
 #if defined(HAVE_LIBVDPAU) && defined(HAS_GL)
-      m_pRenderer = new CRendererVDPAU; 
+      m_pRenderer = new CRendererVDPAU;
+#elif defined (ALLWINNERA10)
+      m_pRenderer = new CRendererVDPAUAllwinner;
 #elif defined(HAVE_LIBVDPAU) && HAS_GLES == 2
       m_pRenderer = new CRendererVDPAU_GLES;
 #endif

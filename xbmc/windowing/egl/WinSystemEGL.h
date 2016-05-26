@@ -65,6 +65,9 @@ public:
 
   EGLDisplay    GetEGLDisplay();
   EGLContext    GetEGLContext();
+  virtual bool  GetVideoLayer(void*& videoLayer);
+  virtual bool  GetDispId(void*& fd);
+  
 protected:
   virtual void  PresentRenderImpl(bool rendered);
   virtual void  SetVSyncImpl(bool enable);

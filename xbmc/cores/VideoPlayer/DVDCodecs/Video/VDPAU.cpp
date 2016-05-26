@@ -18,7 +18,7 @@
  *
  */
 
-#define GL_NV_vdpau_sim_interop 1
+//#define GL_NV_vdpau_sim_interop 1
 
 #include "system.h"
 #ifdef HAVE_LIBVDPAU
@@ -39,6 +39,8 @@
 #include "DVDCodecs/DVDCodecUtils.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
 #include "utils/log.h"
+
+#undef GL_NV_vdpau_interop 
 
 #if defined(GL_OES_EGL_sync)
 #include <EGL/eglext.h>
@@ -3016,7 +3018,7 @@ COutput::~COutput()
   m_bufferPool.freeRenderPics.clear();
   m_bufferPool.usedRenderPics.clear();
   
-#ifdef  GL_NV_vdpau_sim_interop
+#if defined(GL_NV_vdpau_sim_interop) || defined(Cedar_vdpau_interop)
   if(m_dlVdpauNvHandle)
   {
      dlclose(m_dlVdpauNvHandle);
@@ -3524,7 +3526,7 @@ bool COutput::Uninit()
   CLog::Log(LOGNOTICE, " (VDPAU) COutput %s", __FUNCTION__);
   m_mixer.Dispose();
   glFlush();
-  while(ProcessSyncPicture())
+  while(ProcessSyncPicture(true))
   {
     Sleep(10);
   }
@@ -3661,6 +3663,7 @@ CVdpauRenderPicture* COutput::ProcessMixerPicture()
       retPic->sourceIdx = procPic.outputSurface;
       retPic->numTextures = 1;
       retPic->texture[0] = m_bufferPool.glOutputSurfaceMap[procPic.outputSurface].texture[0];
+      retPic->surfaceCedar = m_bufferPool.glOutputSurfaceMap[procPic.outputSurface].glVdpauSurfaceCedar;
       retPic->texWidth = m_config.outWidth;
       retPic->texHeight = m_config.outHeight;
       retPic->crop.x1 = 0;
@@ -3676,6 +3679,7 @@ CVdpauRenderPicture* COutput::ProcessMixerPicture()
       retPic->numTextures = m_bufferPool.glVideoSurfaceMap[procPic.videoSurface].numTextures;
       for (unsigned int i=0; i<VdpauBufferPool::MAX_NUM_TEXTURES; ++i)
         retPic->texture[i] = m_bufferPool.glVideoSurfaceMap[procPic.videoSurface].texture[i];
+      retPic->surfaceCedar = m_bufferPool.glVideoSurfaceMap[procPic.videoSurface].glVdpauSurfaceCedar;
       retPic->texWidth = m_config.surfaceWidth;
       retPic->texHeight = m_config.surfaceHeight;
       retPic->crop.x1 = 0;
@@ -3719,7 +3723,7 @@ void COutput::QueueReturnPicture(CVdpauRenderPicture *pic)
   ProcessSyncPicture();
 }
 
-bool COutput::ProcessSyncPicture()
+bool COutput::ProcessSyncPicture(bool cleanup)
 {
 #if VDPAU_DVDPAU_DEBUG
   CLog::Log(LOGNOTICE, " (VDPAU) COutput %s", __FUNCTION__);
@@ -3776,6 +3780,33 @@ bool COutput::ProcessSyncPicture()
           }
        }
     }
+#elif ALLWINNER_FRAME_sync
+    if(pic->usefence)
+    {
+      void* videoLayer;
+      void* dispId;
+      
+      g_Windowing.GetVideoLayer(videoLayer);
+      g_Windowing.GetDispId(dispId);
+      int curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
+      if(! cleanup)
+      {
+        if(curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId))
+        {
+          busy = true;
+          ++it;
+          continue;
+        }
+      }
+      else
+      {
+        XbmcThreads::EndTime timeout(400);
+        while(curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId) && !timeout.IsTimePast())
+        {
+          curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
+        }
+      }
+    }
 #endif
 
     m_bufferPool.freeRenderPics.push_back(*it);
@@ -3826,6 +3857,9 @@ void COutput::ProcessReturnPicture(CVdpauRenderPicture *pic)
 #if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop) 
     glVDPAUUnmapSurfacesNV(1, &(it->second.glVdpauSurface));
 #endif
+#if defined(Cedar_vdpau_interop)
+    glVDPAUUnmapSurfacesCedar(1, &(it->second.glVdpauSurfaceCedar));
+#endif
     VdpVideoSurface surf = it->second.sourceVuv;
     m_config.videoSurfaces->ClearRender(surf);
   }
@@ -3844,6 +3878,9 @@ void COutput::ProcessReturnPicture(CVdpauRenderPicture *pic)
     }
 #if defined(GL_NV_vdpau_interop) || defined (GL_NV_vdpau_sim_interop)
     glVDPAUUnmapSurfacesNV(1, &(it->second.glVdpauSurface));
+#endif
+#if defined(Cedar_vdpau_interop)
+    glVDPAUUnmapSurfacesCedar(1, &(it->second.glVdpauSurfaceCedar));
 #endif
     VdpOutputSurface outSurf = it->second.sourceRgb;
 #if VDPAU_DEBUG
@@ -3948,6 +3985,21 @@ void COutput::ReleaseBufferPool()
          eglGetSyncAttribKHR(g_Windowing.GetEGLDisplay(), pic->fence, EGL_SYNC_TYPE_KHR, &value);
       }
       pic->fence = None;
+#elif ALLWINNER_FRAME_sync
+      if(pic->usefence)
+      {
+        void* videoLayer;
+        void* dispId; 
+        
+        g_Windowing.GetVideoLayer(videoLayer);
+        g_Windowing.GetDispId(dispId);
+        int curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
+        while((curDisplayedFrameId != -1 && pic->frameId >= curDisplayedFrameId) && !timeout.IsTimePast())
+        {
+          Sleep(5);
+          curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
+        }
+      }
 #endif
     }
   }
@@ -3955,7 +4007,7 @@ void COutput::ReleaseBufferPool()
   {
     CLog::Log(LOGERROR, "COutput::%s - timeout waiting for fence", __FUNCTION__);
   }
-  ProcessSyncPicture();
+  ProcessSyncPicture(true);
 
   // invalidate all used render pictures
   for (unsigned int i = 0; i < m_bufferPool.usedRenderPics.size(); ++i)
@@ -3972,7 +4024,7 @@ void COutput::PreCleanup()
 
   CLog::Log(LOGNOTICE, " (VDPAU) COutput %s", __FUNCTION__);
   m_mixer.Dispose();
-  ProcessSyncPicture();
+  ProcessSyncPicture(true);
 
   CSingleLock lock(m_bufferPool.renderPicSec);
   for (unsigned int i = 0; i < m_bufferPool.outputSurfaces.size(); ++i)
@@ -4009,7 +4061,18 @@ void COutput::PreCleanup()
     glDeleteTextures(1, it_map->second.texture);
     m_bufferPool.glOutputSurfaceMap.erase(it_map);
 #endif
-
+#if defined(Cedar_vdpau_interop)
+    // unmap surface
+    std::map<VdpOutputSurface, VdpauBufferPool::GLVideoSurface>::iterator it_mapCedar;
+    it_mapCedar = m_bufferPool.glOutputSurfaceMap.find(m_bufferPool.outputSurfaces[i]);
+    if (it_mapCedar == m_bufferPool.glOutputSurfaceMap.end())
+    {
+      CLog::Log(LOGERROR, "%s - could not find gl surface", __FUNCTION__);
+      continue;
+    }
+    glVDPAUUnregisterSurfaceCedar(it_mapCedar->second.glVdpauSurfaceCedar);
+    m_bufferPool.glOutputSurfaceMap.erase(it_mapCedar);
+#endif
     CLog::Log(LOGNOTICE, " (VDPAU) COutput %s: output_surface_destroy=%d", 
               __FUNCTION__, m_bufferPool.outputSurfaces[i]);
     vdp_st = m_config.context->GetProcs().vdp_output_surface_destroy(m_bufferPool.outputSurfaces[i]);
@@ -4032,15 +4095,16 @@ void COutput::InitMixer()
   }
 }
 
-#ifdef GL_NV_vdpau_interop
+#if defined(GL_NV_vdpau_interop)
   #define GLNVGetProcAddress(X)       glXGetProcAddress((GLubyte *) (X))
-#elif GL_NV_vdpau_sim_interop
+#elif defined(GL_NV_vdpau_sim_interop)  || defined(Cedar_vdpau_interop)
 void* COutput::GLNVGetProcAddress(const char * func)
 {
+  void *fAddr = NULL;
+  
    if(m_dlVdpauNvHandle)
-      return dlsym(m_dlVdpauNvHandle, func);
-   else
-      return NULL;
+      fAddr = dlsym(m_dlVdpauNvHandle, func);
+   return fAddr;
 }
 #endif
 
@@ -4057,6 +4121,21 @@ bool COutput::GLInit()
   glVDPAUMapSurfacesNV = NULL;
   glVDPAUUnmapSurfacesNV = NULL;
   glVDPAUGetSurfaceivNV = NULL;
+#endif
+#if defined(Cedar_vdpau_interop)
+  glVDPAUInitCedar = NULL;
+  glVDPAUFiniCedar = NULL;
+  glVDPAURegisterOutputSurfaceCedar = NULL;
+  glVDPAURegisterVideoSurfaceCedar = NULL;
+  glVDPAUIsSurfaceCedar = NULL;
+  glVDPAUUnregisterSurfaceCedar = NULL;
+//  glVDPAUSurfaceAccessCedar = NULL;
+  glVDPAUMapSurfacesCedar = NULL;
+  glVDPAUUnmapSurfacesCedar = NULL;
+//  glVDPAUGetSurfaceivCedar = NULL;
+  glVDPAUPresentSurfaceCedar = NULL;
+  glVDPAUConfigureSurfaceCedar = NULL;
+  glVDPAUGetFrameIdCedar = NULL;
 #endif
 
 #ifdef GL_NV_vdpau_sim_interop
@@ -4081,6 +4160,22 @@ bool COutput::GLInit()
            nv_ndpau_device_open(g_Windowing.GetEGLDisplay(), NULL);
         }
      }
+  }
+#endif
+  
+#if defined(Cedar_vdpau_interop)
+  const char VDPAU_MODULE_DIR[] = "/usr/lib";
+  if(!m_dlVdpauNvHandle)
+  {
+    char driver_path[255];
+    snprintf(driver_path, 255, "%s/libcedarDisplay.so.1", VDPAU_MODULE_DIR);
+    m_dlVdpauNvHandle = dlopen(driver_path, RTLD_LAZY);
+    if(!m_dlVdpauNvHandle)
+    {
+      const char* error = dlerror();
+      if (!error)
+        error = "dlerror() returned NULL";
+    }
   }
 #endif
   
@@ -4123,6 +4218,35 @@ bool COutput::GLInit()
   CLog::Log(LOGNOTICE, "VDPAU::COutput: vdpau gl interop initialized");
 #endif
 
+#if defined(Cedar_vdpau_interop)
+  if (!glVDPAUInitCedar)
+    glVDPAUInitCedar    = (PFNGLVDPAUINITCEDAR)GLNVGetProcAddress("glVDPAUInitCedar");
+  if (!glVDPAUFiniCedar)
+    glVDPAUFiniCedar = (PFNGLVDPAUFINICEDAR)GLNVGetProcAddress("glVDPAUFiniCedar");
+  if (!glVDPAURegisterOutputSurfaceCedar)
+    glVDPAURegisterOutputSurfaceCedar    = (PFNGLVDPAUREGISTEROUTPUTSURFACECEDAR)GLNVGetProcAddress("glVDPAURegisterOutputSurfaceCedar");
+  if (!glVDPAURegisterVideoSurfaceCedar)
+    glVDPAURegisterVideoSurfaceCedar    = (PFNGLVDPAUREGISTERVIDEOSURFACECEDAR)GLNVGetProcAddress("glVDPAURegisterVideoSurfaceCedar");
+  if (!glVDPAUIsSurfaceCedar)
+    glVDPAUIsSurfaceCedar    = (PFNGLVDPAUISSURFACECEDAR)GLNVGetProcAddress("glVDPAUIsSurfaceCedar");
+  if (!glVDPAUUnregisterSurfaceCedar)
+    glVDPAUUnregisterSurfaceCedar = (PFNGLVDPAUUNREGISTERSURFACECEDAR)GLNVGetProcAddress("glVDPAUUnregisterSurfaceCedar");
+  if (!glVDPAUMapSurfacesCedar)
+    glVDPAUMapSurfacesCedar = (PFNGLVDPAUMAPSURFACESCEDAR)GLNVGetProcAddress("glVDPAUMapSurfacesCedar");
+  if (!glVDPAUUnmapSurfacesCedar)
+    glVDPAUUnmapSurfacesCedar = (PFNGLVDPAUUNMAPSURFACESCEDAR)GLNVGetProcAddress("glVDPAUUnmapSurfacesCedar");
+  if (!glVDPAUPresentSurfaceCedar)
+    glVDPAUPresentSurfaceCedar = (PFNGLVDPAUPRESENTSURFACECEDAR)GLNVGetProcAddress("glVDPAUPresentSurfaceCedar");
+  if (!glVDPAUConfigureSurfaceCedar)
+    glVDPAUConfigureSurfaceCedar = (PFNGLVDPAUCONFIGURESURFACECEDAR)GLNVGetProcAddress("glVDPAUConfigureSurfaceCedar");
+  if( !glVDPAUGetFrameIdCedar)
+    glVDPAUGetFrameIdCedar = (PFNGLVDPAUGETFRAMEIDCEDAR)GLNVGetProcAddress("glVDPAUGetFrameIdCedar");
+  
+  glVDPAUInitCedar(reinterpret_cast<void*>(m_config.context->GetDevice()), 
+                reinterpret_cast<void*>(m_config.context->GetProcs().vdp_get_proc_address));
+
+#endif
+
 #if defined(EGL_KHR_reusable_sync) && !defined(EGL_EGLEXT_PROTOTYPES)
   if (!eglCreateSyncKHR) {
      eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
@@ -4138,13 +4262,15 @@ bool COutput::GLInit()
   }
 #endif
 
-#if defined(GL_ARB_sync) || defined(GL_OES_EGL_sync)
+#if defined(GL_ARB_sync) || defined(GL_OES_EGL_sync) || defined(ALLWINNER_FRAME_sync)
 #if defined(GL_ARB_sync)
   bool hasfence = g_Windowing.IsExtSupported("GL_ARB_sync");
-#else
+#elif defined(GL_OES_EGL_sync)
   bool hasfence = g_Windowing.IsExtSupported("GL_OES_EGL_sync");
+#elif defined(ALLWINNER_FRAME_sync)
+  bool hasfence = true;
 #endif
-  
+
   for (unsigned int i = 0; i < m_bufferPool.allRenderPics.size(); i++)
   {
     m_bufferPool.allRenderPics[i]->usefence = hasfence;
@@ -4177,13 +4303,13 @@ void COutput::GLMapSurface(bool yuv, uint32_t source)
 #else
       glSurface.numTextures = 4;
 #endif
+#if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop)
       glGenTextures(glSurface.numTextures, glSurface.texture);
       if (glGetError() != GL_NO_ERROR)
       {
         CLog::Log(LOGERROR, "VDPAU::COutput error creating texture");
         m_vdpError = true;
       }
-#if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop)
       glSurface.glVdpauSurface = glVDPAURegisterVideoSurfaceNV(reinterpret_cast<void*>(surf),
                                                     GL_TEXTURE_2D, glSurface.numTextures, glSurface.texture);
 
@@ -4199,6 +4325,9 @@ void COutput::GLMapSurface(bool yuv, uint32_t source)
         m_vdpError = true;
       }
 #endif
+#if defined(Cedar_vdpau_interop)
+      glSurface.glVdpauSurfaceCedar = glVDPAURegisterVideoSurfaceCedar(reinterpret_cast<void*>(surf));
+#endif
       m_bufferPool.glVideoSurfaceMap[surf] = glSurface;
 
       CLog::Log(LOGNOTICE, "VDPAU::COutput registered surface");
@@ -4213,6 +4342,9 @@ void COutput::GLMapSurface(bool yuv, uint32_t source)
       m_vdpError = true;
     }
 #endif
+#if defined(Cedar_vdpau_interop)
+    glVDPAUMapSurfacesCedar(1, &m_bufferPool.glVideoSurfaceMap[source].glVdpauSurfaceCedar);
+#endif    
     if (m_vdpError)
       return;
   }
@@ -4231,8 +4363,8 @@ void COutput::GLMapSurface(bool yuv, uint32_t source)
 
       VdpauBufferPool::GLVideoSurface glSurface;
       glSurface.sourceRgb = m_bufferPool.outputSurfaces[idx];
-      glGenTextures(1, glSurface.texture);
 #if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop)
+      glGenTextures(1, glSurface.texture);
       glSurface.glVdpauSurface = glVDPAURegisterOutputSurfaceNV(reinterpret_cast<void*>(m_bufferPool.outputSurfaces[idx]),
                                                GL_TEXTURE_2D, 1, glSurface.texture);
       if (glGetError() != GL_NO_ERROR)
@@ -4247,6 +4379,9 @@ void COutput::GLMapSurface(bool yuv, uint32_t source)
         m_vdpError = true;
       }
 #endif
+#if defined(Cedar_vdpau_interop)
+      glSurface.glVdpauSurfaceCedar = glVDPAURegisterOutputSurfaceCedar(reinterpret_cast<void*>(m_bufferPool.outputSurfaces[idx]));
+#endif
       m_bufferPool.glOutputSurfaceMap[source] = glSurface;
       CLog::Log(LOGNOTICE, "VDPAU::COutput registered output surfaces");
     }
@@ -4259,6 +4394,9 @@ void COutput::GLMapSurface(bool yuv, uint32_t source)
       CLog::Log(LOGERROR, "VDPAU::COutput error=%d mapping surface", err);
       m_vdpError = true;
     }
+#endif
+#if defined(Cedar_vdpau_interop)
+    glVDPAUMapSurfacesCedar(1, &m_bufferPool.glOutputSurfaceMap[source].glVdpauSurfaceCedar);
 #endif
     if (m_vdpError)
       return;
@@ -4273,8 +4411,11 @@ void COutput::GLUnmapSurfaces()
     {
 #if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop)
        glVDPAUUnregisterSurfaceNV(it->second.glVdpauSurface);
+       glDeleteTextures(it->second.numTextures, it->second.texture);
 #endif
-      glDeleteTextures(it->second.numTextures, it->second.texture);
+#if defined(Cedar_vdpau_interop)
+       glVDPAUUnregisterSurfaceCedar(it->second.glVdpauSurfaceCedar);
+#endif
     }
     m_bufferPool.glVideoSurfaceMap.clear();
   }
@@ -4284,15 +4425,20 @@ void COutput::GLUnmapSurfaces()
   {
 #if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop)
     glVDPAUUnregisterSurfaceNV(it->second.glVdpauSurface);
-#endif
     glDeleteTextures(1, it->second.texture);
+#endif
+#if defined(Cedar_vdpau_interop)
+    glVDPAUUnregisterSurfaceCedar(it->second.glVdpauSurfaceCedar);
+#endif
   }
   m_bufferPool.glOutputSurfaceMap.clear();
 
 #if defined(GL_NV_vdpau_interop) || defined(GL_NV_vdpau_sim_interop)
   glVDPAUFiniNV();
 #endif
-  
+#if defined(Cedar_vdpau_interop)
+  glVDPAUFiniCedar();
+#endif  
   CLog::Log(LOGNOTICE, "VDPAU::COutput: vdpau gl interop finished");
 
 }

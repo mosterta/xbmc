@@ -145,6 +145,9 @@ public:
     A platform-independent way of hiding XBMC (for example blanking the current
     framebuffer */
   virtual bool  ShowWindow(bool show) = 0;
+  
+  virtual bool GetVideoLayerHandle(void*& handle) { return false; };
+  virtual bool GetDispIdHandle(void* &handle) { return false; };
 
 protected:
   XBNativeDisplayType  m_nativeDisplay;

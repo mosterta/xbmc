@@ -172,9 +172,11 @@ bool CLinuxRendererGLES::Configure(unsigned int width, unsigned int height, unsi
   m_iFlags = flags;
   m_format = format;
 
+#if 0
   if(m_format == RENDER_FMT_VDPAU)
      m_format = RENDER_FMT_VDPAU_420;
-  
+#endif
+
   // Calculate the input frame aspect ratio.
   CalculateFrameAspectRatio(d_width, d_height);
   SetViewMode(CMediaSettings::GetInstance().GetCurrentVideoSettings().m_ViewMode);
