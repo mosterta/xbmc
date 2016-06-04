@@ -49,6 +49,8 @@ static int             m_screenid = 0;
 static int             g_hlayer = 0;
 static int             g_width;
 static int             g_height;
+static int             s_firstCustomLayer = 0x65;
+static int             s_lastCustomLayer = 0x67;
 
 CEGLNativeTypeA10::CEGLNativeTypeA10()
 {
@@ -199,6 +201,17 @@ bool CEGLNativeTypeA10::GetDispIdHandle(void*& handle)
   }
   return ret;
 }
+bool CEGLNativeTypeA10::GetLayerInformation(CWinSystemEGL::CWinLayerInformation* layer)
+{
+  bool ret = true;
+  
+  CWinLayerInfoAllwinner *allLayer = static_cast<CWinLayerInfoAllwinner *>(layer);
+  allLayer->m_GuiLayer = m_hGuiLayer;
+  allLayer->m_VideoLayer = m_hVideoLayer;
+  allLayer->m_dispFd = g_hdisp;
+  
+  return ret;
+}
 
 bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
 {
@@ -259,7 +272,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     return false;
   }
 
-  if ((g_height > 720) && (getenv("A10AB") == NULL))
+  if ((g_height > 0 /* 720 */) && (getenv("A10AB") == NULL))
   {
     //set workmode scaler (system layer)
     args[0] = m_screenid;
@@ -302,7 +315,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   }
 
   
-  for (i = 0x65; i <= 0x67; i++)
+  for (i = s_firstCustomLayer; i <= s_lastCustomLayer; i++)
   {
     //release possibly lost allocated layers
     args[0] = m_screenid;
@@ -311,6 +324,9 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     args[3] = 0;
     ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
   }
+
+  if(VLBlueScreenFix() == false)
+    return false;
 
   args[0] = m_screenid;
   args[1] = DISP_LAYER_WORK_MODE_SCALER;
@@ -439,24 +455,6 @@ void CEGLNativeTypeA10::VLExit()
     ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
     m_hVideoLayer = 0;
   }
-  if (m_hGuiLayer)
-  {
-    //close layer
-    args[0] = m_screenid;
-    args[1] = m_hGuiLayer;
-    args[2] = 0;
-    args[3] = 0;
-    ioctl(g_hdisp, DISP_CMD_LAYER_CLOSE, args);
-
-    //release layer
-    args[0] = m_screenid;
-    args[1] = m_hGuiLayer;
-    args[2] = 0;
-    args[3] = 0;
-    ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
-    m_hGuiLayer = 0;
-
-  }
   if (g_hdisp != -1)
   {
     close(g_hdisp);
@@ -469,4 +467,41 @@ void CEGLNativeTypeA10::VLExit()
   }
 }
 
+bool CEGLNativeTypeA10::VLBlueScreenFix()
+{
+  int hlayer;
+  __disp_layer_info_t layera;
+  unsigned long args[4];
+
+  args[0] = m_screenid;
+  args[1] = DISP_LAYER_WORK_MODE_SCALER;
+  args[2] = 0;
+  args[3] = 0;
+  hlayer = ioctl(g_hdisp, DISP_CMD_LAYER_REQUEST, args);
+  if (hlayer <= 0)
+  {
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_REQUEST failed.\n");
+    return false;
+  }
+
+  args[0] = m_screenid;
+  args[1] = hlayer;
+  args[2] = (unsigned long) &layera;
+  args[3] = 0;
+  ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args);
+
+  layera.mode = DISP_LAYER_WORK_MODE_SCALER;
+  layera.fb.mode = DISP_MOD_MB_UV_COMBINED;
+  layera.fb.format = DISP_FORMAT_YUV420;
+  layera.fb.seq = DISP_SEQ_UVUV;
+  ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args);
+
+  args[0] = m_screenid;
+  args[1] = hlayer;
+  args[2] = 0;
+  args[3] = 0;
+  ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
+
+  return true;
+}
 

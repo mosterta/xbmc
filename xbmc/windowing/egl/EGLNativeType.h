@@ -25,6 +25,7 @@
 
 #include "guilib/Resolution.h"
 #include "EGLQuirks.h"
+#include "WinSystemEGL.h"
 
 typedef void* XBNativeDisplayType;
 typedef void* XBNativeWindowType;
@@ -148,6 +149,7 @@ public:
   
   virtual bool GetVideoLayerHandle(void*& handle) { return false; };
   virtual bool GetDispIdHandle(void* &handle) { return false; };
+  virtual bool GetLayerInformation(CWinSystemEGL::CWinLayerInformation* layer) {return false;};
 
 protected:
   XBNativeDisplayType  m_nativeDisplay;

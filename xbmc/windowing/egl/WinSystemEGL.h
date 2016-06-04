@@ -34,6 +34,15 @@ class IDispResource;
 class CWinSystemEGL : public CWinSystemBase, public CRenderSystemGLES
 {
 public:
+  enum CWinLayerInformationType
+  {
+    LayerInfoAllwinner
+  };
+  class CWinLayerInformation
+  {
+public:
+      CWinLayerInformationType type;
+  };
   CWinSystemEGL();
   virtual ~CWinSystemEGL();
 
@@ -67,6 +76,7 @@ public:
   EGLContext    GetEGLContext();
   virtual bool  GetVideoLayer(void*& videoLayer);
   virtual bool  GetDispId(void*& fd);
+  virtual bool  GetLayerInformation(CWinLayerInformation* layer);
   
 protected:
   virtual void  PresentRenderImpl(bool rendered);

@@ -451,5 +451,13 @@ bool CEGLWrapper::GetDispIdHandle(void* &handle)
   
   return m_nativeTypes->GetDispIdHandle(handle);
 }
+
+bool CEGLWrapper::GetLayerInformation(CWinSystemEGL::CWinLayerInformation* layer)
+{
+  if (!m_nativeTypes)
+    return false;
+
+  return m_nativeTypes->GetLayerInformation(layer);
+}
 #endif
 

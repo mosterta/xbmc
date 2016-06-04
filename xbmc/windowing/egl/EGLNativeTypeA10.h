@@ -21,9 +21,18 @@
  */
 
 #include "EGLNativeType.h"
+#include "WinSystemEGL.h"
+
 class CEGLNativeTypeA10 : public CEGLNativeType
 {
 public:
+  class CWinLayerInfoAllwinner : public CWinSystemEGL::CWinLayerInformation
+  {
+public:
+    int m_GuiLayer;
+    int m_VideoLayer;
+    int m_dispFd;
+  };
   CEGLNativeTypeA10();
   virtual ~CEGLNativeTypeA10();
   virtual std::string GetNativeName() const { return "A10"; };
@@ -48,10 +57,12 @@ public:
   virtual bool  ShowWindow(bool show);
   virtual bool  GetVideoLayerHandle(void*& handle);
   virtual bool  GetDispIdHandle(void* &handle);
+  virtual bool  GetLayerInformation(CWinSystemEGL::CWinLayerInformation* layer);
 
 private:
   bool VLInit(int &width, int &height, double &refreshRate);
   void VLExit();
+  bool VLBlueScreenFix();
 
   int m_hVideoLayer;
   int m_hGuiLayer;
