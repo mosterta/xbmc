@@ -170,6 +170,8 @@ bool CActiveAEResampleFFMPEG::Init(uint64_t dst_chan_layout, int dst_channels, i
     }
   }
 
+  SetSpecificOptions(m_pContext);
+  
   if(swr_init(m_pContext) < 0)
   {
     CLog::Log(LOGERROR, "CActiveAEResampleFFMPEG::Init - init resampler failed");
@@ -276,3 +278,9 @@ int CActiveAEResampleFFMPEG::GetDstBufferSize(int samples)
 {
   return av_samples_get_buffer_size(NULL, m_dst_channels, samples, m_dst_fmt, 1);
 }
+
+void CActiveAEResampleFFMPEG::SetSpecificOptions(SwrContext *context)
+{
+}
+
+

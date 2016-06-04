@@ -24,6 +24,9 @@
   #include "settings/Settings.h"
   #include "cores/AudioEngine/Engines/ActiveAE/ActiveAEResamplePi.h"
 #endif
+#if defined(ALLWINNERA10)
+  #include "cores/AudioEngine/Engines/ActiveAE/ActiveAEResampleAllwinner.h"
+#endif
 
 namespace ActiveAE
 {
@@ -33,6 +36,8 @@ IAEResample *CAEResampleFactory::Create(uint32_t flags /* = 0 */)
 #if defined(TARGET_RASPBERRY_PI)
   if (!(flags & AERESAMPLEFACTORY_QUICK_RESAMPLE) && CSettings::GetInstance().GetInt(CSettings::SETTING_AUDIOOUTPUT_PROCESSQUALITY) == AE_QUALITY_GPU)
     return new CActiveAEResamplePi();
+#elif defined(ALLWINNERA10)
+  return new CActiveAEResampleAllwinner();
 #endif
   return new CActiveAEResampleFFMPEG();
 }

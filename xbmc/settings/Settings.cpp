@@ -159,9 +159,6 @@ const std::string CSettings::SETTING_VIDEOPLAYER_QUITSTEREOMODEONSTOP = "videopl
 const std::string CSettings::SETTING_VIDEOPLAYER_RENDERMETHOD = "videoplayer.rendermethod";
 const std::string CSettings::SETTING_VIDEOPLAYER_HQSCALERS = "videoplayer.hqscalers";
 const std::string CSettings::SETTING_VIDEOPLAYER_USEAMCODEC = "videoplayer.useamcodec";
-const std::string CSettings::SETTING_VIDEOPLAYER_USEAMCODECMPEG2 = "videoplayer.useamcodecmpeg2";
-const std::string CSettings::SETTING_VIDEOPLAYER_USEAMCODECMPEG4 = "videoplayer.useamcodecmpeg4";
-const std::string CSettings::SETTING_VIDEOPLAYER_USEAMCODECH264 = "videoplayer.useamcodech264";
 const std::string CSettings::SETTING_VIDEOPLAYER_USEMEDIACODEC = "videoplayer.usemediacodec";
 const std::string CSettings::SETTING_VIDEOPLAYER_USEMEDIACODECSURFACE = "videoplayer.usemediacodecsurface";
 const std::string CSettings::SETTING_VIDEOPLAYER_USEVDPAU = "videoplayer.usevdpau";
@@ -802,6 +799,9 @@ bool CSettings::InitializeDefinitions()
 #elif defined(HAS_IMXVPU)
   if (CFile::Exists(SETTINGS_XML_FOLDER "imx6.xml") && !Initialize(SETTINGS_XML_FOLDER "imx6.xml"))
     CLog::Log(LOGFATAL, "Unable to load imx6-specific settings definitions");
+#elif defined(ALLWINNERA10)
+  if (CFile::Exists(SETTINGS_XML_FOLDER "allwinner.xml") && !Initialize(SETTINGS_XML_FOLDER "allwinner.xml"))
+    CLog::Log(LOGFATAL, "Unable to load Allwinner-specific settings definitions");  
 #elif defined(TARGET_LINUX)
   if (CFile::Exists(SETTINGS_XML_FOLDER "linux.xml") && !Initialize(SETTINGS_XML_FOLDER "linux.xml"))
     CLog::Log(LOGFATAL, "Unable to load linux-specific settings definitions");

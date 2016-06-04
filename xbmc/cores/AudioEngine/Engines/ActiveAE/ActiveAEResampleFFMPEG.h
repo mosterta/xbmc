@@ -49,6 +49,7 @@ public:
   int GetDstBufferSize(int samples);
 
 protected:
+  virtual void SetSpecificOptions(SwrContext *context);
   bool m_loaded;
   uint64_t m_src_chan_layout, m_dst_chan_layout;
   int m_src_rate, m_dst_rate;
