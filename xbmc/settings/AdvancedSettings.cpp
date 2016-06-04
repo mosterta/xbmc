@@ -280,6 +280,7 @@ void CAdvancedSettings::Initialize()
   m_strMusicLibraryAlbumFormat = "";
   m_prioritiseAPEv2tags = false;
   m_musicItemSeparator = " / ";
+  m_musicArtistSeparators = { ";", ":", "|", " feat. ", " ft. " };
   m_videoItemSeparator = " / ";
   m_iMusicLibraryDateAdded = 1; // prefer mtime over ctime and current time
 
@@ -702,6 +703,19 @@ void CAdvancedSettings::ParseSettingsFile(const std::string &file)
     XMLUtils::GetString(pElement, "albumformat", m_strMusicLibraryAlbumFormat);
     XMLUtils::GetString(pElement, "itemseparator", m_musicItemSeparator);
     XMLUtils::GetInt(pElement, "dateadded", m_iMusicLibraryDateAdded);
+    //Music artist name separators
+    TiXmlElement* separators = pElement->FirstChildElement("artistseparators");
+    if (separators)
+    {
+      m_musicArtistSeparators.clear();
+      TiXmlNode* separator = separators->FirstChild("separator");
+      while (separator)
+      {
+        if (separator->FirstChild())
+          m_musicArtistSeparators.push_back(separator->FirstChild()->ValueStr());
+        separator = separator->NextSibling("separator");
+      }
+    }
   }
 
   pElement = pRootElement->FirstChildElement("videolibrary");
@@ -1334,6 +1348,9 @@ void CAdvancedSettings::SettingOptionsLoggingComponentsFiller(const CSetting *se
 #endif
 #ifdef HAS_JSONRPC
   list.push_back(std::make_pair(g_localizeStrings.Get(675), LOGJSONRPC));
+#endif
+#ifdef HAS_WEB_SERVER
+  list.push_back(std::make_pair(g_localizeStrings.Get(681), LOGWEBSERVER));
 #endif
 #ifdef HAS_AIRTUNES
   list.push_back(std::make_pair(g_localizeStrings.Get(677), LOGAIRTUNES));

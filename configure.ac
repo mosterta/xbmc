@@ -630,6 +630,16 @@ case $host in
      use_gl=no
      USE_STATIC_FFMPEG=1
      ;;
+  aarch64*-*-linux-gnu*|aarch64*-*-linux-uclibc*)
+     target_platform=target_linux
+     ARCH="aarch64"
+     use_arch="aarch64"
+     use_neon=yes
+     use_gles=yes
+     use_gl=no
+     use_wayland=no
+     USE_STATIC_FFMPEG=1
+     ;;
   arm*-*linux-android*)
      target_platform=target_android
      CORE_SYSTEM_NAME=android
@@ -703,7 +713,7 @@ case $target_platform in
      use_hardcoded_tables="yes"
      AC_DEFINE(HAS_EGLGLES, [1], [Define if supporting EGL based GLES Framebuffer])
      CFLAGS="$CFLAGS -DALLWINNERA10 -DUSE_VIDEO_SYNC_FB"
-     CXXFLAGS="$CXXFLAGS -DALLWINNERA10i -DUSE_VIDEO_SYNC_FB"
+     CXXFLAGS="$CXXFLAGS -DALLWINNERA10 -DUSE_VIDEO_SYNC_FB"
      ;;
 esac
 
@@ -1623,7 +1633,6 @@ if test "${USE_STATIC_FFMPEG}" = "1"; then
   # get the libdir for static linking
   FFMPEG_LIBDIR=${pkg_cfg_prefix}$(PKG_CONFIG_SYSROOT_DIR="" ${PKG_CONFIG} --static --variable=libdir libavcodec)
   GNUTLS_ALL_LIBS=$(${PKG_CONFIG} --static --libs-only-l --silence-errors gnutls)
-  VORBISENC_ALL_LIBS=$(${PKG_CONFIG} --static --libs-only-l --silence-errors vorbisenc)
 
   # check if static libs are available
   for ff_lib in ${ff_libs}; do
@@ -2242,8 +2251,8 @@ OUTPUT_FILES="Makefile \
     tools/darwin/packaging/migrate_to_kodi_ios.sh \
     xbmc/platform/darwin/osx/Info.plist \
     xbmc/platform/darwin/ios/Info.plist \
-    project/cmake/kodi-config.cmake \
-    project/cmake/xbmc-config.cmake \
+    project/cmake/KodiConfig.cmake \
+    project/cmake/XBMCConfig.cmake \
     tools/android/packaging/xbmc/AndroidManifest.xml \
     tools/android/packaging/Makefile \
     tools/android/packaging/xbmc/src/org/xbmc/kodi/Splash.java \
@@ -2270,7 +2279,7 @@ OUTPUT_FILES="$OUTPUT_FILES \
   xbmc/interfaces/python/Makefile \
   xbmc/interfaces/python/test/Makefile"
 
-# needed for kodi-config.cmake
+# needed for KodiConfig.cmake
 if echo "$libdir" | grep -q '${exec_prefix}'; then
   if test "${prefix}" = "NONE" || test "${prefix}" = ""; then
     prefix="/usr/local"
@@ -2308,8 +2317,6 @@ AC_SUBST(SDL_DEFINES)
 AC_SUBST(FFMPEG_LIBDIR)
 AC_SUBST(USE_STATIC_FFMPEG)
 AC_SUBST(GNUTLS_ALL_LIBS)
-AC_SUBST(VORBISENC_ALL_LIBS)
-AC_SUBST(DCADEC_ALL_LIBS)
 AC_SUBST(USE_LIBAV_HACKS)
 AC_SUBST(PYTHON_VERSION)
 AC_SUBST(OUTPUT_FILES)

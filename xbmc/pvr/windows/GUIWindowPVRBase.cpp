@@ -95,13 +95,6 @@ void CGUIWindowPVRBase::ResetObservers(void)
 
 void CGUIWindowPVRBase::Notify(const Observable &obs, const ObservableMessage msg)
 {
-  if (IsActive())
-  {
-    // Only the active window must set the selected item path which is shared
-    // between all PVR windows, not the last notified window (observer).
-    UpdateSelectedItemPath();
-  }
-
   CGUIMessage m(GUI_MSG_REFRESH_LIST, GetID(), 0, msg);
   CApplicationMessenger::GetInstance().SendGUIMessage(m);
 }
@@ -172,6 +165,7 @@ void CGUIWindowPVRBase::OnDeinitWindow(int nextWindowID)
 
 bool CGUIWindowPVRBase::OnMessage(CGUIMessage& message)
 {
+  bool bReturn = false;
   switch (message.GetMessage())
   {
     case GUI_MSG_CLICKED:
@@ -183,9 +177,21 @@ bool CGUIWindowPVRBase::OnMessage(CGUIMessage& message)
       }
     }
     break;
+
+    case GUI_MSG_REFRESH_LIST:
+    {
+      if (IsActive())
+      {
+        // Only the active window must set the selected item path which is shared
+        // between all PVR windows, not the last notified window (observer).
+        UpdateSelectedItemPath();
+      }
+      bReturn = true;
+    }
+    break;
   }
 
-  return CGUIMediaWindow::OnMessage(message);
+  return bReturn || CGUIMediaWindow::OnMessage(message);
 }
 
 bool CGUIWindowPVRBase::IsValidMessage(CGUIMessage& message)
@@ -607,6 +613,15 @@ bool CGUIWindowPVRBase::DeleteTimer(CFileItem *item, bool bIsRecording, bool bDe
   else if (item->IsEPG())
   {
     timer = item->GetEPGInfoTag()->Timer();
+  }
+  else if (item->IsPVRChannel())
+  {
+    const CEpgInfoTagPtr epgTag(item->GetPVRChannelInfoTag()->GetEPGNow());
+    if (epgTag)
+      timer = epgTag->Timer(); // cheap method, but not reliable as timers get set at epg tags asychrounously
+
+    if (!timer)
+      timer = g_PVRTimers->GetActiveTimerForChannel(item->GetPVRChannelInfoTag()); // more expensive, but reliable and works even for channels with no epg data
   }
 
   if (!timer)

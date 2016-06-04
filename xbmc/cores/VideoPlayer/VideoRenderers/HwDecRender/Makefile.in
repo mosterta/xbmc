@@ -19,6 +19,10 @@ SRCS += RendererMediaCodecSurface.cpp
 SRCS += RendererVDPAU_GLES.cpp
 endif
 
+ifeq (@ALLWINNERA10@, 1)
+SRCS += RendererVDPAUAllwinner.cpp
+endif
+
 ifeq (@USE_LIBAMCODEC@,1)
 SRCS += RendererAML.cpp
 endif

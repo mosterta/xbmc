@@ -110,13 +110,6 @@ void CGUIWindowPVRGuide::Notify(const Observable &obs, const ObservableMessage m
        msg == ObservableMessageEpgContainer ||
        msg == ObservableMessageChannelGroup))
   {
-    if (IsActive())
-    {
-      // Only the active window must set the selected item path which is shared
-      // between all PVR windows, not the last notified window (observer).
-      UpdateSelectedItemPath();
-    }
-
     CSingleLock lock(m_critSection);
     m_bRefreshTimelineItems = true;
   }
@@ -399,7 +392,6 @@ bool CGUIWindowPVRGuide::OnMessage(CGUIMessage& message)
         case ObservableMessageEpgContainer:
         {
           Refresh(true);
-          bReturn = true;
           break;
         }
         case ObservableMessageEpgActiveItem:
@@ -407,7 +399,6 @@ bool CGUIWindowPVRGuide::OnMessage(CGUIMessage& message)
           if (m_viewControl.GetCurrentControl() != GUIDE_VIEW_TIMELINE)
             SetInvalid();
 
-          bReturn = true;
           break;
         }
       }

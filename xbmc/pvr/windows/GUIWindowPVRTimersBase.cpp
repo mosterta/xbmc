@@ -71,7 +71,7 @@ void CGUIWindowPVRTimersBase::GetContextButtons(int itemNumber, CContextButtons 
     CPVRTimerInfoTagPtr timer(pItem->GetPVRTimerInfoTag());
     if (timer)
     {
-      if (timer->HasEpgInfoTag())
+      if (timer->GetEpgInfoTag())
         buttons.Add(CONTEXT_BUTTON_INFO, 19047);          /* Programme information */
 
       CPVRTimerTypePtr timerType(timer->GetTimerType());
@@ -232,13 +232,11 @@ bool CGUIWindowPVRTimersBase::OnMessage(CGUIMessage &message)
         case ObservableMessageCurrentItem:
         {
           SetInvalid();
-          bReturn = true;
           break;
         }
         case ObservableMessageTimersReset:
         {
           Refresh(true);
-          bReturn = true;
           break;
         }
       }

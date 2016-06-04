@@ -49,7 +49,7 @@
 #if defined(TARGET_ANDROID)
 #include "video/videosync/VideoSyncAndroid.h"
 #endif
-#if defined(ALLWINNERA10)
+#if defined(USE_VIDEO_SYNC_FB)
 #include "video/videosync/VideoSyncFb.h"
 #endif
 

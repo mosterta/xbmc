@@ -433,7 +433,7 @@ void CVideoSurfaces::ClearReference(VdpVideoSurface surf)
     CLog::Log(LOGWARNING, "CVideoSurfaces::ClearReference - surface invalid");
     return;
   }
-  CLog::Log(LOGWARNING, "CVideoSurfaces::ClearReference - clear surface reference=%d", surf);
+//  CLog::Log(LOGWARNING, "CVideoSurfaces::ClearReference - clear surface reference=%d", surf);
   m_state[surf] &= ~SURFACE_USED_FOR_REFERENCE;
   if (m_state[surf] == 0)
   {
@@ -455,7 +455,7 @@ bool CVideoSurfaces::MarkRender(VdpVideoSurface surf)
   {
     m_freeSurfaces.erase(it);
   }
-  CLog::Log(LOGWARNING, "CVideoSurfaces::MarkRender - mark surface render=%d", surf);
+//  CLog::Log(LOGWARNING, "CVideoSurfaces::MarkRender - mark surface render=%d", surf);
   m_state[surf] |= SURFACE_USED_FOR_RENDER;
   return true;
 }
@@ -468,7 +468,7 @@ void CVideoSurfaces::ClearRender(VdpVideoSurface surf)
     CLog::Log(LOGWARNING, "CVideoSurfaces::ClearRender - surface invalid");
     return;
   }
-  CLog::Log(LOGWARNING, "CVideoSurfaces::ClearRender - clear surface render=%d", surf);
+//  CLog::Log(LOGWARNING, "CVideoSurfaces::ClearRender - clear surface render=%d", surf);
   m_state[surf] &= ~SURFACE_USED_FOR_RENDER;
   if (m_state[surf] == 0)
   {
@@ -3800,9 +3800,10 @@ bool COutput::ProcessSyncPicture(bool cleanup)
       }
       else
       {
-        XbmcThreads::EndTime timeout(400);
+        XbmcThreads::EndTime timeout(80);
         while(curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId) && !timeout.IsTimePast())
         {
+          Sleep(5);
           curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
         }
       }
