@@ -28,9 +28,7 @@
 #include "DVDClock.h"
 #include "DVDCodecs/DVDCodecs.h"
 #include "DVDCodecs/DVDCodecUtils.h"
-#if defined(TARGET_POSIX) || defined(TARGET_WINDOWS)
 #include "utils/CPUInfo.h"
-#endif
 #include "settings/AdvancedSettings.h"
 #include "settings/Settings.h"
 #include "settings/VideoSettings.h"
@@ -302,9 +300,9 @@ bool CDVDVideoCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
     }
     else
     {
-      int num_threads = std::min(8 /*MAX_THREADS*/, g_cpuInfo.getCPUCount());
-      if( num_threads > 1)
-        m_pCodecContext->thread_count = num_threads;
+      int num_threads = g_cpuInfo.getCPUCount() * 3 / 2;
+      num_threads = std::max(1, std::min(num_threads, 16));
+      m_pCodecContext->thread_count = num_threads;
       m_pCodecContext->thread_safe_callbacks = 1;
       m_decoderState = STATE_SW_MULTI;
       CLog::Log(LOGDEBUG, "CDVDVideoCodecFFmpeg - open frame threaded with %d threads", num_threads);

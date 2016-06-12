@@ -176,7 +176,7 @@ endfunction()
 # helper macro for optional deps
 macro(setup_enable_switch)
   string(TOUPPER ${dep} depup)
-  if (ARGV1)
+  if(ARGV1)
     set(enable_switch ${ARGV1})
   else()
     set(enable_switch ENABLE_${depup})
@@ -235,10 +235,11 @@ function(core_file_read_filtered result filepattern)
     if(VERBOSE)
       message(STATUS "core_file_read_filtered - filename: ${filename}")
     endif()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${filename})
     file(STRINGS ${filename} fstrings REGEX "^[^#//]")
     foreach(fstring ${fstrings})
       string(REGEX REPLACE "^(.*)#(.*)" "\\1" fstring ${fstring})
-      string(REGEX REPLACE "//.*" "" fstring ${fstring})
+      string(REGEX REPLACE "[ \n\r\t]//.*" "" fstring ${fstring})
       string(STRIP ${fstring} fstring)
       list(APPEND filename_strings ${fstring})
     endforeach()
@@ -260,7 +261,7 @@ function(core_add_subdirs_from_filelist files)
     string(STRIP ${filename} filename)
     core_file_read_filtered(fstrings ${filename})
     foreach(subdir ${fstrings})
-      STRING_SPLIT(subdir " " ${subdir})
+      string(REPLACE " " ";" subdir ${subdir})
       list(GET subdir  0 subdir_src)
       list(GET subdir -1 subdir_dest)
       if(VERBOSE)
@@ -293,6 +294,7 @@ macro(core_add_optional_subdirs_from_filelist pattern)
     if(VERBOSE)
       message(STATUS "core_add_optional_subdirs_from_filelist - reading file: ${filename}")
     endif()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${filename})
     file(STRINGS ${filename} fstrings REGEX "^[^#//]")
     foreach(line ${fstrings})
       string(REPLACE " " ";" line "${line}")
@@ -316,7 +318,7 @@ macro(core_add_optional_subdirs_from_filelist pattern)
 endmacro()
 
 macro(today RESULT)
-  if (WIN32)
+  if(WIN32)
     execute_process(COMMAND "cmd" " /C date /T" OUTPUT_VARIABLE ${RESULT})
     string(REGEX REPLACE "(..)/(..)/..(..).*" "\\1/\\2/\\3" ${RESULT} ${${RESULT}})
   elseif(UNIX)
@@ -336,12 +338,12 @@ function(core_find_git_rev)
     execute_process(COMMAND ${GIT_EXECUTABLE} diff-files --ignore-submodules --quiet --
                     RESULT_VARIABLE status_code
                     WORKING_DIRECTORY ${CORE_SOURCE_DIR})
-      if (NOT status_code)
+      if(NOT status_code)
         execute_process(COMMAND ${GIT_EXECUTABLE} diff-index --ignore-submodules --quiet HEAD --
                       RESULT_VARIABLE status_code
                       WORKING_DIRECTORY ${CORE_SOURCE_DIR})
       endif()
-      if (status_code)
+      if(status_code)
         execute_process(COMMAND ${GIT_EXECUTABLE} log -n 1 --pretty=format:"%h-dirty" HEAD
                         OUTPUT_VARIABLE HASH
                         WORKING_DIRECTORY ${CORE_SOURCE_DIR})
@@ -367,13 +369,32 @@ function(core_find_git_rev)
   endif()
 endfunction()
 
+# Parses version.txt and libKODI_guilib.h and sets variables
+# used to construct dirs structure, file naming, API version, etc.
+#
+# The following variables are set from version.txt:
+#   APP_NAME - app name
+#   APP_NAME_LC - lowercased app name
+#   APP_NAME_UC - uppercased app name
+#   COMPANY_NAME - company name
+#   APP_VERSION_MAJOR - the app version major
+#   APP_VERSION_MINOR - the app version minor
+#   APP_VERSION_TAG - the app version tag
+#   APP_VERSION_TAG_LC - lowercased app version tag
+#   APP_VERSION - the app version (${APP_VERSION_MAJOR}.${APP_VERSION_MINOR}-${APP_VERSION_TAG})
+#   APP_ADDON_API - the addon API version in the form of 16.9.702
+#   FILE_VERSION - file version in the form of 16,9,702,0 - Windows only
+#
+# The following variables are set from libKODI_guilib.h:
+#   guilib_version - current ADDONGUI API version
+#   guilib_version_min - minimal ADDONGUI API version
 macro(core_find_versions)
   include(CMakeParseArguments)
   core_file_read_filtered(version_list ${CORE_SOURCE_DIR}/version.txt)
   string(REPLACE " " ";" version_list "${version_list}")
-  cmake_parse_arguments(APP "" "VERSION_MAJOR;VERSION_MINOR;VERSION_TAG;VERSION_CODE;ADDON_API;APP_NAME;COMPANY_NAME" "" ${version_list})
+  cmake_parse_arguments(APP "" "APP_NAME;COMPANY_NAME;WEBSITE;VERSION_MAJOR;VERSION_MINOR;VERSION_TAG;VERSION_CODE;ADDON_API" "" ${version_list})
 
-  set(APP_NAME ${APP_APP_NAME}) # inconsistency in upstream
+  set(APP_NAME ${APP_APP_NAME}) # inconsistency but APP_APP_NAME looks weird
   string(TOLOWER ${APP_APP_NAME} APP_NAME_LC)
   string(TOUPPER ${APP_APP_NAME} APP_NAME_UC)
   set(COMPANY_NAME ${APP_COMPANY_NAME})
@@ -387,4 +408,17 @@ macro(core_find_versions)
   string(REGEX REPLACE ".*\"(.*)\"" "\\1" guilib_version ${guilib_version})
   file(STRINGS ${CORE_SOURCE_DIR}/xbmc/addons/kodi-addon-dev-kit/include/kodi/libKODI_guilib.h guilib_version_min REGEX "^.*GUILIB_MIN_API_VERSION (.*)$")
   string(REGEX REPLACE ".*\"(.*)\"" "\\1" guilib_version_min ${guilib_version_min})
+  # unset variables not used anywhere else
+  unset(version_list)
+  unset(APP_APP_NAME)
+
+  # bail if we can't parse version.txt
+  if(NOT DEFINED APP_VERSION_MAJOR OR NOT DEFINED APP_VERSION_MINOR)
+    message(FATAL_ERROR "Could not determine app version! Make sure that ${CORE_SOURCE_DIR}/version.txt exists")
+  endif()
+
+  # bail if we can't parse libKODI_guilib.h
+  if(NOT DEFINED guilib_version OR NOT DEFINED guilib_version_min)
+    message(FATAL_ERROR "Could not determine add-on API version! Make sure that ${CORE_SOURCE_DIR}/xbmc/addons/kodi-addon-dev-kit/include/kodi/libKODI_guilib.h exists")
+  endif()
 endmacro()

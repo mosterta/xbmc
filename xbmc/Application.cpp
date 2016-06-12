@@ -1153,6 +1153,11 @@ bool CApplication::Initialize()
       int firstWindow = g_SkinInfo->GetFirstWindow();
       g_windowManager.ActivateWindow(firstWindow);
 
+      if (g_windowManager.GetActiveWindowID() == WINDOW_STARTUP_ANIM)
+      {
+        CLog::Log(LOGWARNING, "CApplication::Initialize - startup.xml taints init process");
+      }
+
       // the startup window is considered part of the initialization as it most likely switches to the final window
       uiInitializationFinished = firstWindow != WINDOW_STARTUP_ANIM;
 

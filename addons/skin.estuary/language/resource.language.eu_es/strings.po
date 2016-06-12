@@ -52,6 +52,10 @@ msgctxt "#31085"
 msgid "Channel Group"
 msgstr "Kate taldea"
 
+msgctxt "#31088"
+msgid "Content scanning options"
+msgstr "Edukiaren eskaneatze aukerak"
+
 msgctxt "#31091"
 msgid "Download subtitles"
 msgstr "Deskargatu azpitituluak"
