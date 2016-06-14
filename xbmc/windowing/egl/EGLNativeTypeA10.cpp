@@ -218,6 +218,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   unsigned long       args[4];
   __disp_layer_info_t layera;
   unsigned int        i;
+  int status;
 
   g_hfb = open("/dev/fb0", O_RDWR);
 
@@ -266,7 +267,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     break;
   }
 
-  if (ioctl(g_hfb, FBIOGET_LAYER_HDL_0, &m_hGuiLayer))
+  if (ioctl(g_hfb, FBIOGET_LAYER_HDL_0, &m_hGuiLayer) < 0)
   {
     CLog::Log(LOGERROR, "A10: get fb0 layer handle failed. (%d)", errno);
     return false;
@@ -279,13 +280,23 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     args[1] = m_hGuiLayer;
     args[2] = (unsigned long) (&layera);
     args[3] = 0;
-    ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args);
+    if(ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args) < 0)
+    {
+       CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_GET_PARA for GUI layer(%d) failed. (%d)",
+                 m_hGuiLayer, errno);
+       return false;
+    }
     layera.mode = DISP_LAYER_WORK_MODE_SCALER;
     args[0] = m_screenid;
     args[1] = m_hGuiLayer;
     args[2] = (unsigned long) (&layera);
     args[3] = 0;
-    ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args);
+    if((status = ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args)) < 0)
+    {
+       CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_SET_PARA for GUI layer(%d) failed. (%d)", 
+                 m_hGuiLayer, status);
+       return false;
+    }
   }
   else
   {
@@ -294,7 +305,12 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     args[1] = m_hGuiLayer;
     args[2] = (unsigned long) (&layera);
     args[3] = 0;
-    ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args);
+    if(ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args) < 0)
+    {
+       CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_GET_PARA for GUI layer(%d) failed. (%d)",
+                 m_hGuiLayer, errno);
+       return false;
+    }
     //source window information
     layera.src_win.x      = 0;
     layera.src_win.y      = 0;
@@ -310,8 +326,12 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     args[1] = m_hGuiLayer;
     args[2] = (unsigned long) (&layera);
     args[3] = 0;
-    ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args);
-
+    if((status = ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args)) < 0)
+    {
+       CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_SET_PARA for GUI layer(%d) failed. (%d)",
+                 m_hGuiLayer, status);
+       return false;
+    }
   }
 
   
@@ -358,17 +378,34 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   ck.green_match_rule = 2;
   ck.blue_match_rule = 2;
 
-  args[0] = m_hGuiLayer;
+  args[0] = m_screenid;
   args[1] = (unsigned long)(&ck);
-  ioctl(g_hdisp, DISP_CMD_SET_COLORKEY, args);
+  if((status = ioctl(g_hdisp, DISP_CMD_SET_COLORKEY, args)) < 0)
+  {
+     CLog::Log(LOGERROR, "A10: DISP_CMD_SET_COLORKEY for GUI layer(%d) failed. (%d) (%d)",
+               m_hGuiLayer, status, errno);
+  }
+  
+  args[0] = m_screenid;
+  args[1] = m_hVideoLayer;
+  if (ioctl(g_hdisp, DISP_CMD_LAYER_CK_ON, &args) < 0)
+  {
+     CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_CK_ON for layer(%d) failed. (%d)",
+               m_hVideoLayer, errno);
+  }
+  
 #endif
 
-#if 0
+#if 1
   args[0] = m_screenid;
   args[1] = m_hVideoLayer;
   args[2] = (unsigned long) (&layera);
   args[3] = 0;
-  ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args);
+  if(ioctl(g_hdisp, DISP_CMD_LAYER_GET_PARA, args) < 0)
+  {
+     CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_GET_PARA for layer(%d) failed. (%d)",
+               m_hVideoLayer, errno);
+  }
   layera.src_win.x      = 0;
   layera.src_win.y      = 0;
   layera.src_win.width  = g_width;
@@ -386,7 +423,11 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   args[1] = m_hVideoLayer;
   args[2] = (unsigned long) (&layera);
   args[3] = 0;
-  ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args);
+  if(ioctl(g_hdisp, DISP_CMD_LAYER_SET_PARA, args) < 0)
+  {
+     CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_SET_PARA for layer(%d) failed. (%d)",
+               m_hVideoLayer, errno);
+  }
 #endif
 
   args[0] = m_screenid;
@@ -395,7 +436,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   args[3] = 0;
   if (ioctl(g_hdisp, DISP_CMD_LAYER_TOP, args))
   {
-    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_BOTTOM video layer failed.\n");
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_TOP video layer failed.\n");
     return false;
   }
 
@@ -405,7 +446,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   args[3] = 0;
   if (ioctl(g_hdisp, DISP_CMD_LAYER_TOP, args))
   {
-    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_BOTTOM video layer failed.\n");
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_TOP video layer failed.\n");
     return false;
   }
   
@@ -413,7 +454,8 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   args[1] = m_hGuiLayer;
   if (ioctl(g_hdisp, DISP_CMD_LAYER_ALPHA_OFF, &args) < 0)
   {
-    printf("alpha on failed\n");
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_OFF video layer failed.\n");
+    return false;
   }
 
   args[0] = m_screenid;
@@ -421,7 +463,8 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   args[2] = 0x0;
   if (ioctl(g_hdisp,DISP_CMD_LAYER_SET_ALPHA_VALUE,(void*)args) < 0)
   {
-    printf("set alpha value failed\n");
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_VALUE video layer failed.\n");
+    return false;
   }
 
   return true;
