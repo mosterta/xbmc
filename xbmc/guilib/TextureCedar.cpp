@@ -166,38 +166,41 @@ bool CCedarTexture::LoadFromFileInternal(const std::string& texturePath, unsigne
       if (file.LoadFile(texturePath, buf) <= 0)
          return false;
       
-      CSingleLock lock(m_critSection);
-      m_fallback_gl = false;
-      
-      int result = cedarLoadMem(m_jpgHandle, reinterpret_cast<uint8_t*>(buf.get()), buf.size());
-      if(result)
+      //if (file.GetLength() > 10000)
       {
-        int orientation = 0;
-  
-        orientation = cedarGetOrientation(m_jpgHandle);
-        // limit the sizes of jpegs (even if we fail to decode)
-  
-        ClampLimits(maxWidth, maxHeight, 
-                    cedarGetWidth(m_jpgHandle), 
-                    cedarGetHeight(m_jpgHandle), 
-                    orientation & 4);
-      // to be improved, cedarDecodeJpeg must be checked first
-        if (requirePixels)
+        CSingleLock lock(m_critSection);
+        m_fallback_gl = false;
+      
+        int result = cedarLoadMem(m_jpgHandle, reinterpret_cast<uint8_t*>(buf.get()), buf.size());
+        if(result)
         {
-          Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
-          if (m_pixels && cedarDecodeJpegToMem(m_jpgHandle, maxWidth, maxHeight, (char *)m_pixels))
-              okay = true;
-        }
-        else
-        {
-          if (cedarDecodeJpeg(m_jpgHandle, maxWidth, maxHeight))
+          int orientation = 0;
+  
+          orientation = cedarGetOrientation(m_jpgHandle);
+          // limit the sizes of jpegs (even if we fail to decode)
+    
+          ClampLimits(maxWidth, maxHeight, 
+                      cedarGetWidth(m_jpgHandle), 
+                      cedarGetHeight(m_jpgHandle), 
+                      orientation & 4);
+        // to be improved, cedarDecodeJpeg must be checked first
+          if (requirePixels)
           {
-              Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
-              okay = true;
+            Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
+            if (m_pixels && cedarDecodeJpegToMem(m_jpgHandle, maxWidth, maxHeight, (char *)m_pixels))
+                okay = true;
+          }
+          else
+          {
+            if (cedarDecodeJpeg(m_jpgHandle, maxWidth, maxHeight))
+            {
+                Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
+                okay = true;
+            }
           }
         }
+        cedarCloseJpeg(m_jpgHandle);
       }
-      cedarCloseJpeg(m_jpgHandle);
       if (okay)
       {
          m_hasAlpha = false;
