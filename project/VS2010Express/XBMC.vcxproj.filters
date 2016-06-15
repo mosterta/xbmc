@@ -576,9 +576,6 @@
     <ClCompile Include="..\..\xbmc\cores\VideoPlayer\DVDInputStreams\DVDInputStreamNavigator.cpp">
       <Filter>cores\VideoPlayer\DVDInputStreams</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\xbmc\cores\VideoPlayer\DVDInputStreams\DVDInputStreamRTMP.cpp">
-      <Filter>cores\VideoPlayer\DVDInputStreams</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\xbmc\cores\VideoPlayer\DVDInputStreams\DVDStateSerializer.cpp">
       <Filter>cores\VideoPlayer\DVDInputStreams</Filter>
     </ClCompile>
@@ -1927,9 +1924,6 @@
       <Filter>filesystem</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xbmc\filesystem\FileFactory.cpp">
-      <Filter>filesystem</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\xbmc\filesystem\FileReaderFile.cpp">
       <Filter>filesystem</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xbmc\filesystem\FTPDirectory.cpp">
@@ -3619,9 +3613,6 @@
     <ClInclude Include="..\..\xbmc\cores\VideoPlayer\DVDInputStreams\DVDInputStreamNavigator.h">
       <Filter>cores\VideoPlayer\DVDInputStreams</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\xbmc\cores\VideoPlayer\DVDInputStreams\DVDInputStreamRTMP.h">
-      <Filter>cores\VideoPlayer\DVDInputStreams</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\xbmc\cores\VideoPlayer\DVDInputStreams\DVDStateSerializer.h">
       <Filter>cores\VideoPlayer\DVDInputStreams</Filter>
     </ClInclude>
@@ -5083,9 +5074,6 @@
       <Filter>filesystem</Filter>
     </ClInclude>
     <ClInclude Include="..\..\xbmc\filesystem\FileFactory.h">
-      <Filter>filesystem</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\xbmc\filesystem\FileReaderFile.h">
       <Filter>filesystem</Filter>
     </ClInclude>
     <ClInclude Include="..\..\xbmc\filesystem\FTPDirectory.h">

@@ -186,8 +186,6 @@ vaapi_not_found="== Could not find libva. VAAPI support disabled. =="
 vaapi_disabled="== VAAPI support manually disabled. =="
 openmax_disabled="== OpenMax support manually disabled. =="
 openmax_not_found="== Could not find OpenMax headers. OpenMax support disabled. =="
-librtmp_not_found="== Could not find libRTMP. RTMP support disabled. =="
-librtmp_disabled="== RTMP support disabled. =="
 libnfs_not_found="== Could not find libnfs. NFS client support disabled. =="
 libnfs_disabled="== NFS support disabled. =="
 libshairplay_not_found="== Could not find libshairplay. =="
@@ -325,12 +323,6 @@ AC_ARG_ENABLE([ssh],
   [use_ssh=$enableval],
   [use_ssh=yes])
 
-AC_ARG_ENABLE([rtmp],
-  [AS_HELP_STRING([--enable-rtmp],
-  [enable RTMP support via librtmp (default is auto)])],
-  [use_librtmp=$enableval],
-  [use_librtmp=auto])
-
 AC_ARG_ENABLE([samba],
   [AS_HELP_STRING([--disable-samba],
   [disable SAMBA support (default is enabled)])],
@@ -408,6 +400,12 @@ AC_ARG_ENABLE([libbluray],
   [enable libbluray support])],
   [use_libbluray=$enableval],
   [use_libbluray=auto])
+
+AC_ARG_ENABLE([libxslt],
+  [AS_HELP_STRING([--disable-libxslt],
+  [enable libxslt (XSLT scrapers) support (default is enabled)])],
+  [use_libxslt=$enableval],
+  [use_libxslt=yes])
 
 AC_ARG_ENABLE([texturepacker],
   [AS_HELP_STRING([--enable-texturepacker],
@@ -1091,12 +1089,22 @@ if test "$target_platform" = "target_android" ; then
   AC_CHECK_LIB([log],         [__android_log_vprint],, AC_MSG_ERROR($missing_library))
   AC_CHECK_LIB([jnigraphics],     [main],, AC_MSG_ERROR($missing_library))
 fi
-PKG_CHECK_MODULES([LIBXML], [libxml-2.0],
-  [INCLUDES="$INCLUDES $LIBXML_CFLAGS"; LIBS="$LIBS $LIBXML_LIBS"],
-  AC_MSG_ERROR($missing_library))
-PKG_CHECK_MODULES([LIBXSLT], [libxslt],
-  [INCLUDES="$INCLUDES $LIBXSLT_CFLAGS"; LIBS="$LIBS $LIBXSLT_LIBS"],
-  AC_MSG_ERROR($missing_library))
+
+# check for libbxslt
+AS_CASE([x$use_libxslt],
+  [xyes],[
+    PKG_CHECK_MODULES([LIBXML], [libxml-2.0],
+      [INCLUDES="$INCLUDES $LIBXML_CFLAGS"; LIBS="$LIBS $LIBXML_LIBS"],
+      AC_MSG_ERROR($missing_library))
+    PKG_CHECK_MODULES([LIBXSLT], [libxslt],
+      [INCLUDES="$INCLUDES $LIBXSLT_CFLAGS"; LIBS="$LIBS $LIBXSLT_LIBS"],
+      AC_MSG_ERROR($missing_library))
+    AC_DEFINE([HAVE_LIBXSLT], 1, [System has libxslt library])
+    AC_SUBST([HAVE_LIBXSLT], 1)
+  ],[
+    AC_SUBST([HAVE_LIBXSLT], 0)
+  ]
+)
 PKG_CHECK_MODULES([FRIBIDI],    [fribidi],
   [INCLUDES="$INCLUDES $FRIBIDI_CFLAGS"; LIBS="$LIBS $FRIBIDI_LIBS"],
   AC_MSG_ERROR($missing_library))
@@ -1114,7 +1122,7 @@ PKG_CHECK_MODULES([PCRE],       [libpcre],
 PKG_CHECK_MODULES([FREETYPE2],  [freetype2],
   [INCLUDES="$INCLUDES $FREETYPE2_CFLAGS"; LIBS="$LIBS $FREETYPE2_LIBS"],
   AC_MSG_ERROR($missing_library))
-PKG_CHECK_MODULES([TAGLIB],  [taglib >= 1.8],
+PKG_CHECK_MODULES([TAGLIB],  [taglib >= 1.9],
   [INCLUDES="$INCLUDES $TAGLIB_CFLAGS"; LIBS="$LIBS $TAGLIB_LIBS"],
   AC_MSG_ERROR($missing_library))
 
@@ -1307,26 +1315,6 @@ else
   PKG_CHECK_MODULES([LIBSSH], [libssh],
     [INCLUDES="$INCLUDES $LIBSSH_CFLAGS"; LIBS="$LIBS $LIBSSH_LIBS"; AC_DEFINE([HAVE_LIBSSH], [1], [Whether to use libSSH library.])],
     AC_MSG_ERROR(libssh not found))
-fi
-
-# libRTMP
-if test "$use_librtmp" != "no"; then
-  AC_CHECK_HEADERS([librtmp/log.h librtmp/amf.h librtmp/rtmp.h],,
-   [if test "$use_librtmp" = "yes"; then
-      AC_MSG_ERROR($librtmp_not_found)
-    elif test "$use_librtmp" != "no"; then
-      AC_MSG_NOTICE($librtmp_not_found)
-      use_librtmp="no"
-    fi
-   ])
-  if test "$use_librtmp" != "no"; then
-    XB_FIND_SONAME([RTMP], [rtmp], [use_librtmp])
-  fi
-  if test "$use_librtmp" != "no"; then
-    AC_DEFINE([HAS_LIBRTMP], [1], [Whether to use libRTMP library.])
-  fi
-else
-  AC_MSG_NOTICE($librtmp_disabled)
 fi
 
 # samba
@@ -1931,6 +1919,12 @@ else
   final_message="$final_message\n  Bluray:\tNo"
 fi
 
+if test "$use_libxslt" = "yes"; then
+  final_message="$final_message\n  XSLT scrapers:\tYes"
+else
+  final_message="$final_message\n  XSLT scrapers:\tNo"
+fi
+
 if test "x$use_texturepacker" != "xno"; then
   AC_PATH_PROG([TEXTUREPACKER], [TexturePacker], ["none"],
     [$PATH$PATH_SEPARATOR${abs_top_srcdir}/tools/depends/native/TexturePacker/bin])
@@ -2065,12 +2059,6 @@ if test "$use_libssh" != "no"; then
   final_message="$final_message\n  libssh support:\tYes"
 else
   final_message="$final_message\n  libssh support:\tNo"
-fi
-
-if test "$use_librtmp" != "no"; then
-  final_message="$final_message\n  libRTMP support:\tYes"
-else
-  final_message="$final_message\n  libRTMP support:\tNo"
 fi
 
 if test "x$use_samba" != "xno"; then

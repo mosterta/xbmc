@@ -808,9 +808,6 @@ void CRenderManager::FlipPage(volatile std::atomic_bool& bStop, double pts /* = 
   EDEINTERLACEMODE deinterlacemode = CMediaSettings::GetInstance().GetCurrentVideoSettings().m_DeinterlaceMode;
   EINTERLACEMETHOD interlacemethod = AutoInterlaceMethodInternal(CMediaSettings::GetInstance().GetCurrentVideoSettings().m_InterlaceMethod);
 
-  if(g_advancedSettings.m_videoDisableBackgroundDeinterlace && !g_graphicsContext.IsFullScreenVideo())
-    deinterlacemode = VS_DEINTERLACEMODE_OFF;
-
   if (deinterlacemode == VS_DEINTERLACEMODE_OFF)
   {
     presentmethod = PRESENT_METHOD_SINGLE;
@@ -823,13 +820,26 @@ void CRenderManager::FlipPage(volatile std::atomic_bool& bStop, double pts /* = 
     else
     {
       bool invert = false;
-      if      (interlacemethod == VS_INTERLACEMETHOD_RENDER_BLEND)            presentmethod = PRESENT_METHOD_BLEND;
-      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_WEAVE)            presentmethod = PRESENT_METHOD_WEAVE;
-      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_WEAVE_INVERTED) { presentmethod = PRESENT_METHOD_WEAVE ; invert = true; }
-      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_BOB)              presentmethod = PRESENT_METHOD_BOB;
-      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_BOB_INVERTED)   { presentmethod = PRESENT_METHOD_BOB; invert = true; }
-      else if (interlacemethod == VS_INTERLACEMETHOD_IMX_FASTMOTION_DOUBLE)   presentmethod = PRESENT_METHOD_BOB;
-      else                                                                    presentmethod = PRESENT_METHOD_SINGLE;
+      if (interlacemethod == VS_INTERLACEMETHOD_RENDER_BLEND)
+        presentmethod = PRESENT_METHOD_BLEND;
+      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_WEAVE)
+        presentmethod = PRESENT_METHOD_WEAVE;
+      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_WEAVE_INVERTED)
+      {
+        presentmethod = PRESENT_METHOD_WEAVE;
+        invert = true;
+      }
+      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_BOB)
+        presentmethod = PRESENT_METHOD_BOB;
+      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_BOB_INVERTED)
+      {
+        presentmethod = PRESENT_METHOD_BOB;
+        invert = true;
+      }
+      else if (interlacemethod == VS_INTERLACEMETHOD_IMX_FASTMOTION_DOUBLE)
+        presentmethod = PRESENT_METHOD_BOB;
+      else
+        presentmethod = PRESENT_METHOD_SINGLE;
 
       if (presentmethod != PRESENT_METHOD_SINGLE)
       {
@@ -883,17 +893,6 @@ RESOLUTION CRenderManager::GetResolution()
     res = CResolutionUtils::ChooseBestResolution(m_fps, m_width, CONF_FLAGS_STEREO_MODE_MASK(m_flags));
 
   return res;
-}
-
-float CRenderManager::GetMaximumFPS()
-{
-  float fps;
-
-  fps = (float)m_dvdClock.GetRefreshRate();
-  if (fps <= 0)
-    fps = g_graphicsContext.GetFPS();
-
-  return fps;
 }
 
 void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
@@ -1317,7 +1316,7 @@ void CRenderManager::PrepareNextRender()
   }
 
   double frameOnScreen = m_dvdClock.GetClock();
-  double frametime = 1.0 / GetMaximumFPS() * DVD_TIME_BASE;
+  double frametime = 1.0 / g_graphicsContext.GetFPS() * DVD_TIME_BASE;
 
   // correct display latency
   // internal buffers of driver, assume that driver lets us go one frame in advance

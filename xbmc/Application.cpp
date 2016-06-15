@@ -37,6 +37,7 @@
 #include "cores/AudioEngine/AEFactory.h"
 #include "cores/AudioEngine/DSPAddons/ActiveAEDSP.h"
 #include "cores/AudioEngine/Utils/AEUtil.h"
+#include "cores/playercorefactory/PlayerCoreFactory.h"
 #include "PlayListPlayer.h"
 #include "Autorun.h"
 #include "video/Bookmark.h"
@@ -48,6 +49,7 @@
 #include "guilib/GUIFontManager.h"
 #include "guilib/GUIColorManager.h"
 #include "guilib/StereoscopicsManager.h"
+#include "addons/BinaryAddonCache.h"
 #include "addons/LanguageResource.h"
 #include "addons/Skin.h"
 #include "interfaces/generic/ScriptInvocationManager.h"
@@ -1064,9 +1066,9 @@ bool CApplication::Initialize()
   cdio_loglevel_default = CDIO_LOG_ERROR;
 #endif
 
-#ifdef TARGET_POSIX // TODO: Win32 has no special://home/ mapping by default, so we
-              //       must create these here. Ideally this should be using special://home/ and
-              //       be platform agnostic (i.e. unify the InitDirectories*() functions)
+#ifdef TARGET_POSIX //! @todo Win32 has no special://home/ mapping by default, so we
+              //!       must create these here. Ideally this should be using special://home/ and
+              //!      be platform agnostic (i.e. unify the InitDirectories*() functions)
   if (!m_bPlatformDirectories)
 #endif
   {
@@ -1902,10 +1904,7 @@ void CApplication::Render()
     g_infoManager.UpdateFPS();
   }
 
-  // TODO: find better solution
-  // if video is rendered to a separate layer, we should not block this thread
-  if (!m_pPlayer->IsRenderingVideoLayer() || hasRendered)
-    g_graphicsContext.Flip(hasRendered);
+  g_graphicsContext.Flip(hasRendered, m_pPlayer->IsRenderingVideoLayer());
 
   CTimeUtils::UpdateFrameTime(hasRendered);
 }
@@ -3075,11 +3074,11 @@ PlayBackRet CApplication::PlayStack(const CFileItem& item, bool bRestart)
     LoadVideoSettings(item);
     
     // see if we have the info in the database
-    // TODO: If user changes the time speed (FPS via framerate conversion stuff)
-    //       then these times will be wrong.
-    //       Also, this is really just a hack for the slow load up times we have
-    //       A much better solution is a fast reader of FPS and fileLength
-    //       that we can use on a file to get it's time.
+    //! @todo If user changes the time speed (FPS via framerate conversion stuff)
+    //!       then these times will be wrong.
+    //!       Also, this is really just a hack for the slow load up times we have
+    //!       A much better solution is a fast reader of FPS and fileLength
+    //!       that we can use on a file to get it's time.
     std::vector<int> times;
     bool haveTimes(false);
     CVideoDatabase dbs;
@@ -3334,7 +3333,7 @@ PlayBackRet CApplication::PlayFile(CFileItem item, const std::string& player, bo
   }
   else if(m_itemCurrentFile->IsStack() && m_currentStack->Size() > 0)
   {
-    // TODO - this will fail if user seeks back to first file in stack
+    //! @todo - this will fail if user seeks back to first file in stack
     if(m_currentStackPosition == 0 || m_itemCurrentFile->m_lStartOffset == STARTOFFSET_RESUME)
       options.fullscreen = g_advancedSettings.m_fullScreenOnMovieStart && !CMediaSettings::GetInstance().DoesVideoStartWindowed();
     else
@@ -3713,8 +3712,8 @@ void CApplication::UpdateFileState()
     // Ignore for PVR channels, PerformChannelSwitch takes care of this.
     // Also ignore video playlists containing multiple items: video settings have already been saved in PlayFile()
     // and we'd overwrite them with settings for the *previous* item.
-    // TODO: these "exceptions" should be removed and the whole logic of saving settings be revisited and
-    // possibly moved out of CApplication.  See PRs 5842, 5958, http://trac.kodi.tv/ticket/15704#comment:3
+    //! @todo these "exceptions" should be removed and the whole logic of saving settings be revisited and
+    //! possibly moved out of CApplication.  See PRs 5842, 5958, http://trac.kodi.tv/ticket/15704#comment:3
     int playlist = g_playlistPlayer.GetCurrentPlaylist();
     if (!m_progressTrackingItem->IsPVRChannel() && !(playlist == PLAYLIST_VIDEO && g_playlistPlayer.GetPlaylist(playlist).size() > 1))
       SaveFileState();
@@ -3883,8 +3882,8 @@ bool CApplication::WakeUpScreenSaverAndDPMS(bool bPowerOffKeyPressed /* = false 
   {
     if (m_dpmsIsManual)
       return false;
-    // TODO: if screensaver lock is specified but screensaver is not active
-    // (DPMS came first), activate screensaver now.
+    //! @todo if screensaver lock is specified but screensaver is not active
+    //! (DPMS came first), activate screensaver now.
     ToggleDPMS(false);
     ResetScreenSaverTimer();
     result = !m_bScreenSave || WakeUpScreenSaver(bPowerOffKeyPressed);

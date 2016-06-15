@@ -53,7 +53,7 @@ namespace XBMCAddon
 #define checkedv(methcall) { if (window.isNotNull()) xwin-> methcall ; }
 
 
-    // TODO: This should be done with template specialization
+    //! @todo This should be done with template specialization
     class WindowXMLInterceptor : public InterceptorDialog<CGUIMediaWindow>
     {
       WindowXML* xwin;
@@ -185,11 +185,24 @@ namespace XBMCAddon
             A(m_vecItems)->AddFront(fileItem,position);
           }
           A(m_viewControl).SetItems(*(A(m_vecItems)));
-          A(UpdateButtons());
         }
         //----------------------------------------------------
       }
     }
+
+    void WindowXML::addItems(const std::vector<Alternative<String, const XBMCAddon::xbmcgui::ListItem* > > & items)
+    {
+    XBMC_TRACE;
+    LOCKGUI;
+    for (auto item : items)
+      {
+        AddonClass::Ref<ListItem> ritem = item.which() == XBMCAddon::first ? ListItem::fromString(item.former()) : AddonClass::Ref<ListItem>(item.later());
+        CFileItemPtr& fileItem = ritem->item;
+        A(m_vecItems)->Add(fileItem);
+      }
+      A(m_viewControl).SetItems(*(A(m_vecItems)));
+    }
+
 
     void WindowXML::removeItem(int position)
     {
@@ -198,7 +211,6 @@ namespace XBMCAddon
       LOCKGUI;
       A(m_vecItems)->Remove(position);
       A(m_viewControl).SetItems(*(A(m_vecItems)));
-      A(UpdateButtons());
     }
 
     int WindowXML::getCurrentListPosition()
@@ -253,7 +265,6 @@ namespace XBMCAddon
       A(ClearFileItems());
 
       A(m_viewControl).SetItems(*(A(m_vecItems)));
-      A(UpdateButtons());
     }
 
     void WindowXML::setContainerProperty(const String& key, const String& value)
@@ -290,9 +301,9 @@ namespace XBMCAddon
       CLog::Log(LOGDEBUG,"%sMessage id:%d",_tg.getSpaces(),(int)message.GetMessage());
 #endif
 
-      // TODO: We shouldn't be dropping down to CGUIWindow in any of this ideally.
-      //       We have to make up our minds about what python should be doing and
-      //       what this side of things should be doing
+      //! @todo We shouldn't be dropping down to CGUIWindow in any of this ideally.
+      //!       We have to make up our minds about what python should be doing and
+      //!       what this side of things should be doing
       switch (message.GetMessage())
       {
       case GUI_MSG_WINDOW_DEINIT:
@@ -467,7 +478,6 @@ namespace XBMCAddon
     void WindowXML::SetupShares()
     {
       XBMC_TRACE;
-      A(UpdateButtons());
     }
 
     bool WindowXML::Update(const String &strPath)

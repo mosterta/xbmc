@@ -510,7 +510,7 @@ void CGUIEPGGridContainer::UpdateItems()
     }
     else // "gap" tag seleceted
     {
-      const GridItemsPtr *prevItem(GetPrevItem(m_channelCursor));
+      const GridItem *prevItem(GetPrevItem(m_channelCursor));
       if (prevItem)
       {
         const CEpgInfoTagPtr tag(prevItem->item->GetEPGInfoTag());
@@ -1050,9 +1050,9 @@ std::string CGUIEPGGridContainer::GetLabel(int info) const
   return label;
 }
 
-GridItemsPtr *CGUIEPGGridContainer::GetClosestItem(int channel)
+GridItem *CGUIEPGGridContainer::GetClosestItem(int channel)
 {
-  GridItemsPtr *closest = GetItem(channel);
+  GridItem *closest = GetItem(channel);
 
   if (!closest)
     return nullptr;
@@ -1084,7 +1084,7 @@ GridItemsPtr *CGUIEPGGridContainer::GetClosestItem(int channel)
   return m_gridModel->GetGridItemPtr(channel + m_channelOffset, m_blockCursor - left + m_blockOffset);
 }
 
-int CGUIEPGGridContainer::GetItemSize(GridItemsPtr *item)
+int CGUIEPGGridContainer::GetItemSize(GridItem *item)
 {
   if (!item)
     return MathUtils::round_int(m_blockSize); // stops it crashing
@@ -1111,7 +1111,7 @@ int CGUIEPGGridContainer::GetRealBlock(const CGUIListItemPtr &item, int channel)
   return block;
 }
 
-GridItemsPtr *CGUIEPGGridContainer::GetNextItem(int channel)
+GridItem *CGUIEPGGridContainer::GetNextItem(int channel)
 {
   int channelIndex = channel + m_channelOffset;
   int blockIndex = m_blockCursor + m_blockOffset;
@@ -1129,7 +1129,7 @@ GridItemsPtr *CGUIEPGGridContainer::GetNextItem(int channel)
   return m_gridModel->GetGridItemPtr(channelIndex, i + m_blockOffset);
 }
 
-GridItemsPtr *CGUIEPGGridContainer::GetPrevItem(int channel)
+GridItem *CGUIEPGGridContainer::GetPrevItem(int channel)
 {
   int channelIndex = channel + m_channelOffset;
   int blockIndex = m_blockCursor + m_blockOffset;
@@ -1144,7 +1144,7 @@ GridItemsPtr *CGUIEPGGridContainer::GetPrevItem(int channel)
   return m_gridModel->GetGridItemPtr(channelIndex, i + m_blockOffset);
 }
 
-GridItemsPtr *CGUIEPGGridContainer::GetItem(int channel)
+GridItem *CGUIEPGGridContainer::GetItem(int channel)
 {
   int channelIndex = channel + m_channelOffset;
   int blockIndex = m_blockCursor + m_blockOffset;
@@ -1830,7 +1830,7 @@ void CGUIEPGGridContainer::HandleProgrammeGrid(bool bRender, unsigned int curren
 
       bool focused = (channel == m_channelOffset + m_channelCursor) && (item == m_gridModel->GetGridItem(m_channelOffset + m_channelCursor, m_blockOffset + m_blockCursor));
 
-      if (bRender) // @@@ TODO why the functional difference wrt truncate here?
+      if (bRender) //! @todo Why the functional difference wrt truncate here?
       {
         // reset to grid start position if first item is out of grid view
         if (posA2 < posA)

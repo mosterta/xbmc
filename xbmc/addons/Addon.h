@@ -38,6 +38,8 @@ namespace ADDON
   typedef std::vector<AddonPtr> VECADDONS;
   typedef std::vector<AddonPtr>::iterator IVECADDONS;
 
+  const char* const ORIGIN_SYSTEM = "b6a50484-93a0-4afb-a01c-8d17e059feda";
+
 // utils
 std::string TranslateType(TYPE type, bool pretty=false);
 std::string GetIcon(TYPE type);
@@ -68,10 +70,10 @@ public:
   std::string libname;
   std::string author;
   std::string source;
-  //TODO: fix parts relying on mutating these
+  //! @todo fix parts relying on mutating these
   mutable std::string path;
   mutable std::string icon;
-  mutable std::string changelog;
+  std::string changelog;
   mutable std::string fanart;
   std::string disclaimer;
   ADDONDEPS dependencies;
@@ -80,6 +82,7 @@ public:
   CDateTime installDate;
   CDateTime lastUpdated;
   CDateTime lastUsed;
+  std::string origin;
 };
 
 
@@ -112,6 +115,7 @@ public:
   CDateTime InstallDate() const override { return m_props.installDate; }
   CDateTime LastUpdated() const override { return m_props.lastUpdated; }
   CDateTime LastUsed() const override { return m_props.lastUsed; }
+  std::string Origin() const override { return m_props.origin; }
   const InfoMap& ExtraInfo() const override { return m_props.extrainfo; }
   const ADDONDEPS& GetDeps() const override { return m_props.dependencies; }
 

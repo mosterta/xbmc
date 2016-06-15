@@ -77,6 +77,7 @@ CVideoPlayerVideo::CVideoPlayerVideo(CDVDClock* pClock
 
   m_bRenderSubs = false;
   m_stalled = false;
+  m_paused = false;
   m_syncState = IDVDStreamPlayer::SYNC_STARTING;
   m_iSubtitleDelay = 0;
   m_iLateFrames = 0;
@@ -259,6 +260,9 @@ void CVideoPlayerVideo::Process()
     if (m_syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
       iPriority = 1;
 
+    if (m_paused)
+      iPriority = 1;
+
     CDVDMsg* pMsg;
     MsgQueueReturnCode ret = m_messageQueue.Get(&pMsg, iQueueTimeOut, iPriority);
 
@@ -341,7 +345,7 @@ void CVideoPlayerVideo::Process()
 
       m_pullupCorrection.Flush();
       //we need to recalculate the framerate
-      //TODO: this needs to be set on a streamchange instead
+      //! @todo this needs to be set on a streamchange instead
       ResetFrameRateCalc();
       m_droppingStats.Reset();
 
@@ -395,6 +399,11 @@ void CVideoPlayerVideo::Process()
         if (decoderState & VC_BUFFER)
           break;
       }
+    }
+    else if (pMsg->IsType(CDVDMsg::GENERAL_PAUSE))
+    {
+      m_paused = static_cast<CDVDMsgBool*>(pMsg)->m_value;
+      CLog::Log(LOGDEBUG, "CVideoPlayerVideo - CDVDMsg::GENERAL_PAUSE: %d", m_paused);
     }
     else if (pMsg->IsType(CDVDMsg::DEMUXER_PACKET))
     {
@@ -608,8 +617,8 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(int &decoderState, double &frametim
         m_syncState = IDVDStreamPlayer::SYNC_WAITSYNC;
         SStartMsg msg;
         msg.player = VideoPlayer_VIDEO;
-        msg.cachetime = DVD_MSEC_TO_TIME(50); // TODO
-        msg.cachetotal = DVD_MSEC_TO_TIME(100); // TODO
+        msg.cachetime = DVD_MSEC_TO_TIME(50); //! @todo implement
+        msg.cachetotal = DVD_MSEC_TO_TIME(100); //! @todo implement
         msg.timestamp = hasTimestamp ? pts : DVD_NOPTS_VALUE;
         m_messageParent.Put(new CDVDMsgType<SStartMsg>(CDVDMsg::PLAYER_STARTED, msg));
       }
@@ -790,7 +799,8 @@ int CVideoPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
   }
 
   //try to calculate the framerate
-  CalcFrameRate();
+  if (!m_stalled)
+    CalcFrameRate();
 
   // signal to clock what our framerate is, it may want to adjust it's
   // speed to better match with our video renderer's output speed

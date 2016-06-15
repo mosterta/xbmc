@@ -36,6 +36,7 @@
 #include <taglib/mpegfile.h>
 #include <taglib/oggfile.h>
 #include <taglib/oggflacfile.h>
+#include <taglib/opusfile.h>
 #include <taglib/rifffile.h>
 #include <taglib/speexfile.h>
 #include <taglib/s3mfile.h>
@@ -419,7 +420,7 @@ bool CTagLoaderTagLib::ParseTag(ID3v2::Tag *id3v2, MUSIC_INFO::EmbeddedArt *art,
 
         // @xbmc.org ratings trump others (of course)
         if      (popFrame->email() == "ratings@xbmc.org")
-          tag.SetUserrating(popFrame->rating() / 51); //TODO wtf? Why 51 find some explanation, somewhere...
+          tag.SetUserrating(popFrame->rating() / 51); //! @todo wtf? Why 51 find some explanation, somewhere...
         else if (tag.GetUserrating() == 0)
         {
           if (popFrame->email() != "Windows Media Player 9 Series" &&
@@ -650,6 +651,7 @@ bool CTagLoaderTagLib::ParseTag(Ogg::XiphComment *xiph, EmbeddedArt *art, CMusic
       if (iUserrating > 0 && iUserrating <= 100)
         tag.SetUserrating((iUserrating / 10));
     }
+#if TAGLIB_MAJOR_VERSION <= 1 && TAGLIB_MINOR_VERSION < 11
     else if (it->first == "METADATA_BLOCK_PICTURE")
     {
       const char* b64 = it->second.front().toCString();
@@ -676,10 +678,12 @@ bool CTagLoaderTagLib::ParseTag(Ogg::XiphComment *xiph, EmbeddedArt *art, CMusic
     {
       pictures[2].setMimeType(it->second.front());
     }
+#endif
     else if (g_advancedSettings.m_logLevel == LOG_LEVEL_MAX)
       CLog::Log(LOGDEBUG, "unrecognized XipComment name: %s", it->first.toCString(true));
   }
 
+#if TAGLIB_MAJOR_VERSION <= 1 && TAGLIB_MINOR_VERSION < 11
   // Process the extracted picture frames; 0 = CoverArt, 1 = Other, 2 = COVERART/COVERARTMIME
   for (int i = 0; i < 3; ++i)
     if (pictures[i].data().size())
@@ -694,6 +698,29 @@ bool CTagLoaderTagLib::ParseTag(Ogg::XiphComment *xiph, EmbeddedArt *art, CMusic
 
       break;
     }
+#else
+  auto pictureList = xiph->pictureList();
+  FLAC::Picture *cover[2] = {};
+
+  for (auto i: pictureList)
+  {
+    FLAC::Picture *picture = i;
+    if (picture->type() == FLAC::Picture::FrontCover)
+      cover[0] = picture;
+    else // anything else is taken as second priority
+      cover[1] = picture;
+  }
+  for (unsigned int i = 0; i < 2; i++)
+  {
+    if (cover[i])
+    {
+      tag.SetCoverArtInfo(cover[i]->data().size(), cover[i]->mimeType().to8Bit(true));
+      if (art)
+        art->set(reinterpret_cast<const uint8_t*>(cover[i]->data().data()), cover[i]->data().size(), cover[i]->mimeType().to8Bit(true));
+      break; // one is enough
+    }
+  }
+#endif
 
   if (xiph->comment() != String::null)
     tag.SetComment(xiph->comment().toCString(true));
@@ -996,6 +1023,7 @@ bool CTagLoaderTagLib::Load(const std::string& strFileName, CMusicInfoTag& tag, 
   TagLib::MPEG::File*        mpegFile = nullptr;
   TagLib::Ogg::Vorbis::File* oggVorbisFile = nullptr;
   TagLib::Ogg::FLAC::File*   oggFlacFile = nullptr;
+  TagLib::Ogg::Opus::File*   oggOpusFile = nullptr;
   TagLib::TrueAudio::File*   ttaFile = nullptr;
   TagLib::WavPack::File*     wvFile = nullptr;
   TagLib::RIFF::WAV::File *  wavFile = nullptr;
@@ -1035,6 +1063,8 @@ bool CTagLoaderTagLib::Load(const std::string& strFileName, CMusicInfoTag& tag, 
       file = new XM::File(stream);
     else if (strExtension == "ogg")
       file = oggVorbisFile = new Ogg::Vorbis::File(stream);
+    else if (strExtension == "opus")
+      file = oggOpusFile = new Ogg::Opus::File(stream);
     else if (strExtension == "oga") // Leave this madness until last - oga container can have Vorbis or FLAC
     {
       file = oggFlacFile = new Ogg::FLAC::File(stream);
@@ -1088,6 +1118,8 @@ bool CTagLoaderTagLib::Load(const std::string& strFileName, CMusicInfoTag& tag, 
     xiph = dynamic_cast<Ogg::XiphComment *>(oggFlacFile->tag());
   else if (oggVorbisFile)
     xiph = dynamic_cast<Ogg::XiphComment *>(oggVorbisFile->tag());
+  else if (oggOpusFile)
+    xiph = dynamic_cast<Ogg::XiphComment *>(oggOpusFile->tag());
   else if (ttaFile)
     id3v2 = ttaFile->ID3v2Tag(false);
   else if (aiffFile)

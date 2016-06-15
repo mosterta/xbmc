@@ -26,6 +26,7 @@
 
 #include "SmartPlayList.h"
 #include "Util.h"
+#include "dbwrappers/Database.h"
 #include "filesystem/File.h"
 #include "filesystem/SmartPlaylistDirectory.h"
 #include "guilib/LocalizeStrings.h"
@@ -33,12 +34,12 @@
 #include "utils/JSONVariantParser.h"
 #include "utils/JSONVariantWriter.h"
 #include "utils/log.h"
+#include "utils/StreamDetails.h"
 #include "utils/StringUtils.h"
 #include "utils/StringValidation.h"
 #include "utils/URIUtils.h"
 #include "utils/Variant.h"
 #include "utils/XMLUtils.h"
-#include "video/VideoDatabase.h"
 
 using namespace XFILE;
 
@@ -735,7 +736,7 @@ CDatabaseQueryRule::SEARCH_OPERATOR CSmartPlaylistRule::GetOperator(const std::s
   SEARCH_OPERATOR op = CDatabaseQueryRule::GetOperator(strType);
   if ((strType == "tvshows" || strType == "episodes") && m_field == FieldYear)
   { // special case for premiered which is a date rather than a year
-    // TODO: SMARTPLAYLISTS do we really need this, or should we just make this field the premiered date and request a date?
+    //! @todo SMARTPLAYLISTS do we really need this, or should we just make this field the premiered date and request a date?
     if (op == OPERATOR_EQUALS)
       op = OPERATOR_CONTAINS;
     else if (op == OPERATOR_DOES_NOT_EQUAL)
