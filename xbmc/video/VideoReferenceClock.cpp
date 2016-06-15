@@ -133,7 +133,8 @@ void CVideoReferenceClock::Process()
  #if defined ALLWINNERA10
     fbNum = 0;
  #endif
-    m_pVideoSync = new CVideoSyncFb(this, fbNum);
+    if(getenv("A10FB") == NULL)
+      m_pVideoSync = new CVideoSyncFb(this, fbNum);
 #endif
 
     if (m_pVideoSync)
