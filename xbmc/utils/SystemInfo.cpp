@@ -519,27 +519,27 @@ bool CSysInfo::GetDiskSpace(const std::string& drive,int& iTotal, int& iTotalFre
 
 std::string CSysInfo::GetCPUModel()
 {
-  return "CPU: " + g_cpuInfo.getCPUModel();
+  return "CPU: " + g_cpuInfo.getCPUModel() + "\n";
 }
 
 std::string CSysInfo::GetCPUBogoMips()
 {
-  return "BogoMips: " + g_cpuInfo.getCPUBogoMips();
+  return "BogoMips: " + g_cpuInfo.getCPUBogoMips() + "\n";
 }
 
 std::string CSysInfo::GetCPUHardware()
 {
-  return "Hardware: " + g_cpuInfo.getCPUHardware();
+  return "Hardware: " + g_cpuInfo.getCPUHardware() + "\n";
 }
 
 std::string CSysInfo::GetCPURevision()
 {
-  return "Revision: " + g_cpuInfo.getCPURevision();
+  return "Revision: " + g_cpuInfo.getCPURevision() + "\n";
 }
 
 std::string CSysInfo::GetCPUSerial()
 {
-  return "Serial: " + g_cpuInfo.getCPUSerial();
+  return "Serial: " + g_cpuInfo.getCPUSerial() + "\n";
 }
 
 std::string CSysInfo::GetKernelName(bool emptyIfUnknown /*= false*/)
