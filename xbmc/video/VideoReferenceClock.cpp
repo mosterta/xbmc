@@ -25,6 +25,7 @@
 #include "guilib/GraphicContext.h"
 #include "video/videosync/VideoSync.h"
 #include "settings/Settings.h"
+#include "utils/CPUInfo.h"
 
 #if defined(HAS_GLX)
 #include "video/videosync/VideoSyncGLX.h"
@@ -133,7 +134,7 @@ void CVideoReferenceClock::Process()
  #if defined ALLWINNERA10
     fbNum = 0;
  #endif
-    if(getenv("A10FB") == NULL)
+    if(std::string("sun4i") != g_cpuInfo.getCPUHardware())
       m_pVideoSync = new CVideoSyncFb(this, fbNum);
 #endif
 

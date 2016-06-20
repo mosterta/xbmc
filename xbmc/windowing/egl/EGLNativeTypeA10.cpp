@@ -24,6 +24,7 @@
 #include "utils/log.h"
 #include "guilib/gui3d.h"
 #include "utils/StringUtils.h"
+#include "utils/CPUInfo.h"
 
 #include <sys/ioctl.h>
 #include <drv_display_sun4i.h>
@@ -273,7 +274,8 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     return false;
   }
 
-  if ((g_height > 0 /* 720 */) && (getenv("A10AB") == NULL))
+  //Allwinner A10 needs to use 2 scaler layer, display backend does not work properly
+  if (std::string("sun4i") == g_cpuInfo.getCPUHardware())
   {
     //set workmode scaler (system layer)
     args[0] = m_screenid;
@@ -368,7 +370,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     printf("layer open failed\n");
   }
 #endif
-#if 1
+#if 0
   __disp_colorkey_t ck;
   ck.ck_max.red = ck.ck_min.red = 0x0;
   ck.ck_max.green = ck.ck_min.green = 0x0;
@@ -396,7 +398,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   
 #endif
 
-#if 1
+#if 0
   args[0] = m_screenid;
   args[1] = m_hVideoLayer;
   args[2] = (unsigned long) (&layera);
@@ -449,21 +451,58 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_TOP video layer failed.\n");
     return false;
   }
-  
+  //if not a A10, but A20 and hopefully later hardware as well,
+  //alpha blending is switched off, since HW does alpha blending automatically
+  if(std::string("sun4i") != g_cpuInfo.getCPUHardware())
+  {
+    args[0] = m_screenid;
+    args[1] = m_hGuiLayer;
+    if (ioctl(g_hdisp, DISP_CMD_LAYER_ALPHA_OFF, &args) < 0)
+    {
+      CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_OFF video layer failed.\n");
+      return false;
+    }
+  }
+  else
+  {
+    args[0] = m_screenid;
+    args[1] = m_hGuiLayer;
+    if (ioctl(g_hdisp, DISP_CMD_LAYER_ALPHA_ON, &args) < 0)
+    {
+      CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_ON video layer failed.\n");
+      return false;
+    }
+  }
   args[0] = m_screenid;
   args[1] = m_hGuiLayer;
-  if (ioctl(g_hdisp, DISP_CMD_LAYER_ALPHA_OFF, &args) < 0)
+  args[2] = 0xA8;
+  if (ioctl(g_hdisp,DISP_CMD_LAYER_SET_ALPHA_VALUE,(void*)args) < 0)
   {
-    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_OFF video layer failed.\n");
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_VALUE video layer failed.\n");
     return false;
   }
 
   args[0] = m_screenid;
-  args[1] = m_hGuiLayer;
-  args[2] = 0x0;
+  args[1] = m_hVideoLayer;
+  args[2] = 0xFF;
   if (ioctl(g_hdisp,DISP_CMD_LAYER_SET_ALPHA_VALUE,(void*)args) < 0)
   {
     CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_VALUE video layer failed.\n");
+    return false;
+  }
+  args[0] = m_screenid;
+  args[1] = m_hVideoLayer;
+  if (ioctl(g_hdisp, DISP_CMD_LAYER_ALPHA_ON, &args) < 0)
+  {
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_OFF video layer failed.\n");
+    return false;
+  }
+  
+  args[0] = m_screenid;
+  args[1] = m_hVideoLayer;
+  if (ioctl(g_hdisp, DISP_CMD_LAYER_CK_ON, &args) < 0)
+  {
+    CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_OFF video layer failed.\n");
     return false;
   }
 
