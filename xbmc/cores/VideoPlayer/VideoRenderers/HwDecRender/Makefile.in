@@ -16,10 +16,13 @@ SRCS += RendererIMX.cpp
 SRCS += RendererOpenMax.cpp
 SRCS += RendererMediaCodec.cpp
 SRCS += RendererMediaCodecSurface.cpp
+endif
+
+ifeq (@USE_ALLWINNER_GLES@, 1)
 SRCS += RendererVDPAU_GLES.cpp
 endif
 
-ifeq (@ALLWINNERA10@, 1)
+ifeq (@USE_ALLWINNER_DISP@, 1)
 SRCS += RendererVDPAUAllwinner.cpp
 endif
 
