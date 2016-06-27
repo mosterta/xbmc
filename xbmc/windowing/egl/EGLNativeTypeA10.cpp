@@ -47,11 +47,10 @@ static int             g_hfb = -1;
 static int             g_hdisp = -1;
 static int             m_screenid = 0;
 //static int             g_syslayer = 0x64;
-static int             g_hlayer = 0;
 static int             g_width;
 static int             g_height;
-static int             s_firstCustomLayer = 0x65;
-static int             s_lastCustomLayer = 0x67;
+static const int       s_firstCustomLayer = 0x65;
+static const int       s_lastCustomLayer = 0x67;
 
 CEGLNativeTypeA10::CEGLNativeTypeA10()
 {
@@ -370,15 +369,19 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     printf("layer open failed\n");
   }
 #endif
-#if 0
+#if 1
   __disp_colorkey_t ck;
-  ck.ck_max.red = ck.ck_min.red = 0x0;
-  ck.ck_max.green = ck.ck_min.green = 0x0;
-  ck.ck_max.blue = ck.ck_min.blue = 0x0;
-  ck.ck_max.alpha = ck.ck_min.alpha = 0xff;
-  ck.red_match_rule = 2;
-  ck.green_match_rule = 2;
-  ck.blue_match_rule = 2;
+  ck.ck_min.red = 0x1;
+  ck.ck_min.green = 0x1;
+  ck.ck_min.blue = 0x1;
+  ck.ck_min.alpha = 0x00;
+  ck.ck_max.red = 0xff;
+  ck.ck_max.green = 0xff;
+  ck.ck_max.blue = 0xff;
+  ck.ck_max.alpha = 0xff;
+  ck.red_match_rule = 3;
+  ck.green_match_rule = 3;
+  ck.blue_match_rule = 3;
 
   args[0] = m_screenid;
   args[1] = (unsigned long)(&ck);
@@ -387,7 +390,8 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
      CLog::Log(LOGERROR, "A10: DISP_CMD_SET_COLORKEY for GUI layer(%d) failed. (%d) (%d)",
                m_hGuiLayer, status, errno);
   }
-  
+#endif
+#if 0
   args[0] = m_screenid;
   args[1] = m_hVideoLayer;
   if (ioctl(g_hdisp, DISP_CMD_LAYER_CK_ON, &args) < 0)
