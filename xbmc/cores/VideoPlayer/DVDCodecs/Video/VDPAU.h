@@ -133,7 +133,8 @@ typedef void (GL_APIENTRYP PFNGLVDPAUUNREGISTERSURFACECEDAR) (vdpauSurfaceCedar 
 typedef void (GL_APIENTRYP PFNGLVDPAUMAPSURFACESCEDAR) (GLsizei numSurfaces, const vdpauSurfaceCedar *surfaces);
 typedef void (GL_APIENTRYP PFNGLVDPAUUNMAPSURFACESCEDAR) (GLsizei numSurfaces, const vdpauSurfaceCedar *surfaces);
 typedef int (GL_APIENTRYP PFNGLVDPAUGETFRAMEIDCEDAR) (int hLayer, int dispFd);
-
+typedef void (GL_APIENTRYP PFGLVDPAUCLOSEVIDEOLAYERCEDAR) (int hLayer, int dispFd);
+typedef void (GL_APIENTRYP PFGLVDPAUGETVIDEOFRAMECCONFIG(vdpauSurfaceCedar surface, int *srcFormat, void** addrY, void** addrU, void** addrV, int *height, int * width);
 #endif
 
 namespace VDPAU
