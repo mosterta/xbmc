@@ -180,39 +180,6 @@ bool CEGLNativeTypeA10::ShowWindow(bool show)
   return false;
 }
 
-bool CEGLNativeTypeA10::GetVideoLayerHandle(void*& handle)
-{
-  bool ret = false;
-  if(m_hVideoLayer != 0)
-  {
-    handle = (void*)m_hVideoLayer;
-    ret = true;
-  }
-  return ret;
-}
-
-bool CEGLNativeTypeA10::GetDispIdHandle(void*& handle)
-{
-  bool ret = false;
-  if(m_hVideoLayer != 0)
-  {
-    handle = (void*)g_hdisp;
-    ret = true;
-  }
-  return ret;
-}
-bool CEGLNativeTypeA10::GetLayerInformation(CWinSystemEGL::CWinLayerInformation* layer)
-{
-  bool ret = true;
-  
-  CWinLayerInfoAllwinner *allLayer = static_cast<CWinLayerInfoAllwinner *>(layer);
-  allLayer->m_GuiLayer = m_hGuiLayer;
-  allLayer->m_VideoLayer = m_hVideoLayer;
-  allLayer->m_dispFd = g_hdisp;
-  
-  return ret;
-}
-
 bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
 {
   unsigned long       args[4];
@@ -228,6 +195,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     CLog::Log(LOGERROR, "A10: open /dev/disp failed. (%d)", errno);
     return false;
   }
+
 #if 0
   int ver = SUNXI_DISP_VERSION;
   if (ioctl(g_hdisp, DISP_CMD_VERSION, &ver) < 0)
@@ -267,6 +235,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     break;
   }
 
+#if 0
   if (ioctl(g_hfb, FBIOGET_LAYER_HDL_0, &m_hGuiLayer) < 0)
   {
     CLog::Log(LOGERROR, "A10: get fb0 layer handle failed. (%d)", errno);
@@ -509,14 +478,14 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
     CLog::Log(LOGERROR, "A10: DISP_CMD_LAYER_ALPHA_OFF video layer failed.\n");
     return false;
   }
-
+#endif
   return true;
 }
 
 void CEGLNativeTypeA10::VLExit()
 {
   unsigned long args[4];
-
+#if 0
   if (m_hVideoLayer)
   {
     //stop video
@@ -541,6 +510,8 @@ void CEGLNativeTypeA10::VLExit()
     ioctl(g_hdisp, DISP_CMD_LAYER_RELEASE, args);
     m_hVideoLayer = 0;
   }
+#endif
+
   if (g_hdisp != -1)
   {
     close(g_hdisp);

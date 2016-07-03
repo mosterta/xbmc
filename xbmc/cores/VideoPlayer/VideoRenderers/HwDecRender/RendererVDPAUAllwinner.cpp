@@ -27,12 +27,25 @@
 #include "windowing/WindowingFactory.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderCapture.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
-#include <dlfcn.h>
+#include "windowing/hwlayer/HwLayerFactory.h"
 
 CRendererVDPAUAllwinner::CRendererVDPAUAllwinner(): glVDPAUPresentSurfaceCedar(NULL), 
     m_dlHandle(NULL), m_needReconfigure(false), m_frameId(0)
 {
-  LoadSymbols();
+  bool status;
+  CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
+                                         CHwLayerManagerAW::ScalerType::Type_Scale);
+  status = g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, prop);
+  if(! status )
+    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error setting property scaler", __FUNCTION__);
+
+  status = g_HwLayer.showLayer(CHwLayerManagerAW::HwLayerType::Video);
+  if(! status )
+    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error calling showlayer", __FUNCTION__);
+  status = m_vdpauAdaptor.initialize();
+  if(! status )
+    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error initializing vdpauAdaptor", __FUNCTION__);
+  
 }
 
 CRendererVDPAUAllwinner::~CRendererVDPAUAllwinner()
@@ -41,9 +54,16 @@ CRendererVDPAUAllwinner::~CRendererVDPAUAllwinner()
   void* dispId;
 //    CWinSystemEGL::CWinLayerInfoPtr layerInfo;
 
+#if 0
   g_Windowing.GetVideoLayer(videoLayer);
   g_Windowing.GetDispId(dispId);
   glVDPAUCloseVideoLayerCedar((int)videoLayer, (int)dispId);
+#endif
+  
+  g_HwLayer.hideLayer(CHwLayerManagerAW::HwLayerType::Video);
+  CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
+                                         CHwLayerManagerAW::ScalerType::Type_Normal);
+  g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, prop);
 }
 
 bool CRendererVDPAUAllwinner::RenderCapture(CRenderCapture* capture)
@@ -145,25 +165,13 @@ bool CRendererVDPAUAllwinner::RenderHook(int index)
 
 bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWORD alpha)
 {
-#if 0
-  static unsigned long long previous = 0;
-  unsigned long long current = XbmcThreads::SystemClockMillis();
-  printf("r->r: %d\n", (int)(current-previous));
-  previous = current;
-#endif
-  
   ManageRenderArea();
 
   VDPAU::CVdpauRenderPicture *buffer = static_cast<VDPAU::CVdpauRenderPicture*>(m_buffers[m_iYV12RenderBuffer].hwDec);
   if (buffer != NULL && buffer->valid)
   {
-    void* videoLayer;
-    void* dispId;
-//    CWinSystemEGL::CWinLayerInfoPtr layerInfo;
-
-    g_Windowing.GetVideoLayer(videoLayer);
-    g_Windowing.GetDispId(dispId);
-//    g_Windowing.GetLayerInformation(layerInfo);
+    m_vdpauAdaptor.setFrame(buffer->surfaceCedar);
+    
     if(m_needReconfigure || (m_oldSrc != m_sourceRect || m_oldDst != m_destRect))
     {
       cdRect_t src = { (uint32_t)m_sourceRect.x1, (uint32_t)m_sourceRect.y1, 
@@ -171,19 +179,28 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
       cdRect_t dst = { (uint32_t)m_destRect.x1, (uint32_t)m_destRect.y1, 
         (uint32_t)(m_destRect.x2 - m_destRect.x1), (uint32_t)(m_destRect.y2 - m_destRect.y1) };
 
-      glVDPAUConfigureSurfaceCedar(buffer->surfaceCedar, (int)videoLayer, (int)dispId, src, dst);
+      bool status;
+      CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
+                                              CHwLayerManagerAW::ScalerType::Type_Scale);
+      status = g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, prop);
+      if(! status )
+        CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error setting property scaler", __FUNCTION__);
+
+
+      status = g_HwLayer.configure(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, 
+                                   m_sourceRect, m_destRect);
+
+      status = g_HwLayer.showLayer(CHwLayerManagerAW::HwLayerType::Video);
+      if(! status )
+        CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error calling showlayer", __FUNCTION__);
+      
       m_needReconfigure = false;
       m_oldSrc = m_sourceRect;
       m_oldDst = m_destRect;
     }
     buffer->frameId = m_frameId++;
-    glVDPAUPresentSurfaceCedar(buffer->surfaceCedar, (int)videoLayer, (int)dispId, buffer->frameId);
+    g_HwLayer.displayFrame(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, buffer->frameId);
   }
-
-#if 0
-  unsigned long long current2 = XbmcThreads::SystemClockMillis();
-  printf("r: %d  %d\n", m_iYV12RenderBuffer, (int)(current2-current));
-#endif
 
   return true;
 }
@@ -201,36 +218,6 @@ void CRendererVDPAUAllwinner::DeleteTexture(int index)
 bool CRendererVDPAUAllwinner::UploadTexture(int index)
 {
   return true;// nothing todo for IMX
-}
-
-bool CRendererVDPAUAllwinner::LoadSymbols()
-{
-  if (!m_dlHandle)
-  {
-    m_dlHandle  = dlopen("libcedarDisplay.so.1", RTLD_LAZY);
-    if (!m_dlHandle)
-    {
-      const char* error = dlerror();
-      if (!error)
-        error = "dlerror() returned NULL";
-
-      CLog::Log(LOGERROR,"CRendererVDPAUAllwinner::LoadSymbols: Unable to get handle to lib: %s", error);
-      return false;
-    }
-  }
-
-  char* error;
-  (void)dlerror();
-  glVDPAUPresentSurfaceCedar = (PFNGLVDPAUPRESENTSURFACECEDAR) dlsym(m_dlHandle, (const char*)"glVDPAUPresentSurfaceCedar");
-  glVDPAUConfigureSurfaceCedar = (PFNGLVDPAUCONFIGURESURFACECEDAR) dlsym(m_dlHandle, (const char*)"glVDPAUConfigureSurfaceCedar");
-  glVDPAUCloseVideoLayerCedar = (PFGLVDPAUCLOSEVIDEOLAYERCEDAR) dlsym(m_dlHandle, (const char*)"glVDPAUCloseVideoLayerCedar");
-  error = dlerror();
-  if (error)
-  {
-    CLog::Log(LOGERROR,"(CRendererVDPAUAllwinner) - %s in %s",error,__FUNCTION__);
-    return false;
-  }
-  return true;
 }
 
 #endif

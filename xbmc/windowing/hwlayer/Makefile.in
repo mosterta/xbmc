@@ -1,0 +1,10 @@
+INCLUDES=-I.
+
+SRCS = HwLayerManagerAllwinner.cpp
+SRCS+= HwLayerAllwinnerA10.cpp
+SRCS+= HwLayerAdaptorVdpau.cpp
+
+LIB = windowing_hwlayer.a
+
+include ../../../Makefile.include
+-include $(patsubst %.cpp,%.P,$(patsubst %.c,%.P,$(SRCS)))

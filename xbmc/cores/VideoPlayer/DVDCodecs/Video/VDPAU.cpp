@@ -39,6 +39,7 @@
 #include "DVDCodecs/DVDCodecUtils.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
 #include "utils/log.h"
+#include "windowing/hwlayer/HwLayerFactory.h"
 
 #undef GL_NV_vdpau_interop 
 
@@ -3783,15 +3784,14 @@ bool COutput::ProcessSyncPicture(bool cleanup)
 #elif ALLWINNER_FRAME_sync
     if(pic->usefence)
     {
-      void* videoLayer;
-      void* dispId;
-      
-      g_Windowing.GetVideoLayer(videoLayer);
-      g_Windowing.GetDispId(dispId);
-      int curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
+      int curDisplayedFrameId;
+      bool status = g_HwLayer.getCurrentFrameId(CHwLayerManagerAW::HwLayerType::Video, curDisplayedFrameId);
+      if(! status )
+        CLog::Log(LOGERROR, "COutput:%s error calling showlayer", __FUNCTION__);
+
       if(! cleanup)
       {
-        if(curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId))
+        if(status && curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId))
         {
           busy = true;
           ++it;
@@ -3801,10 +3801,10 @@ bool COutput::ProcessSyncPicture(bool cleanup)
       else
       {
         XbmcThreads::EndTime timeout(80);
-        while(curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId) && !timeout.IsTimePast())
+        while(status && curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId) && !timeout.IsTimePast())
         {
           Sleep(5);
-          curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
+          bool status = g_HwLayer.getCurrentFrameId(CHwLayerManagerAW::HwLayerType::Video, curDisplayedFrameId);
         }
       }
     }
@@ -3989,16 +3989,13 @@ void COutput::ReleaseBufferPool()
 #elif ALLWINNER_FRAME_sync
       if(pic->usefence)
       {
-        void* videoLayer;
-        void* dispId; 
-        
-        g_Windowing.GetVideoLayer(videoLayer);
-        g_Windowing.GetDispId(dispId);
-        int curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
-        while((curDisplayedFrameId != -1 && pic->frameId >= curDisplayedFrameId) && !timeout.IsTimePast())
+        int curDisplayedFrameId;
+        //curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
+        bool status = g_HwLayer.getCurrentFrameId(CHwLayerManagerAW::HwLayerType::Video, curDisplayedFrameId);
+        while(status && (curDisplayedFrameId != -1 && pic->frameId >= curDisplayedFrameId) && !timeout.IsTimePast())
         {
           Sleep(5);
-          curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
+          bool status = g_HwLayer.getCurrentFrameId(CHwLayerManagerAW::HwLayerType::Video, curDisplayedFrameId);
         }
       }
 #endif

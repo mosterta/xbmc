@@ -518,19 +518,6 @@ bool CWinSystemEGL::Show(bool raise)
 {
   return m_egl->ShowWindow(true);
 }
-bool CWinSystemEGL::GetLayerInformation(CWinLayerInformation* layer)
-{
-  return m_egl->GetLayerInformation(layer);
-}
-
-bool CWinSystemEGL::GetVideoLayer(void* &videoLayer)
-{
-  return m_egl->GetVideoLayerHandle(videoLayer);
-}
-bool CWinSystemEGL::GetDispId(void*& fd)
-{
-  return m_egl->GetDispIdHandle(fd);
-}
 
 void CWinSystemEGL::Register(IDispResource *resource)
 {

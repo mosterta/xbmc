@@ -713,6 +713,8 @@ case $target_platform in
      use_openmax=no
      USE_ALLWINNER_DISP=1
      USE_ALLWINNER_GLES=0
+     USE_HWLAYER=1
+     AC_DEFINE(HAS_HWLAYER, [1], [Define if supporting Hwlayer])
      AC_DEFINE(HAS_EGLGLES, [1], [Define if supporting EGL based GLES Framebuffer])
      CFLAGS="$CFLAGS -DALLWINNERA10 -DUSE_VIDEO_SYNC_FB"
      CXXFLAGS="$CXXFLAGS -DALLWINNERA10 -DUSE_VIDEO_SYNC_FB"
@@ -2348,6 +2350,7 @@ AC_SUBST(USE_BREAKPAD)
 AC_SUBST(CROSS_COMPILING)
 AC_SUBST(USE_ALLWINNER_DISP)
 AC_SUBST(USE_ALLWINNER_GLES)
+AC_SUBST(USE_HWLAYER)
 
 # pushd and popd are not available in other shells besides bash, so implement
 # our own pushd/popd functions

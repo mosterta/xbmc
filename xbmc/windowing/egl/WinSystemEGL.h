@@ -75,9 +75,6 @@ public:
 
   EGLDisplay    GetEGLDisplay();
   EGLContext    GetEGLContext();
-  virtual bool  GetVideoLayer(void*& videoLayer);
-  virtual bool  GetDispId(void*& fd);
-  virtual bool  GetLayerInformation(CWinLayerInformation* layer);
   
 protected:
   virtual void  PresentRenderImpl(bool rendered);

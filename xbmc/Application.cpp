@@ -222,6 +222,8 @@
 #include "pictures/GUIWindowSlideShow.h"
 #include "windows/GUIWindowLoginScreen.h"
 
+#include "windowing/hwlayer/HwLayerFactory.h"
+
 using namespace ADDON;
 using namespace XFILE;
 #ifdef HAS_DVD_DRIVE
@@ -770,6 +772,15 @@ bool CApplication::CreateGUI()
     CDisplaySettings::GetInstance().SetCurrentResolution(RES_DESKTOP);
     sav_res = true;
   }
+
+#if HAS_HWLAYER
+  CHwLayerManagerConfigAllwinner layerConfig;
+  layerConfig.m_screenId = 0;
+  layerConfig.m_fbNum = 0;
+  g_HwLayer.initialize(layerConfig);
+  g_HwLayer.setup();
+#endif
+
   if (!InitWindow())
   {
     return false;

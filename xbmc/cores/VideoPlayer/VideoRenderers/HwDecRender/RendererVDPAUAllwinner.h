@@ -26,6 +26,7 @@
 
 #include "cores/VideoPlayer/VideoRenderers/LinuxRendererGLES.h"
 #include "cores/VideoPlayer/DVDCodecs/Video/VDPAU.h"
+#include "windowing/hwlayer/HwLayerFactory.h"
 
 class CRendererVDPAUAllwinner : public CLinuxRendererGLES
 {
@@ -75,6 +76,7 @@ private:
   int m_frameId;
   CRect m_oldSrc;
   CRect m_oldDst;
+  CHwLayerAdaptorVdpauAllwinner m_vdpauAdaptor;
 };
 
 #endif
