@@ -677,9 +677,7 @@ private:
  */
 class CDecoder
  : public CDVDVideoCodecFFmpeg::IHardwareDecoder
-#if HAS_GL
  , public IDispResource
-#endif
 {
    friend class CVdpauRenderPicture;
 
@@ -765,6 +763,8 @@ protected:
 
   int m_codecControl;
   CProcessInfo& m_processInfo;
+
+  bool 		m_initalVideoControlSent;
 };
 
 }

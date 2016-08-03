@@ -564,6 +564,7 @@ CDecoder::CDecoder(CProcessInfo& processInfo) : m_vdpauOutput(&m_inMsgEvent), m_
   m_vdpauConfig.context = 0;
   m_dataSet = false;
   m_vdpauConfig.processInfo = &m_processInfo;
+  m_initalVideoControlSent = false;
 }
 
 bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum AVPixelFormat fmt, unsigned int surfaces)
@@ -668,8 +669,12 @@ bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum A
       mainctx->get_buffer2 = CDecoder::FFGetBuffer;
       mainctx->slice_flags = SLICE_FLAG_CODED_ORDER|SLICE_FLAG_ALLOW_FIELD;
       mainctx->hwaccel_context = &m_hwContext;
+      mainctx->set_video_header = CDecoder::FFSetVideoHeader;
 
       g_Windowing.Register(this);
+
+      m_initalVideoControlSent = false;
+
       return true;
     }
   }
@@ -731,6 +736,7 @@ long CDecoder::Release()
       m_vdpauConfig.context->GetProcs().vdp_video_surface_destroy(surf);
     }
   }
+  IHardwareDecoder::Release();
   return IHardwareDecoder::Release();
 }
 
@@ -1255,6 +1261,12 @@ int CDecoder::Render(struct AVCodecContext *s, struct AVFrame *src,
       return -1;
   }
 
+  if(s->codec_id == AV_CODEC_ID_MPEG4 && vdp->m_initalVideoControlSent == false) 
+  {
+    //ugly hack, but timing is not correct between opening FFMPEG codec and registering the callbacks :(
+    FFSetVideoHeader(s, VDP_MPEG4_VOL_HEADER);
+    vdp->m_initalVideoControlSent = true;
+  }
   uint64_t startTime = CurrentHostCounter();
   uint16_t decoded, processed, rend;
   vdp->m_bufferStats.Get(decoded, processed, rend);
@@ -3395,8 +3407,6 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
             CLog::Log(LOGDEBUG, " (VDPAU) COutput %s: RETURNPIC setting m_state=%s", 
                       __FUNCTION__, VDPAU_OUTPUT_parentStates_names[m_state]);
 #endif
-            m_dataPort.DeferOut(false);
-            m_mixer.m_dataPort.DeferIn(false);
             m_extTimeout = 0;
             //m_bStateMachineSelfTrigger=true;
           }
@@ -3715,6 +3725,10 @@ void COutput::QueueReturnPicture(CVdpauRenderPicture *pic)
   if (it2 == m_bufferPool.syncRenderPics.end())
   {
     m_bufferPool.syncRenderPics.push_back(*it);
+  }
+  else
+  {
+    CLog::Log(LOGERROR, "COutput::QueueReturnPicture - sync already added");
   }
 
   ProcessSyncPicture();
