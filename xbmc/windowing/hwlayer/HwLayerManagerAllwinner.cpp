@@ -34,13 +34,6 @@
 using namespace std;
 
 template<typename CHwLayer,typename CVideoDataProvider>
-CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::CHwLayerManagerAllwinner(): 
-    CHwLayerManager<CHwLayer, CHwLayerManagerConfigAllwinner>(),
-    m_fbFd(-1), m_dispFd(-1)
-{
-};
-
-template<typename CHwLayer,typename CVideoDataProvider>
 CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::~CHwLayerManagerAllwinner()
 {
   for (auto& layerPair  : Base::m_layers)

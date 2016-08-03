@@ -137,6 +137,10 @@ DIRECTORY_ARCHIVES += xbmc/rendering/gles/rendering_gles.a
 DIRECTORY_ARCHIVES += xbmc/windowing/egl/windowing_egl.a
 endif
 
+ifeq (@USE_HWLAYER@,1)
+DIRECTORY_ARCHIVES += xbmc/windowing/hwlayer/windowing_hwlayer.a
+endif
+
 ifeq (@USE_UPNP@,1)
 DIRECTORY_ARCHIVES += lib/libUPnP/libupnp.a \
                       xbmc/network/upnp/upnp.a

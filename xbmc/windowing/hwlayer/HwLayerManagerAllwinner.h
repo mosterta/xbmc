@@ -40,7 +40,6 @@ class CHwLayerManagerAllwinner : public CHwLayerManager<CHwLayer, CHwLayerManage
 
    typedef CHwLayerManager<CHwLayer, CHwLayerManagerConfigAllwinner> Base;
    
-   CHwLayerManagerAllwinner();
    virtual ~CHwLayerManagerAllwinner();
    virtual bool initialize(CHwLayerManagerConfigAllwinner & config);
    virtual bool setup();

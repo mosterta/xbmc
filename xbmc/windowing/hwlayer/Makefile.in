@@ -3,6 +3,7 @@ INCLUDES=-I.
 SRCS = HwLayerManagerAllwinner.cpp
 SRCS+= HwLayerAllwinnerA10.cpp
 SRCS+= HwLayerAdaptorVdpau.cpp
+SRCS+= HwLayerCommonAllwinner.cpp
 
 LIB = windowing_hwlayer.a
 
