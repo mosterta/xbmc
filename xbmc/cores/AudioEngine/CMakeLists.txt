@@ -129,11 +129,5 @@ if(CORE_SYSTEM_NAME STREQUAL freebsd)
   list(APPEND HEADERS Sinks/AESinkOSS.h)
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 core_add_library(audioengine)
-add_dependencies(audioengine libcpluff)
-
-if(ENABLE_INTERNAL_FFMPEG)
-  add_dependencies(audioengine ffmpeg)
-endif()
+target_include_directories(${CORE_LIBRARY} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

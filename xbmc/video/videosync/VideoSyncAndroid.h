@@ -30,12 +30,12 @@ public:
   
   // CVideoSync interface
   virtual bool Setup(PUPDATECLOCK func);
-  virtual void Run(volatile bool& stop);
+  virtual void Run(std::atomic<bool>& stop);
   virtual void Cleanup();
   virtual float GetFps();
   
   // IDispResource interface
-  virtual void OnResetDevice();
+  virtual void OnResetDisplay();
 
   // Choreographer callback
   void FrameCallback(int64_t frameTimeNanos);

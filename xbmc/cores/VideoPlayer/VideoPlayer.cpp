@@ -653,7 +653,6 @@ CVideoPlayer::CVideoPlayer(IPlayerCallback& callback)
   m_OmxPlayerState.bOmxWaitAudio       = false;
   m_OmxPlayerState.bOmxSentEOFs        = false;
   m_OmxPlayerState.threshold           = 0.2f;
-  m_OmxPlayerState.current_deinterlace = CMediaSettings::GetInstance().GetCurrentVideoSettings().m_DeinterlaceMode;
   m_OmxPlayerState.interlace_method    = VS_INTERLACEMETHOD_MAX;
 #ifdef HAS_OMXPLAYER
   m_omxplayer_mode                     = CSettings::GetInstance().GetBool(CSettings::SETTING_VIDEOPLAYER_USEOMXPLAYER);
@@ -2368,7 +2367,7 @@ void CVideoPlayer::SynchronizeDemuxer(unsigned int timeout)
 
   CDVDMsgGeneralSynchronize* message = new CDVDMsgGeneralSynchronize(timeout, 0);
   m_messenger.Put(message->Acquire());
-  message->Wait(&m_bStop, 0);
+  message->Wait(m_bStop, 0);
   message->Release();
 }
 
@@ -2977,33 +2976,17 @@ bool CVideoPlayer::CanPause()
 
 void CVideoPlayer::Pause()
 {
-  CSingleLock lock(m_StateSection);
-  if (!m_State.canpause)
-    return;
-  lock.Leave();
-
-  if(m_playSpeed != DVD_PLAYSPEED_PAUSE && IsCaching())
+  // toggle between pause and normal speed
+  if (GetSpeed() == 0)
   {
-    SetCaching(CACHESTATE_DONE);
-    return;
-  }
-
-  // return to normal speed if it was paused before, pause otherwise
-  if (m_playSpeed == DVD_PLAYSPEED_PAUSE)
-  {
-    SetPlaySpeed(DVD_PLAYSPEED_NORMAL);
+    SetSpeed(1);
     m_callback.OnPlayBackResumed();
   }
   else
   {
-    SetPlaySpeed(DVD_PLAYSPEED_PAUSE);
+    SetSpeed(0);
     m_callback.OnPlayBackPaused();
   }
-}
-
-bool CVideoPlayer::IsPaused() const
-{
-  return m_playSpeed == DVD_PLAYSPEED_PAUSE || IsCaching();
 }
 
 bool CVideoPlayer::HasVideo() const
@@ -3938,7 +3921,7 @@ void CVideoPlayer::FlushBuffers(bool queued, double pts, bool accurate, bool syn
       CDVDMsgGeneralSynchronize* msg = new CDVDMsgGeneralSynchronize(1000, 0);
       m_VideoPlayerAudio->SendMessage(msg->Acquire(), 1);
       m_VideoPlayerVideo->SendMessage(msg->Acquire(), 1);
-      msg->Wait(&m_bStop, 0);
+      msg->Wait(m_bStop, 0);
       msg->Release();
 
       // purge any pending PLAYER_STARTED messages
@@ -4502,8 +4485,16 @@ bool CVideoPlayer::OnAction(const CAction &action)
       CGUIDialogKaiToast::QueueNotification(g_localizeStrings.Get(25011),
                                             g_localizeStrings.Get(m_SkipCommercials ? 25013 : 25012));
       break;
-    case ACTION_SHOW_CODEC:
+    case ACTION_PLAYER_DEBUG:
       m_renderManager.ToggleDebug();
+      break;
+
+    case ACTION_PLAYER_PROCESS_INFO:
+      if (g_windowManager.GetActiveWindow() != WINDOW_DIALOG_PLAYER_PROCESS_INFO)
+      {
+        g_windowManager.ActivateWindow(WINDOW_DIALOG_PLAYER_PROCESS_INFO);
+        return true;
+      }
       break;
   }
 
@@ -5054,11 +5045,6 @@ bool CVideoPlayer::IsRenderingGuiLayer()
 bool CVideoPlayer::IsRenderingVideoLayer()
 {
   return m_renderManager.IsVideoLayer();
-}
-
-bool CVideoPlayer::Supports(EDEINTERLACEMODE mode)
-{
-  return m_renderManager.Supports(mode);
 }
 
 bool CVideoPlayer::Supports(EINTERLACEMETHOD method)

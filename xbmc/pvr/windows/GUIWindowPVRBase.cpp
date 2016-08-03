@@ -692,8 +692,9 @@ bool CGUIWindowPVRBase::DeleteTimer(CFileItem *item, bool bIsRecording, bool bDe
   return false;
 }
 
-void CGUIWindowPVRBase::CheckResumeRecording(CFileItem *item)
+bool CGUIWindowPVRBase::CheckResumeRecording(CFileItem *item)
 {
+  bool bPlayIt(true);
   std::string resumeString = CGUIWindowPVRRecordings::GetResumeString(*item);
   if (!resumeString.empty())
   {
@@ -703,7 +704,10 @@ void CGUIWindowPVRBase::CheckResumeRecording(CFileItem *item)
     int choice = CGUIDialogContextMenu::ShowAndGetChoice(choices);
     if (choice > 0)
       item->m_lStartOffset = choice == CONTEXT_BUTTON_RESUME_ITEM ? STARTOFFSET_RESUME : 0;
+    else
+      bPlayIt = false; // context menu cancelled
   }
+  return bPlayIt;
 }
 
 bool CGUIWindowPVRBase::PlayRecording(CFileItem *item, bool bPlayMinimized /* = false */, bool bCheckResume /* = true */)
@@ -714,9 +718,9 @@ bool CGUIWindowPVRBase::PlayRecording(CFileItem *item, bool bPlayMinimized /* = 
   std::string stream = item->GetPVRRecordingInfoTag()->m_strStreamURL;
   if (stream.empty())
   {
-    if (bCheckResume)
-      CheckResumeRecording(item);
-    CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_PLAY, 0, 0, static_cast<void*>(new CFileItem(*item)));
+    if (!bCheckResume || CheckResumeRecording(item))
+      CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_PLAY, 0, 0, static_cast<void*>(new CFileItem(*item)));
+
     return true;
   }
 
@@ -766,9 +770,8 @@ bool CGUIWindowPVRBase::PlayRecording(CFileItem *item, bool bPlayMinimized /* = 
     return false;
   }
 
-  if (bCheckResume)
-    CheckResumeRecording(item);
-  CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_PLAY, 0, 0, static_cast<void*>(new CFileItem(*item)));
+  if (!bCheckResume || CheckResumeRecording(item))
+    CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_PLAY, 0, 0, static_cast<void*>(new CFileItem(*item)));
 
   return true;
 }

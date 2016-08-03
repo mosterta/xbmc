@@ -75,7 +75,6 @@ public:
 struct SOmxPlayerState
 {
   OMXClock av_clock;              // openmax clock component
-  EDEINTERLACEMODE current_deinterlace; // whether deinterlace is currently enabled
   EINTERLACEMETHOD interlace_method; // current deinterlace method
   bool bOmxWaitVideo;             // whether we need to wait for video to play out on EOS
   bool bOmxWaitAudio;             // whether we need to wait for audio to play out on EOS
@@ -242,8 +241,7 @@ public:
   virtual bool OpenFile(const CFileItem& file, const CPlayerOptions &options);
   virtual bool CloseFile(bool reopen = false);
   virtual bool IsPlaying() const;
-  virtual void Pause();
-  virtual bool IsPaused() const;
+  virtual void Pause() override;
   virtual bool HasVideo() const;
   virtual bool HasAudio() const;
   virtual bool HasRDS() const;
@@ -326,7 +324,6 @@ public:
   virtual bool IsRenderingVideo();
   virtual bool IsRenderingGuiLayer();
   virtual bool IsRenderingVideoLayer();
-  virtual bool Supports(EDEINTERLACEMODE mode);
   virtual bool Supports(EINTERLACEMETHOD method);
   virtual bool Supports(ESCALINGMETHOD method);
   virtual bool Supports(ERENDERFEATURE feature);

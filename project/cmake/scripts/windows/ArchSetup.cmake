@@ -5,7 +5,7 @@ set(ARCH win32)
 
 # -------- Paths (mainly for find_package) ---------
 
-set(PLATFORM_DIR win32)
+set(PLATFORM_DIR platform/win32)
 
 # Precompiled headers fail with per target output directory. (needs CMake 3.1)
 set(PRECOMPILEDHEADER_DIR ${PROJECT_BINARY_DIR}/${CORE_BUILD_CONFIG}/objs)
@@ -34,6 +34,9 @@ set(SYSTEM_DEFINES -DNOMINMAX -D_USE_32BIT_TIME_T -DHAS_DX -D__STDC_CONSTANT_MAC
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
   set(CMAKE_CXX_FLAGS "/MP /FS ${CMAKE_CXX_FLAGS}")
 endif()
+
+# Google Test needs to use shared version of runtime libraries
+set(gtest_force_shared_crt ON CACHE STRING "" FORCE)
 
 
 # -------- Linker options ---------
@@ -77,4 +80,11 @@ set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG /OP
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+  # Generate a batch file that opens Visual Studio with the necessary env variables set.
+  file(WRITE ${CMAKE_BINARY_DIR}/kodi-sln.bat
+             "@echo off\n"
+             "set KODI_HOME=%~dp0\n"
+             "set PATH=%~dp0\\system\n"
+             "start %~dp0\\${PROJECT_NAME}.sln")
 endif()

@@ -36,7 +36,7 @@
 #include "pvr/PVRManager.h"
 
 #if defined(TARGET_WINDOWS)
-#include "win32/WIN32Util.h"
+#include "platform/win32/WIN32Util.h"
 #endif
 
 #include <cstdio>
@@ -93,7 +93,6 @@ void TestBasicEnvironment::SetUp()
   if (!CreateDirectory(lpTempPathBuffer, NULL))
     SetUpError();
   CSpecialProtocol::SetTempPath(lpTempPathBuffer);
-  CWIN32Util::ExtendDllPath(); //Needed for delay loading on windows
 #else
   char buf[MAX_PATH];
   char *tmp;

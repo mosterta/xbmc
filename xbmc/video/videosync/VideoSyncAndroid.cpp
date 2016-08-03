@@ -47,7 +47,7 @@ bool CVideoSyncAndroid::Setup(PUPDATECLOCK func)
   return true;
 }
 
-void CVideoSyncAndroid::Run(volatile bool& stop)
+void CVideoSyncAndroid::Run(std::atomic<bool>& stop)
 {
   while(!stop && !m_abort)
   {
@@ -69,7 +69,7 @@ float CVideoSyncAndroid::GetFps()
   return m_fps;
 }
 
-void CVideoSyncAndroid::OnResetDevice()
+void CVideoSyncAndroid::OnResetDisplay()
 {
   m_abort = true;
 }

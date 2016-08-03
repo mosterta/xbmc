@@ -78,18 +78,7 @@
           <control type="list" format="string" />
         </setting>
       </group>
-      <group id="3">
-        <requirement>
-          <and>
-            <or>
-              <condition>HAS_GL</condition>
-              <condition>HAS_GLESv2</condition>
-            </or>
-            <condition>HAVE_LIBVDPAU</condition>
-          </and>
-        </requirement>
-      </group>
-      <group id="4" label="14231">
+      <group id="3" label="14231">
         <setting id="videoplayer.rendermethod" type="integer" label="13415" help="36153">
           <level>2</level>
           <default>0</default> <!-- RENDER_METHOD_AUTO -->
@@ -335,7 +324,7 @@
           <control type="toggle" />
         </setting>
       </group>
-      <group id="5" label="14232">
+      <group id="4" label="14232">
         <setting id="videoplayer.stereoscopicplaybackmode" type="integer" label="36520" help="36537">
           <level>2</level>
           <default>0</default>
@@ -355,7 +344,7 @@
           <control type="toggle" />
         </setting>
       </group>
-      <group id="6" label="14233">
+      <group id="5" label="14233">
         <setting id="videoplayer.teletextenabled" type="boolean" label="23050" help="36174">
           <level>3</level>
           <default>true</default>
@@ -846,7 +835,71 @@
       </group>
     </category>
   </section>
-  <section id="library" label="14202" help="38101">
+  <section id="media" label="14211" help="38101">
+    <category id="library" label="14202" help="39004">
+      <group id="1" label="14226">
+        <setting id="source.videos" type="action" label="14242" help="39005">
+          <level>1</level>
+          <control type="button" format="action" />
+        </setting>
+        <setting id="source.music" type="action" label="14243" help="39006">
+          <level>1</level>
+          <control type="button" format="action" />
+        </setting>
+        <setting id="source.pictures" type="action" label="14244" help="39007">
+          <level>1</level>
+          <control type="button" format="action" />
+        </setting>
+      </group>
+      <group id="2" label="14236">
+        <setting id="videolibrary.updateonstartup" type="boolean" label="14245" help="36146">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="videolibrary.backgroundupdate" type="boolean" label="14246" help="36147">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="videolibrary.cleanup" type="action" label="14247" help="36148">
+          <level>2</level>
+          <control type="button" format="action" />
+        </setting>
+        <setting id="videolibrary.export" type="action" label="14248" help="36149">
+          <level>2</level>
+          <control type="button" format="action" />
+        </setting>
+        <setting id="videolibrary.import" type="action" label="14249" help="36150">
+          <level>2</level>
+          <control type="button" format="action" />
+        </setting>
+      </group>
+      <group id="3" label="14237">
+        <setting id="musiclibrary.updateonstartup" type="boolean" label="14245" help="36259">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="musiclibrary.backgroundupdate" type="boolean" label="14246" help="36147">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="musiclibrary.cleanup" type="action" label="14247" help="36148">
+          <level>2</level>
+          <control type="button" format="action" />
+        </setting>
+        <setting id="musiclibrary.export" type="action" label="14248" help="36262">
+          <level>2</level>
+          <control type="button" format="action" />
+        </setting>
+        <setting id="musiclibrary.import" type="action" label="14249" help="36263">
+          <level>2</level>
+          <control type="button" format="action" />
+        </setting>
+      </group>
+    </category>
     <category id="filelists" label="16000" help="36121">
       <group id="1" label="593">
         <setting id="filelists.showparentdiritems" type="boolean" label="13306" help="36122">
@@ -1140,56 +1193,6 @@
             <options>resolutions</options>
           </constraints>
           <control type="spinner" format="string" />
-        </setting>
-      </group>
-    </category>
-    <category id="databases" label="14219" help="38110">
-      <group id="1" label="14215">
-        <setting id="videolibrary.updateonstartup" type="boolean" label="14245" help="36146">
-          <level>1</level>
-          <default>false</default>
-          <control type="toggle" />
-        </setting>
-        <setting id="videolibrary.backgroundupdate" type="boolean" label="14246" help="36147">
-          <level>1</level>
-          <default>false</default>
-          <control type="toggle" />
-        </setting>
-        <setting id="videolibrary.cleanup" type="action" label="14247" help="36148">
-          <level>2</level>
-          <control type="button" format="action" />
-        </setting>
-        <setting id="videolibrary.export" type="action" label="14248" help="36149">
-          <level>2</level>
-          <control type="button" format="action" />
-        </setting>
-        <setting id="videolibrary.import" type="action" label="14249" help="36150">
-          <level>2</level>
-          <control type="button" format="action" />
-        </setting>
-      </group>
-      <group id="2" label="14216">
-        <setting id="musiclibrary.updateonstartup" type="boolean" label="14245" help="36259">
-          <level>1</level>
-          <default>false</default>
-          <control type="toggle" />
-        </setting>
-        <setting id="musiclibrary.backgroundupdate" type="boolean" label="14246" help="36147">
-          <level>1</level>
-          <default>false</default>
-          <control type="toggle" />
-        </setting>
-        <setting id="musiclibrary.cleanup" type="action" label="14247" help="36148">
-          <level>2</level>
-          <control type="button" format="action" />
-        </setting>
-        <setting id="musiclibrary.export" type="action" label="14248" help="36262">
-          <level>2</level>
-          <control type="button" format="action" />
-        </setting>
-        <setting id="musiclibrary.import" type="action" label="14249" help="36263">
-          <level>2</level>
-          <control type="button" format="action" />
         </setting>
       </group>
     </category>

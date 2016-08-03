@@ -33,10 +33,10 @@
 #include "threads/SingleLock.h"
 #include "utils/MathUtils.h"
 #include "utils/log.h"
-#include "win32/dxerr.h"
+#include "platform/win32/dxerr.h"
 #include "utils/SystemInfo.h"
 #pragma warning(disable: 4091)
-#include "d3d10umddi.h"
+#include <d3d10umddi.h>
 #pragma warning(default: 4091)
 #include <algorithm>
 

@@ -130,16 +130,9 @@ struct SPlayerVideoStreamInfo
   }
 };
 
-enum EDEINTERLACEMODE
-{
-  VS_DEINTERLACEMODE_OFF=0,
-  VS_DEINTERLACEMODE_AUTO=1,
-  VS_DEINTERLACEMODE_FORCE=2
-};
-
 enum EINTERLACEMETHOD
 {
-  VS_INTERLACEMETHOD_NONE=0, // Legacy
+  VS_INTERLACEMETHOD_NONE=0,
   VS_INTERLACEMETHOD_AUTO=1,
   VS_INTERLACEMETHOD_RENDER_BLEND=2,
 
@@ -244,7 +237,6 @@ public:
   virtual bool IsPlaying() const { return false;}
   virtual bool CanPause() { return true; };
   virtual void Pause() = 0;
-  virtual bool IsPaused() const = 0;
   virtual bool HasVideo() const = 0;
   virtual bool HasAudio() const = 0;
   virtual bool HasRDS() const { return false; }
@@ -408,7 +400,6 @@ public:
 
   virtual bool IsRenderingVideoLayer() { return false; };
 
-  virtual bool Supports(EDEINTERLACEMODE mode) { return false; };
   virtual bool Supports(EINTERLACEMETHOD method) { return false; };
   virtual bool Supports(ESCALINGMETHOD method) { return false; };
   virtual bool Supports(ERENDERFEATURE feature) { return false; };

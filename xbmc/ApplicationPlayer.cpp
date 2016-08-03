@@ -193,10 +193,9 @@ bool CApplicationPlayer::HasRDS() const
   return (player && player->HasRDS());
 }
 
-bool CApplicationPlayer::IsPaused() const
+bool CApplicationPlayer::IsPaused()
 {
-  std::shared_ptr<IPlayer> player = GetInternal();
-  return (player && player->IsPaused());
+  return (GetPlaySpeed() == 0);
 }
 
 bool CApplicationPlayer::IsPlaying() const
@@ -205,9 +204,9 @@ bool CApplicationPlayer::IsPlaying() const
   return (player && player->IsPlaying());
 }
 
-bool CApplicationPlayer::IsPausedPlayback() const
+bool CApplicationPlayer::IsPausedPlayback()
 {
-  return (IsPlaying() && IsPaused());
+  return (IsPlaying() && (GetPlaySpeed() == 0));
 }
 
 bool CApplicationPlayer::IsPlayingAudio() const
@@ -229,7 +228,10 @@ void CApplicationPlayer::Pause()
 {
   std::shared_ptr<IPlayer> player = GetInternal();
   if (player)
+  {
     player->Pause();
+    m_speedUpdate.SetExpired();
+  }
 }
 
 void CApplicationPlayer::SetMute(bool bOnOff)
@@ -708,13 +710,6 @@ void CApplicationPlayer::GetDeinterlaceMethods(std::vector<int> &deinterlaceMeth
     player->OMXGetDeinterlaceMethods(deinterlaceMethods);
 }
 
-void CApplicationPlayer::GetDeinterlaceModes(std::vector<int> &deinterlaceModes)
-{
-  std::shared_ptr<IPlayer> player = GetInternal();
-  if (player)
-    player->OMXGetDeinterlaceModes(deinterlaceModes);
-}
-
 void CApplicationPlayer::GetScalingMethods(std::vector<int> &scalingMethods)
 {
   std::shared_ptr<IPlayer> player = GetInternal();
@@ -749,7 +744,6 @@ int CApplicationPlayer::GetPlaySpeed()
   }
   else
     return 0;
-
 }
 
 void CApplicationPlayer::FrameMove()
@@ -828,15 +822,6 @@ bool CApplicationPlayer::IsRenderingVideoLayer()
   std::shared_ptr<IPlayer> player = GetInternal();
   if (player)
     return player->IsRenderingVideoLayer();
-  else
-    return false;
-}
-
-bool CApplicationPlayer::Supports(EDEINTERLACEMODE mode)
-{
-  std::shared_ptr<IPlayer> player = GetInternal();
-  if (player)
-    return player->Supports(mode);
   else
     return false;
 }

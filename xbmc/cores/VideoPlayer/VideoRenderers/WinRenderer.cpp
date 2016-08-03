@@ -34,7 +34,7 @@
 #include "utils/log.h"
 #include "utils/win32/gpu_memcpy_sse4.h"
 #include "VideoShaders/WinVideoFilter.h"
-#include "win32/WIN32Util.h"
+#include "platform/win32/WIN32Util.h"
 #include "windowing/WindowingFactory.h"
 
 typedef struct {
@@ -1009,16 +1009,6 @@ bool CWinRenderer::CreateYV12Texture(int index)
 
   CLog::Log(LOGDEBUG, "created video buffer %i", index);
   return true;
-}
-
-bool CWinRenderer::Supports(EDEINTERLACEMODE mode)
-{
-  if(mode == VS_DEINTERLACEMODE_OFF
-  || mode == VS_DEINTERLACEMODE_AUTO
-  || mode == VS_DEINTERLACEMODE_FORCE)
-    return true;
-
-  return false;
 }
 
 bool CWinRenderer::Supports(EINTERLACEMETHOD method)

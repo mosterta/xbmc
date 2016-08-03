@@ -89,11 +89,6 @@ bool CRendererMediaCodecSurface::Supports(EINTERLACEMETHOD method)
   return false;
 }
 
-bool CRendererMediaCodecSurface::Supports(EDEINTERLACEMODE mode)
-{
-  return false;
-}
-
 EINTERLACEMETHOD CRendererMediaCodecSurface::AutoInterlaceMethod()
 {
   return VS_INTERLACEMETHOD_NONE;
@@ -103,8 +98,8 @@ CRenderInfo CRendererMediaCodecSurface::GetRenderInfo()
 {
   CRenderInfo info;
   info.formats = m_formats;
-  info.max_buffer_size = NUM_BUFFERS;
-  info.optimal_buffer_size = 2;
+  info.max_buffer_size = 4;
+  info.optimal_buffer_size = 3;
   return info;
 }
 
@@ -176,4 +171,3 @@ bool CRendererMediaCodecSurface::UploadTexture(int index)
   return true; // nothing todo
 }
 #endif
-
