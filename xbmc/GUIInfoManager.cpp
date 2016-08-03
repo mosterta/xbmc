@@ -95,7 +95,7 @@
 #include "music/MusicThumbLoader.h"
 #include "video/VideoDatabase.h"
 #include "cores/IPlayer.h"
-#include "cores/AudioEngine/DSPAddons/ActiveAEDSPProcess.h"
+#include "cores/AudioEngine/Engines/ActiveAE/AudioDSPAddons/ActiveAEDSP.h"
 #include "cores/AudioEngine/Utils/AEUtil.h"
 #include "cores/VideoPlayer/VideoRenderers/BaseRenderer.h"
 #include "interfaces/info/InfoExpression.h"
@@ -768,6 +768,12 @@ const infomap weather[] =        {{ "isfetched",        WEATHER_IS_FETCHED },
 ///     Returns true if ADSP is supported from Kodi
 ///     \note normally always true
 ///   }
+///   \table_row3{   <b>`System.HasCMS`</b>,
+///                  \anchor System_HasCMS
+///                  _boolean_,
+///     Returns true if colour management is supported from Kodi
+///     \note currently only supported for OpenGL
+///   }
 ///   \table_row3{   <b>`System.HasModalDialog`</b>,
 ///                  \anchor System_HasModalDialog
 ///                  _boolean_,
@@ -1182,7 +1188,8 @@ const infomap system_labels[] =  {{ "hasnetwork",       SYSTEM_ETHERNET_LINK_ACT
                                   { "haspvr",           SYSTEM_HAS_PVR },
                                   { "startupwindow",    SYSTEM_STARTUP_WINDOW },
                                   { "stereoscopicmode", SYSTEM_STEREOSCOPIC_MODE },
-                                  { "hasadsp",          SYSTEM_HAS_ADSP }};
+                                  { "hasadsp",          SYSTEM_HAS_ADSP },
+                                  { "hascms",           SYSTEM_HAS_CMS }};
 
 /// \page modules__General__List_of_gui_access
 /// @{
@@ -2106,6 +2113,22 @@ const infomap videoplayer[] =    {{ "title",            VIDEOPLAYER_TITLE },
                                   { "canresumelivetv",  VIDEOPLAYER_CAN_RESUME_LIVE_TV },
                                   { "imdbnumber",       VIDEOPLAYER_IMDBNUMBER },
                                   { "episodename",      VIDEOPLAYER_EPISODENAME }
+};
+
+const infomap player_process[] =
+{
+  { "videodecoder", PLAYER_PROCESS_VIDEODECODER },
+  { "deintmethod", PLAYER_PROCESS_DEINTMETHOD },
+  { "pixformat", PLAYER_PROCESS_PIXELFORMAT },
+  { "videowidth", PLAYER_PROCESS_VIDEOWIDTH },
+  { "videoheight", PLAYER_PROCESS_VIDEOHEIGHT },
+  { "videofps", PLAYER_PROCESS_VIDEOFPS },
+  { "videodar", PLAYER_PROCESS_VIDEODAR },
+  { "videohwdecoder", PLAYER_PROCESS_VIDEOHWDECODER },
+  { "audiodecoder", PLAYER_PROCESS_AUDIODECODER },
+  { "audiochannels", PLAYER_PROCESS_AUDIOCHANNELS },
+  { "audiosamplerate", PLAYER_PROCESS_AUDIOSAMPLERATE },
+  { "audiobitspersample", PLAYER_PROCESS_AUDIOBITSPERSAMPLE }
 };
 
 /// \page modules__General__List_of_gui_access
@@ -3530,7 +3553,7 @@ const infomap container_str[]  = {{ "property",         CONTAINER_PROPERTY },
 ///   \table_row3{   <b>`ListItem.HasTimerSchedule`</b>,
 ///                  \anchor ListItem_HasTimerSchedule
 ///                  _boolean_,
-///     Whether the item is part of a repeating timer schedule (PVR). (v16 addition)
+///     Whether the item was scheduled by a timer rule (PVR). (v16 addition)
 ///   }
 ///   \table_row3{   <b>`ListItem.HasRecording`</b>,
 ///                  \anchor ListItem_HasRecording
@@ -3817,6 +3840,7 @@ const infomap listitem_labels[]= {{ "thumb",            LISTITEM_THUMB },
                                   { "addonlastupdated", LISTITEM_ADDON_LAST_UPDATED },
                                   { "addonlastused",    LISTITEM_ADDON_LAST_USED },
                                   { "addonorigin",      LISTITEM_ADDON_ORIGIN },
+                                  { "addonsize",        LISTITEM_ADDON_SIZE },
 };
 
 /// \page modules__General__List_of_gui_access
@@ -5142,6 +5166,14 @@ int CGUIInfoManager::TranslateSingleString(const std::string &strCondition, bool
         if (prop.name == player_times[i].str)
           return AddMultiInfo(GUIInfo(player_times[i].val, TranslateTimeFormat(prop.param())));
       }
+      if (prop.name == "process" && prop.num_params())
+      {
+        for (size_t i = 0; i < sizeof(player_process) / sizeof(infomap); i++)
+        {
+          if (prop.param() == player_process[i].str)
+            return player_process[i].val;
+        }
+      }
       if (prop.num_params() == 1)
       {
         for (size_t i = 0; i < sizeof(player_param) / sizeof(infomap); i++)
@@ -5312,7 +5344,9 @@ int CGUIInfoManager::TranslateSingleString(const std::string &strCondition, bool
           return AddMultiInfo(GUIInfo(player_times[i].val, TranslateTimeFormat(prop.param())));
       }
       if (prop.name == "content" && prop.num_params())
+      {
         return AddMultiInfo(GUIInfo(VIDEOPLAYER_CONTENT, ConditionalStringParameter(prop.param()), 0));
+      }
       for (size_t i = 0; i < sizeof(videoplayer) / sizeof(infomap); i++)
       {
         if (prop.name == videoplayer[i].str)
@@ -5992,6 +6026,39 @@ std::string CGUIInfoManager::GetLabel(int info, int contextWindow, std::string *
       strLabel = info.language;
     }
     break;
+  case PLAYER_PROCESS_VIDEODECODER:
+      strLabel = CServiceBroker::GetDataCacheCore().GetVideoDecoderName();
+      break;
+  case PLAYER_PROCESS_DEINTMETHOD:
+      strLabel = CServiceBroker::GetDataCacheCore().GetVideoDeintMethod();
+      break;
+  case PLAYER_PROCESS_PIXELFORMAT:
+      strLabel = CServiceBroker::GetDataCacheCore().GetVideoPixelFormat();
+      break;
+  case PLAYER_PROCESS_VIDEOFPS:
+      strLabel = StringUtils::Format("%.3f", CServiceBroker::GetDataCacheCore().GetVideoFps());
+      break;
+  case PLAYER_PROCESS_VIDEODAR:
+      strLabel = StringUtils::Format("%.2f", CServiceBroker::GetDataCacheCore().GetVideoDAR());
+      break;
+  case PLAYER_PROCESS_VIDEOWIDTH:
+      strLabel = StringUtils::FormatNumber(CServiceBroker::GetDataCacheCore().GetVideoWidth());
+      break;
+  case PLAYER_PROCESS_VIDEOHEIGHT:
+      strLabel = StringUtils::FormatNumber(CServiceBroker::GetDataCacheCore().GetVideoHeight());
+      break;
+  case PLAYER_PROCESS_AUDIODECODER:
+      strLabel = CServiceBroker::GetDataCacheCore().GetAudioDecoderName();
+      break;
+  case PLAYER_PROCESS_AUDIOCHANNELS:
+      strLabel = CServiceBroker::GetDataCacheCore().GetAudioChannels();
+      break;
+  case PLAYER_PROCESS_AUDIOSAMPLERATE:
+      strLabel = StringUtils::FormatNumber(CServiceBroker::GetDataCacheCore().GetAudioSampleRate());
+      break;
+  case PLAYER_PROCESS_AUDIOBITSPERSAMPLE:
+      strLabel = StringUtils::FormatNumber(CServiceBroker::GetDataCacheCore().GetAudioBitsPerSampe());
+      break;
   case RDS_AUDIO_LANG:
   case RDS_CHANNEL_COUNTRY:
   case RDS_TITLE:
@@ -6728,6 +6795,12 @@ bool CGUIInfoManager::GetBool(int condition1, int contextWindow, const CGUIListI
     bReturn = true;
   else if (condition == SYSTEM_HAS_ADSP)
     bReturn = true;
+  else if (condition == SYSTEM_HAS_CMS)
+#ifdef HAS_GL
+    bReturn = true;
+#else
+    bReturn = false;
+#endif
   else if (condition == SYSTEM_ISMASTER)
     bReturn = CProfilesManager::GetInstance().GetMasterProfile().getLockMode() != LOCK_MODE_EVERYONE && g_passwordManager.bMasterUser;
   else if (condition == SYSTEM_ISFULLSCREEN)
@@ -7089,6 +7162,9 @@ bool CGUIInfoManager::GetBool(int condition1, int contextWindow, const CGUIListI
                    !m_currentFile->GetPVRRadioRDSInfoTag()->GetSMSStudio().empty() ||
                    !m_currentFile->GetPVRRadioRDSInfoTag()->GetPhoneStudio().empty());
     break;
+    case PLAYER_PROCESS_VIDEOHWDECODER:
+        bReturn = CServiceBroker::GetDataCacheCore().IsVideoHwDecoder();
+        break;
     default: // default, use integer value different from 0 as true
       {
         int val;
@@ -9089,7 +9165,7 @@ void CGUIInfoManager::UpdateAVInfo()
 {
   if(g_application.m_pPlayer->IsPlaying())
   {
-    if (g_dataCacheCore.HasAVInfoChanges())
+    if (CServiceBroker::GetDataCacheCore().HasAVInfoChanges())
     {
       SPlayerVideoStreamInfo video;
       SPlayerAudioStreamInfo audio;
@@ -9937,6 +10013,8 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
       return item->GetEPGInfoTag()->EndAsLocalTime().GetAsLocalizedTime("", false);
     else if (item->HasPVRTimerInfoTag())
       return item->GetPVRTimerInfoTag()->EndAsLocalTime().GetAsLocalizedTime("", false);
+    else if (item->HasPVRRecordingInfoTag())
+      return (item->GetPVRRecordingInfoTag()->RecordingTimeAsLocalTime() + CDateTimeSpan(0, 0, 0, item->GetPVRRecordingInfoTag()->GetDuration())).GetAsLocalizedTime("", false);
     else if (item->HasVideoInfoTag())
     {
       CDateTimeSpan duration(0, 0, 0, item->GetVideoInfoTag()->GetDuration());
@@ -10242,6 +10320,10 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
         return origin->Name();
       return g_localizeStrings.Get(13205);
     }
+    break;
+  case LISTITEM_ADDON_SIZE:
+    if (item->HasAddonInfo() && item->GetAddonInfo()->PackageSize() > 0)
+      return StringUtils::FormatFileSize(item->GetAddonInfo()->PackageSize());
     break;
   }
 

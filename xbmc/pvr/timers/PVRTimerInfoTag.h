@@ -86,16 +86,12 @@ namespace PVR
 
     virtual void Serialize(CVariant &value) const;
 
-    int Compare(const CPVRTimerInfoTag &timer) const;
-
     void UpdateSummary(void);
 
     void DisplayError(PVR_ERROR err) const;
 
     std::string GetStatus() const;
     std::string GetTypeAsString() const;
-
-    bool SetDuration(int iDuration);
 
     static const int DEFAULT_PVRRECORD_INSTANTRECORDTIME = -1;
 
@@ -144,8 +140,6 @@ namespace PVR
      */
     void ResetChildState();
 
-    void UpdateEpgEvent(bool bClear = false);
-
     bool IsActive(void) const
     {
       return m_state == PVR_TIMER_STATE_SCHEDULED
@@ -190,10 +184,10 @@ namespace PVR
     void SetTimerType(const CPVRTimerTypePtr &type);
 
     /*!
-      * @brief Checks whether this is a repeating (vs. one-shot) timer.
-      * @return True if this is a repeating timer, false otherwise.
+      * @brief Checks whether this is a timer rule (vs. one time timer).
+      * @return True if this is a timer rule, false otherwise.
       */
-    bool IsRepeating(void) const { return m_timerType && m_timerType->IsRepeating(); }
+    bool IsTimerRule(void) const { return m_timerType && m_timerType->IsTimerRule(); }
 
     /*!
       * @brief Checks whether this is a manual (vs. epg-based) timer.
@@ -213,14 +207,9 @@ namespace PVR
 
     CDateTime FirstDayAsUTC(void) const;
     CDateTime FirstDayAsLocalTime(void) const;
-    void SetFirstDayFromUTC(CDateTime &firstDay) { m_FirstDay = firstDay; }
     void SetFirstDayFromLocalTime(CDateTime &firstDay) { m_FirstDay = firstDay.GetAsUTCDateTime(); }
 
     unsigned int MarginStart(void) const { return m_iMarginStart; }
-    void SetMarginStart(unsigned int iMinutes) { m_iMarginStart = iMinutes; }
-
-    unsigned int MarginEnd(void) const { return m_iMarginEnd; }
-    void SetMarginEnd(unsigned int iMinutes) { m_iMarginEnd = iMinutes; }
 
     /*!
      * @brief Get the text for the notification.
@@ -243,9 +232,22 @@ namespace PVR
     bool RenameOnClient(const std::string &strNewName);
     bool UpdateOnClient();
 
+    /*!
+     * @brief Associate the given epg tag with this timer; before, clear old timer at associated epg tag, if any.
+     * @param tag The epg tag to assign.
+     */
+    void SetEpgTag(const EPG::CEpgInfoTagPtr &tag);
+
+    /*!
+     * @brief Clear the epg tag associated with this timer; before, clear this timer at associated epg tag, if any.
+     */
     void ClearEpgTag(void);
 
-    void UpdateChannel(void);
+    /*!
+     * @brief Update the channel associated with this timer.
+     * @return the channel for the timer. Can be empty for epg based repeating timers (e.g. "match any channel" rules)
+     */
+    CPVRChannelPtr UpdateChannel(void);
 
     /*!
      * @brief Return string representation for any possible combination of weekdays.
@@ -263,7 +265,7 @@ namespace PVR
     unsigned int GetTimerRuleId() const { return m_iParentClientIndex; }
 
     std::string           m_strTitle;            /*!< @brief name of this timer */
-    std::string           m_strEpgSearchString;  /*!< @brief a epg data match string for repeating epg-based timers. Format is backend-dependent, for example regexp */
+    std::string           m_strEpgSearchString;  /*!< @brief a epg data match string for epg-based timer rules. Format is backend-dependent, for example regexp */
     bool                  m_bFullTextEpgSearch;  /*!< @brief indicates whether only epg episode title can be matched by the pvr backend or "more" (backend-dependent") data. */
     std::string           m_strDirectory;        /*!< @brief directory where the recording must be stored */
     std::string           m_strSummary;          /*!< @brief summary string with the time to show inside a GUI list */
@@ -277,8 +279,8 @@ namespace PVR
     int                   m_iPriority;           /*!< @brief priority of the timer */
     int                   m_iLifetime;           /*!< @brief lifetime of the timer in days */
     int                   m_iMaxRecordings;      /*!< @brief (optional) backend setting for maximum number of recordings to keep*/
-    unsigned int          m_iWeekdays;           /*!< @brief bit based store of weekdays for repeating timers */
-    unsigned int          m_iPreventDupEpisodes; /*!< @brief only record new episodes for repeating epg based timers */
+    unsigned int          m_iWeekdays;           /*!< @brief bit based store of weekdays for timer rules */
+    unsigned int          m_iPreventDupEpisodes; /*!< @brief only record new episodes for epg-based timer rules */
     unsigned int          m_iRecordingGroup;     /*!< @brief (optional) if set, the addon/backend stores the recording to a group (sub-folder) */
     std::string           m_strFileNameAndPath;  /*!< @brief file name is only for reference */
     int                   m_iChannelNumber;      /*!< @brief integer value of the channel number */
@@ -294,10 +296,9 @@ namespace PVR
     void UpdateEpgInfoTag(void);
 
     CCriticalSection      m_critSection;
-    unsigned int          m_iEpgUid;   /*!< id of epg event associated with this timer, EPG_TAG_INVALID_UID if none. */
     CDateTime             m_StartTime; /*!< start time */
     CDateTime             m_StopTime;  /*!< stop time */
-    CDateTime             m_FirstDay;  /*!< if it is a manual repeating timer the first date it starts */
+    CDateTime             m_FirstDay;  /*!< if it is a manual timer rule the first date it starts */
     CPVRTimerTypePtr      m_timerType; /*!< the type of this timer */
 
     unsigned int          m_iActiveChildTimers;   /*!< @brief Number of active timers which have this timer as their m_iParentClientIndex */
@@ -305,6 +306,7 @@ namespace PVR
     bool                  m_bHasChildRecording;   /*!< @brief Has at least one child timer with status PVR_TIMER_STATE_RECORDING */
     bool                  m_bHasChildErrors;      /*!< @brief Has at least one child timer with status PVR_TIMER_STATE_ERROR */
 
+    mutable unsigned int  m_iEpgUid;   /*!< id of epg event associated with this timer, EPG_TAG_INVALID_UID if none. */
     mutable EPG::CEpgInfoTagPtr m_epgTag; /*!< epg info tag matching m_iEpgUid. */
   };
 }

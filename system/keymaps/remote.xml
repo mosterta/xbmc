@@ -1,36 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- This file contains the mapping of keyboard keys to actions within Kodi.              -->
-<!--                                                                                      -->
-<!-- The format is:                                                                       -->
-<!--  <window>                                                                            -->
-<!--    <device>                                                                          -->
-<!--      <button>action</button>                                                         -->
-<!--    </device>                                                                         -->
-<!--  </window>                                                                           -->
-<!--                                                                                      -->
-<!-- To map keys from other remotes using the RCA protocol, you may add <universalremote> -->
-<!-- blocks. In this case, the tags used are <obc#> where # is the original button code   -->
-<!-- (OBC) of the key. You set it up by adding a <universalremote> block to the window or -->
-<!-- <global> section:                                                                    -->
-<!--    <universalremote>                                                                 -->
-<!--       <obc45>Stop</obc45>                                                            -->
-<!--    </universalremote>                                                                -->
-<!--                                                                                      -->
-<!-- The <global> section is a fall through - they will only be used if the button is     -->
-<!-- not used in the current window's section.                                            -->
-<!--                                                                                      -->
-<!-- Actions can be built-in functions.                                                   -->
-<!--  eg <B>ActivateWindow(MyMusic)</B>                                                   -->
-<!-- would automatically go to Music on the press of the B button.                        -->
-<!--                                                                                      -->
-<!--  Long presses                                                                        -->
-<!--   A limitation is that if a single press is mapped in a section, a global "longpress"-->
-<!--   will be ignored. The workaround is to duplicate the long mapping in the section.   -->
-<!--                                                                                      -->
-<!-- An empty action removes the corresponding mapping from default and parent keymaps.   -->
-<!-- This is different from a "noop" action, which disables a button.                     -->
-<!--                                                                                      -->
-<!-- More documentation on keymaps can be found on http://kodi.wiki/view/keymaps          -->
+<!-- This file contains the mapping of keys (gamepad, remote, and keyboard) to actions within XBMC -->
+<!-- The <global> section is a fall through - they will only be used if the button is not          -->
+<!-- used in the current window's section.  Note that there is only handling                       -->
+<!-- for a single action per button at this stage.                                                 -->
+<!-- For joystick/gamepad configuration under linux/win32, see below as it differs from xbox       -->
+<!-- gamepads.                                                                                     -->
+
+<!-- The format is:                      -->
+<!--    <device>                         -->
+<!--      <button>action</button>        -->
+<!--    </device>                        -->
+
+<!-- To map keys from other remotes using the RCA protocol, you may add <universalremote> blocks -->
+<!-- In this case, the tags used are <obc#> where # is the original button code (OBC) of the key -->
+<!-- You set it up by adding a <universalremote> block to the window or <global> section:       -->
+<!--    <universalremote>             -->
+<!--       <obc45>Stop</obc45>         -->
+<!--    </universalremote>            -->
+
+<!-- Note that the action can be a built-in function.                                         -->
+<!--  eg <B>ActivateWindow(Music)</B>                                                       -->
+<!-- would automatically go to My Music on the press of the B button.                         -->
+<!-- An empty action removes the corresponding mapping from the default keymap                -->
+
+<!-- Joysticks / Gamepads:                                                                    -->
+<!--   See the sample PS3 controller configuration below for the format.                      -->
+<!--                                                                                          -->
+<!--  Joystick Name:                                                                          -->
+<!--   Do 'cat /proc/bus/input/devices' or see your xbmc log file  to find the names of       -->
+<!--   detected joysticks. The name used in the configuration should match the detected name. -->
+<!--                                                                                          -->
+<!--  Button Ids:                                                                             -->
+<!--   'id' is the button ID used by SDL. Joystick button ids of connected joysticks appear   -->
+<!--   in xbmc.log when they are pressed. Use your log to map custom buttons to actions.      -->
+<!--                                                                                          -->
+<!--  Axis Ids / Analog Controls                                                              -->
+<!--   Coming soon.                                                                           -->
+<!--                                                                                          -->
+<!--  Long presses                                                                            -->
+<!--   A limitation is that if a single press is mapped in a section, a global "longpress"    -->
+<!--   will be ignored. The workaround is to duplicate the long mapping in the section.       -->
 <keymap>
   <global>
     <remote>
@@ -64,9 +73,9 @@
       <volumeminus>VolumeDown</volumeminus>
       <mute>Mute</mute>
       <power>ShutDown()</power>
-      <myvideo>ActivateWindow(MyVideos)</myvideo>
-      <mymusic>ActivateWindow(MyMusic)</mymusic>
-      <mypictures>ActivateWindow(MyPictures)</mypictures>
+      <myvideo>ActivateWindow(Videos)</myvideo>
+      <mymusic>ActivateWindow(Music)</mymusic>
+      <mypictures>ActivateWindow(Pictures)</mypictures>
       <mytv>ActivateWindow(Videos,TvShows)</mytv>
       <guide>ActivateWindow(TVGuide)</guide>
       <livetv>ActivateWindow(TVChannels)</livetv>
@@ -74,9 +83,9 @@
       <recordedtv>ActivateWindow(TVRecordings)</recordedtv>
       <epgsearch>ActivateWindow(TVSearch)</epgsearch>
       <red>ActivateWindow(TVChannels)</red>
-      <green>ActivateWindow(MyVideos)</green>
-      <yellow>ActivateWindow(MyMusic)</yellow>
-      <blue>ActivateWindow(MyPictures)</blue>
+      <green>ActivateWindow(Videos)</green>
+      <yellow>ActivateWindow(Music)</yellow>
+      <blue>ActivateWindow(Pictures)</blue>
       <zero>Number0</zero>
       <one>Number1</one>
       <two>JumpSMS2</two>
@@ -133,14 +142,14 @@
       <blue>Blue</blue>
     </remote>
   </MyRadioTimers>
-  <MyFiles>
+  <FileManager>
     <remote>
       <clear>Delete</clear>
       <zero>Highlight</zero>
       <star>Move</star>
       <hash>Rename</hash>
     </remote>
-  </MyFiles>
+  </FileManager>
   <MyMusicPlaylist>
     <remote>
       <clear>Delete</clear>
@@ -152,18 +161,12 @@
       <zero>Queue</zero>
     </remote>
   </MyMusicPlaylistEditor>
-  <MyMusicFiles>
+  <Music>
     <remote>
       <zero>Queue</zero>
       <star>Queue</star>
     </remote>
-  </MyMusicFiles>
-  <MyMusicLibrary>
-    <remote>
-      <zero>Queue</zero>
-      <star>Queue</star>
-    </remote>
-  </MyMusicLibrary>
+  </Music>
   <MyPictures>
     <remote>
       <clear>Delete</clear>
@@ -255,13 +258,6 @@
       <info>CodecInfo</info>
     </remote>
   </MusicOSD>
-  <VisualisationSettings>
-    <remote>
-      <menu>Back</menu>
-      <contentsmenu>Back</contentsmenu>
-      <rootmenu>Back</rootmenu>
-    </remote>
-  </VisualisationSettings>
   <VisualisationPresetList>
     <remote>
       <menu>Back</menu>
@@ -296,12 +292,12 @@
       <xbox>NextResolution</xbox>
     </remote>
   </ScreenCalibration>
-  <GUICalibration>
+  <ScreenCalibration>
     <remote>
       <select>NextCalibration</select>
       <zero>ResetCalibration</zero>
     </remote>
-  </GUICalibration>
+  </ScreenCalibration>
   <VideoOSD>
     <remote>
       <menu>Back</menu>
@@ -357,18 +353,12 @@
       <zero>Delete</zero>
     </remote>
   </VideoBookmarks>
-  <MyVideoLibrary>
+  <Videos>
     <remote>
       <zero>Queue</zero>
       <clear>Delete</clear>
     </remote>
-  </MyVideoLibrary>
-  <MyVideoFiles>
-    <remote>
-      <zero>Queue</zero>
-      <star>Queue</star>
-    </remote>
-  </MyVideoFiles>
+  </Videos>
   <MyVideoPlaylist>
     <remote>
       <clear>Delete</clear>
@@ -400,11 +390,11 @@
       <title>Back</title>
     </remote>
   </ContextMenu>
-  <Scripts>
+  <Programs>
     <remote>
       <info>info</info>
     </remote>
-  </Scripts>
+  </Programs>
   <NumericInput>
     <remote>
       <zero>Number0</zero>
@@ -465,11 +455,11 @@
       <back>PreviousMenu</back>
     </remote>
   </SystemSettings>
-  <NetworkSettings>
+  <ServiceSettings>
     <remote>
       <back>PreviousMenu</back>
     </remote>
-  </NetworkSettings>
+  </ServiceSettings>
   <InterfaceSettings>
     <remote>
       <back>PreviousMenu</back>
@@ -671,16 +661,11 @@
       <nine>number9</nine>
     </remote>
   </RadioGuide>
-  <MyTVSettings>
+  <PVRSettings>
     <remote>
       <back>PreviousMenu</back>
     </remote>
-  </MyTVSettings>
-  <AddonSettings>
-    <remote>
-      <clear>Delete</clear>
-    </remote>
-  </AddonSettings>
+  </PVRSettings>
   <Addon>
     <remote>
       <red>Red</red>

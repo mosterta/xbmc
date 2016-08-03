@@ -348,6 +348,7 @@ static bool Browse(const CURL& path, CFileItemList &items)
   const std::string repo = path.GetHostName();
 
   VECADDONS addons;
+  items.SetPath(path.Get());
   if (repo == "all")
   {
     CAddonDatabase database;
@@ -554,9 +555,6 @@ bool CAddonsDirectory::GetDirectory(const CURL& url, CFileItemList &items)
     VECADDONS addons;
     if (!GetRecentlyUpdatedAddons(addons))
       return false;
-
-    std::sort(addons.begin(), addons.end(),
-        [](const AddonPtr& a, const AddonPtr& b){ return a->LastUpdated() > b->LastUpdated(); });
 
     CAddonsDirectory::GenerateAddonListing(path, addons, items, g_localizeStrings.Get(24004));
     return true;

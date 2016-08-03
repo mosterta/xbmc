@@ -48,16 +48,17 @@ CGUIWindowPVRTimersBase::CGUIWindowPVRTimersBase(bool bRadio, int id, const std:
 void CGUIWindowPVRTimersBase::RegisterObservers(void)
 {
   CSingleLock lock(m_critSection);
-  g_PVRTimers->RegisterObserver(this);
+  g_PVRManager.RegisterObserver(this);
   g_infoManager.RegisterObserver(this);
+  CGUIWindowPVRBase::RegisterObservers();
 }
 
 void CGUIWindowPVRTimersBase::UnregisterObservers(void)
 {
   CSingleLock lock(m_critSection);
-  if (g_PVRTimers)
-    g_PVRTimers->UnregisterObserver(this);
+  CGUIWindowPVRBase::UnregisterObservers();
   g_infoManager.UnregisterObserver(this);
+  g_PVRManager.UnregisterObserver(this);
 }
 
 void CGUIWindowPVRTimersBase::GetContextButtons(int itemNumber, CContextButtons &buttons)

@@ -35,7 +35,7 @@
 #include "cores/IPlayer.h"
 #include "cores/VideoPlayer/DVDFileInfo.h"
 #include "cores/AudioEngine/AEFactory.h"
-#include "cores/AudioEngine/DSPAddons/ActiveAEDSP.h"
+#include "cores/AudioEngine/Engines/ActiveAE/AudioDSPAddons/ActiveAEDSP.h"
 #include "cores/AudioEngine/Utils/AEUtil.h"
 #include "cores/playercorefactory/PlayerCoreFactory.h"
 #include "PlayListPlayer.h"
@@ -602,6 +602,8 @@ bool CApplication::Create()
   av_register_all();
   // register avfilter
   avfilter_register_all();
+  // initialize network protocols
+  avformat_network_init();
   // set avutil callback
   av_log_set_callback(ff_avutil_log);
 
@@ -1057,7 +1059,7 @@ bool CApplication::InitDirectoriesWin32()
 #endif
 }
 
-void CApplication::CreateUserDirs()
+void CApplication::CreateUserDirs() const
 {
   CDirectory::Create("special://home/");
   CDirectory::Create("special://home/addons");
@@ -1068,6 +1070,12 @@ void CApplication::CreateUserDirs()
   CDirectory::Create("special://temp/");
   CDirectory::Create("special://logpath");
   CDirectory::Create("special://temp/temp"); // temp directory for python and dllGetTempPathA
+
+  //Let's clear our archive cache before starting up anything more
+  auto archiveCachePath = CSpecialProtocol::TranslatePath("special://temp/archive_cache/");
+  CDirectory::Remove(archiveCachePath);
+  CDirectory::Create(archiveCachePath);
+
 }
 
 bool CApplication::Initialize()
@@ -2159,7 +2167,7 @@ bool CApplication::OnAction(const CAction &action)
   if (action.GetID() == ACTION_PREV_ITEM && m_pPlayer->CanSeek())
   {
     SeekTime(0);
-    m_pPlayer->SetPlaySpeed(1, g_application.m_muted);
+    m_pPlayer->SetPlaySpeed(1);
     return true;
   }
 
@@ -2182,7 +2190,7 @@ bool CApplication::OnAction(const CAction &action)
       m_pPlayer->Pause();
       // go back to normal play speed on unpause
       if (!m_pPlayer->IsPaused() && m_pPlayer->GetPlaySpeed() != 1)
-        m_pPlayer->SetPlaySpeed(1, g_application.m_muted);
+        m_pPlayer->SetPlaySpeed(1);
 
       g_audioManager.Enable(m_pPlayer->IsPaused());
       return true;
@@ -2195,7 +2203,7 @@ bool CApplication::OnAction(const CAction &action)
         return OnAction(CAction(ACTION_PAUSE));
       // if we do a FF/RW then go back to normal speed
       if (m_pPlayer->GetPlaySpeed() != 1)
-        m_pPlayer->SetPlaySpeed(1, g_application.m_muted);
+        m_pPlayer->SetPlaySpeed(1);
       return true;
     }
     if (!m_pPlayer->IsPaused())
@@ -2217,7 +2225,7 @@ bool CApplication::OnAction(const CAction &action)
         if (iPlaySpeed > 32 || iPlaySpeed < -32)
           iPlaySpeed = 1;
 
-        m_pPlayer->SetPlaySpeed(iPlaySpeed, g_application.m_muted);
+        m_pPlayer->SetPlaySpeed(iPlaySpeed);
         return true;
       }
       else if ((action.GetAmount() || m_pPlayer->GetPlaySpeed() != 1) && (action.GetID() == ACTION_ANALOG_REWIND || action.GetID() == ACTION_ANALOG_FORWARD))
@@ -2230,7 +2238,7 @@ bool CApplication::OnAction(const CAction &action)
         int iSpeed = 1 << iPower;
         if (iSpeed != 1 && action.GetID() == ACTION_ANALOG_REWIND)
           iSpeed = -iSpeed;
-        g_application.m_pPlayer->SetPlaySpeed(iSpeed, g_application.m_muted);
+        g_application.m_pPlayer->SetPlaySpeed(iSpeed);
         if (iSpeed == 1)
           CLog::Log(LOGDEBUG,"Resetting playspeed");
         return true;
@@ -2245,7 +2253,7 @@ bool CApplication::OnAction(const CAction &action)
         m_pPlayer->Pause();
         g_audioManager.Enable(m_pPlayer->IsPaused());
 
-        g_application.m_pPlayer->SetPlaySpeed(1, g_application.m_muted);
+        g_application.m_pPlayer->SetPlaySpeed(1);
         return true;
       }
     }
@@ -3187,8 +3195,7 @@ PlayBackRet CApplication::PlayFile(CFileItem item, const std::string& player, bo
     CMediaSettings::GetInstance().GetCurrentAudioSettings() = CMediaSettings::GetInstance().GetDefaultAudioSettings();
     // see if we have saved options in the database
 
-    m_pPlayer->SetPlaySpeed(1, g_application.m_muted);
-    m_pPlayer->m_iPlaySpeed = 1;     // Reset both CApp's & Player's speed else we'll get confused
+    m_pPlayer->SetPlaySpeed(1);
 
     m_itemCurrentFile.reset(new CFileItem(item));
 
@@ -3425,21 +3432,10 @@ PlayBackRet CApplication::PlayFile(CFileItem item, const std::string& player, bo
     iResult = PLAYBACK_FAIL;
   }
 
-  if(iResult == PLAYBACK_OK)
+  if (iResult == PLAYBACK_OK)
   {
-    if (m_pPlayer->GetPlaySpeed() != 1)
-    {
-      int iSpeed = m_pPlayer->GetPlaySpeed();
-      m_pPlayer->m_iPlaySpeed = 1;
-      m_pPlayer->SetPlaySpeed(iSpeed, g_application.m_muted);
-    }
-
-    // if player has volume control, set it.
-    if (m_pPlayer->ControlsVolume())
-    {
-      m_pPlayer->SetVolume(m_volumeLevel);
-      m_pPlayer->SetMute(m_muted);
-    }
+    m_pPlayer->SetVolume(m_volumeLevel);
+    m_pPlayer->SetMute(m_muted);
 
     if(m_pPlayer->IsPlayingAudio())
     {
@@ -4266,9 +4262,6 @@ bool CApplication::OnMessage(CGUIMessage& message)
       else
       {
         m_pPlayer->ClosePlayer();
-
-        // Reset playspeed
-        m_pPlayer->m_iPlaySpeed = 1;
       }
 
       if (!m_pPlayer->IsPlaying())
@@ -4440,10 +4433,6 @@ void CApplication::Process()
   // process messages, even if a movie is playing
   CApplicationMessenger::GetInstance().ProcessMessages();
   if (g_application.m_bStop) return; //we're done, everything has been unloaded
-
-  // check how far we are through playing the current item
-  // and do anything that needs doing (playcount updates etc)
-  CheckPlayingProgress();
 
   // update sound
   m_pPlayer->DoAudioWork();
@@ -4735,11 +4724,8 @@ void CApplication::VolumeChanged() const
   CAnnouncementManager::GetInstance().Announce(Application, "xbmc", "OnVolumeChanged", data);
 
   // if player has volume control, set it.
-  if (m_pPlayer->ControlsVolume())
-  {
-     m_pPlayer->SetVolume(m_volumeLevel);
-     m_pPlayer->SetMute(m_muted);
-  }
+  m_pPlayer->SetVolume(m_volumeLevel);
+  m_pPlayer->SetMute(m_muted);
 }
 
 int CApplication::GetSubtitleDelay() const
@@ -5055,30 +5041,6 @@ void CApplication::StartMusicArtistScan(const std::string& strDirectory,
   m_musicInfoScanner->ShowDialog(true);
 
   m_musicInfoScanner->FetchArtistInfo(strDirectory,refresh);
-}
-
-void CApplication::CheckPlayingProgress()
-{
-  // check if we haven't rewound past the start of the file
-  if (m_pPlayer->IsPlaying())
-  {
-    int iSpeed = g_application.m_pPlayer->GetPlaySpeed();
-    if (iSpeed < 1)
-    {
-      iSpeed *= -1;
-      int iPower = 0;
-      while (iSpeed != 1)
-      {
-        iSpeed >>= 1;
-        iPower++;
-      }
-      if (g_infoManager.GetPlayTime() / 1000 < iPower)
-      {
-        g_application.m_pPlayer->SetPlaySpeed(1, g_application.m_muted);
-        g_application.SeekTime(0);
-      }
-    }
-  }
 }
 
 bool CApplication::ProcessAndStartPlaylist(const std::string& strPlayList, CPlayList& playlist, int iPlaylist, int track)

@@ -22,7 +22,7 @@
 #include "GUIWindowPVRRecordings.h"
 
 #include "Application.h"
-#include "cores/AudioEngine/DSPAddons/ActiveAEDSP.h"
+#include "cores/AudioEngine/Engines/ActiveAE/AudioDSPAddons/ActiveAEDSP.h"
 #include "dialogs/GUIDialogKaiToast.h"
 #include "dialogs/GUIDialogNumeric.h"
 #include "dialogs/GUIDialogOK.h"
@@ -92,6 +92,20 @@ void CGUIWindowPVRBase::ResetObservers(void)
   if (IsActive())
     RegisterObservers();
 }
+
+void CGUIWindowPVRBase::RegisterObservers(void)
+{
+  CSingleLock lock(m_critSection);
+  if (m_group)
+    m_group->RegisterObserver(this);
+};
+
+void CGUIWindowPVRBase::UnregisterObservers(void)
+{
+  CSingleLock lock(m_critSection);
+  if (m_group)
+    m_group->UnregisterObserver(this);
+};
 
 void CGUIWindowPVRBase::Notify(const Observable &obs, const ObservableMessage msg)
 {
@@ -373,7 +387,7 @@ CPVRChannelGroupPtr CGUIWindowPVRBase::GetGroup(void)
   return m_group;
 }
 
-void CGUIWindowPVRBase::SetGroup(CPVRChannelGroupPtr group)
+void CGUIWindowPVRBase::SetGroup(const CPVRChannelGroupPtr &group)
 {
   CSingleLock lock(m_critSection);
   if (!group)
@@ -572,9 +586,32 @@ bool CGUIWindowPVRBase::EditTimer(CFileItem *item)
     return false;
   }
 
-  if (ShowTimerSettings(timer) && !timer->GetTimerType()->IsReadOnly())
-    return g_PVRTimers->UpdateTimer(timer);
+  // clone the timer.
+  const CPVRTimerInfoTagPtr newTimer(new CPVRTimerInfoTag);
+  newTimer->UpdateEntry(timer);
 
+  if (ShowTimerSettings(newTimer) && !timer->GetTimerType()->IsReadOnly())
+  {
+    if (newTimer->GetTimerType() == timer->GetTimerType())
+    {
+      return g_PVRTimers->UpdateTimer(newTimer);
+    }
+    else
+    {
+      // timer type changed. delete the original timer, then create the new timer. this order is
+      // important. for instance, the new timer might be a rule which schedules the original timer.
+      // deleting the original timer after creating the rule would do literally this and we would
+      // end up with one timer missing wrt to the rule defined by the new timer.
+      if (g_PVRTimers->DeleteTimer(timer, timer->IsRecording(), false))
+      {
+        if (g_PVRTimers->AddTimer(newTimer))
+          return true;
+
+        // rollback.
+        return g_PVRTimers->AddTimer(timer);
+      }
+    }
+  }
   return false;
 }
 
@@ -630,7 +667,7 @@ bool CGUIWindowPVRBase::DeleteTimer(CFileItem *item, bool bIsRecording, bool bDe
     return false;
   }
 
-  if (bDeleteRule && !timer->IsRepeating())
+  if (bDeleteRule && !timer->IsTimerRule())
     timer = g_PVRTimers->GetTimerRule(timer);
 
   if (!timer)
@@ -962,7 +999,7 @@ bool CGUIWindowPVRBase::ConfirmDeleteTimer(const CPVRTimerInfoTagPtr &timer, boo
     // prompt user for confirmation for deleting the timer
     bConfirmed = CGUIDialogYesNo::ShowAndGetInput(
                         CVariant{122}, // "Confirm delete"
-                        timer->IsRepeating()
+                        timer->IsTimerRule()
                           ? CVariant{845}  // "Are you sure you want to delete this timer rule and all timers it has scheduled?"
                           : CVariant{846}, // "Are you sure you want to delete this timer?"
                         CVariant{""},

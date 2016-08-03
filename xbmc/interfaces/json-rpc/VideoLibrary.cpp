@@ -528,7 +528,7 @@ JSONRPC_STATUS CVideoLibrary::SetMovieDetails(const std::string &method, ITransp
     return InternalError;
 
   CVideoInfoTag infos;
-  if (!videodatabase.GetMovieInfo("", infos, id) || infos.m_iDbId <= 0)
+  if (!videodatabase.GetMovieInfo("", infos, id, RequiresInitialDetails(parameterObject)) || infos.m_iDbId <= 0)
     return InvalidParams;
 
   // get artwork
@@ -605,7 +605,7 @@ JSONRPC_STATUS CVideoLibrary::SetTVShowDetails(const std::string &method, ITrans
     return InternalError;
 
   CVideoInfoTag infos;
-  if (!videodatabase.GetTvShowInfo("", infos, id) || infos.m_iDbId <= 0)
+  if (!videodatabase.GetTvShowInfo("", infos, id, (CFileItem *)0, RequiresInitialDetails(parameterObject)) || infos.m_iDbId <= 0)
     return InvalidParams;
 
   // get artwork
@@ -676,7 +676,7 @@ JSONRPC_STATUS CVideoLibrary::SetEpisodeDetails(const std::string &method, ITran
     return InternalError;
 
   CVideoInfoTag infos;
-  videodatabase.GetEpisodeInfo("", infos, id);
+  videodatabase.GetEpisodeInfo("", infos, id, RequiresInitialDetails(parameterObject));
   if (infos.m_iDbId <= 0)
   {
     videodatabase.Close();
@@ -988,6 +988,14 @@ bool CVideoLibrary::FillFileItemList(const CVariant &parameterObject, CFileItemL
   return success;
 }
 
+int CVideoLibrary::RequiresInitialDetails(const CVariant &parameterObject)
+{
+  int details = VideoDbDetailsNone;
+  if (ParameterNotNull(parameterObject, "ratings") || ParameterNotNull(parameterObject, "rating") || ParameterNotNull(parameterObject, "votes"))
+    return VideoDbDetailsRating;
+  return details;
+}
+
 int CVideoLibrary::RequiresAdditionalDetails(const MediaType& mediaType, const CVariant &parameterObject)
 {
   if (mediaType != MediaTypeMovie && mediaType != MediaTypeTvShow && mediaType != MediaTypeEpisode && mediaType != MediaTypeMusicVideo)
@@ -1119,14 +1127,22 @@ void CVideoLibrary::UpdateVideoTag(const CVariant &parameterObject, CVideoInfoTa
     CVariant ratings = parameterObject["ratings"];
     for (CVariant::const_iterator_map rIt = ratings.begin_map(); rIt != ratings.end_map(); rIt++)
     {
-      if (rIt->second.isArray() && ParameterNotNull(rIt->second, "name") && ParameterNotNull(rIt->second, "rating"))
+      if (rIt->second.isObject() && ParameterNotNull(rIt->second, "rating"))
       {
-        details.SetRating(rIt->second["rating"].asFloat(), rIt->second["name"].asString());
-        if (ParameterNotNull(rIt->second, "votes"))
-          details.SetVotes(StringUtils::ReturnDigits(parameterObject["votes"].asString()), rIt->second["name"].asString());
+        const auto& rating = rIt->second;
+        if (ParameterNotNull(rating, "votes"))
+          details.AddRating(rating["rating"].asFloat(), rating["votes"].asFloat(), rIt->first, (ParameterNotNull(rating, "default") && rating["default"].asBoolean()));
+        else
+          details.SetRating(rating["rating"].asFloat(), rIt->first, (ParameterNotNull(rating, "default") && rating["default"].asBoolean()));
+
+        updatedDetails.insert("ratings");
+      }
+      else if (rIt->second.isNull())
+      {
+        details.RemoveRating(rIt->first);
+        updatedDetails.insert("ratings");
       }
     }
-    updatedDetails.insert("ratings");
   }
   if (ParameterNotNull(parameterObject, "userrating"))
     details.m_iUserRating = parameterObject["userrating"].asInteger();

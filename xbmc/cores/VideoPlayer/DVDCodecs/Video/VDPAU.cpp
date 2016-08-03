@@ -27,6 +27,7 @@
 #include "windowing/WindowingFactory.h"
 #include "guilib/GraphicContext.h"
 #include "guilib/TextureManager.h"
+#include "cores/VideoPlayer/Process/ProcessInfo.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderManager.h"
 #include "DVDVideoCodecFFmpeg.h"
 #include "DVDClock.h"
@@ -554,7 +555,7 @@ int CVideoSurfaces::Size()
 // CVDPAU
 //-----------------------------------------------------------------------------
 
-CDecoder::CDecoder() : m_vdpauOutput(&m_inMsgEvent)
+CDecoder::CDecoder(CProcessInfo& processInfo) : m_vdpauOutput(&m_inMsgEvent), m_processInfo(processInfo)
 {
   m_vdpauConfig.videoSurfaces = &m_videoSurfaces;
 
@@ -562,6 +563,7 @@ CDecoder::CDecoder() : m_vdpauOutput(&m_inMsgEvent)
   m_DisplayState = VDPAU_OPEN;
   m_vdpauConfig.context = 0;
   m_dataSet = false;
+  m_vdpauConfig.processInfo = &m_processInfo;
 }
 
 bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum AVPixelFormat fmt, unsigned int surfaces)
@@ -655,8 +657,6 @@ bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum A
       m_vdpauConfig.context->GetProcs().vdp_decoder_destroy(m_vdpauConfig.vdpDecoder);
       CheckStatus(vdp_st, __LINE__);
 
-      m_vdpauConfig.vdpDecoder = VDP_INVALID_HANDLE;
-
       // finally setup ffmpeg
       memset(&m_hwContext, 0, sizeof(AVVDPAUContext));
       m_hwContext.render2 = CDecoder::Render;
@@ -669,9 +669,7 @@ bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum A
       mainctx->slice_flags = SLICE_FLAG_CODED_ORDER|SLICE_FLAG_ALLOW_FIELD;
       mainctx->hwaccel_context = &m_hwContext;
 
-#if HAS_GL
       g_Windowing.Register(this);
-#endif
       return true;
     }
   }
@@ -687,9 +685,7 @@ void CDecoder::Close()
 {
   CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
 
-#if HAS_GL
   g_Windowing.Unregister(this);
-#endif
 
   CSingleLock lock(m_DecoderSection);
 

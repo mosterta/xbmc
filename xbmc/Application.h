@@ -29,10 +29,11 @@
 #include "messaging/IMessageTarget.h"
 #include "ServiceManager.h"
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <string>
-#include <atomic>
+#include <vector>
 
 class CAction;
 class CFileItem;
@@ -202,7 +203,6 @@ public:
   bool IsIdleShutdownInhibited() const;
   // Checks whether the screensaver and / or DPMS should become active.
   void CheckScreenSaverAndDPMS();
-  void CheckPlayingProgress();
   void ActivateScreenSaver(bool forceType = false);
   bool SetupNetwork();
   void CloseNetworkShares();
@@ -505,7 +505,7 @@ protected:
   bool InitDirectoriesLinux();
   bool InitDirectoriesOSX();
   bool InitDirectoriesWin32();
-  void CreateUserDirs();
+  void CreateUserDirs() const;
 
   /*! \brief Helper method to determine how to handle TMSG_SHUTDOWN
   */

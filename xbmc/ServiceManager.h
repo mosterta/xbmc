@@ -42,6 +42,7 @@ class CPVRManager;
 }
 
 class XBPython;
+class CDataCacheCore;
 
 class CServiceManager
 {
@@ -56,12 +57,19 @@ public:
   XBPython& GetXBPython();
   PVR::CPVRManager& GetPVRManager();
   ActiveAE::CActiveAEDSP& GetADSPManager();
+  CDataCacheCore& GetDataCacheCore();
 
 protected:
+  struct delete_dataCacheCore
+  {
+    void operator()(CDataCacheCore *p) const;
+  };
+
   std::unique_ptr<ADDON::CAddonMgr> m_addonMgr;
   std::unique_ptr<ADDON::CBinaryAddonCache> m_binaryAddonCache;
   std::unique_ptr<ANNOUNCEMENT::CAnnouncementManager> m_announcementManager;
   std::unique_ptr<XBPython> m_XBPython;
   std::unique_ptr<PVR::CPVRManager> m_PVRManager;
   std::unique_ptr<ActiveAE::CActiveAEDSP> m_ADSPManager;
+  std::unique_ptr<CDataCacheCore, delete_dataCacheCore> m_dataCacheCore;
 };
