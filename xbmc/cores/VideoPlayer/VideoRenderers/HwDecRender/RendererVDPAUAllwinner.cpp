@@ -28,6 +28,8 @@
 #include "cores/VideoPlayer/VideoRenderers/RenderCapture.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
 #include "windowing/hwlayer/HwLayerFactory.h"
+#include "settings/Settings.h"
+#include "settings/AdvancedSettings.h"
 
 CRendererVDPAUAllwinner::CRendererVDPAUAllwinner(): glVDPAUPresentSurfaceCedar(NULL), 
     m_dlHandle(NULL), m_needReconfigure(false), m_frameId(0)
@@ -120,18 +122,36 @@ bool CRendererVDPAUAllwinner::Supports(EINTERLACEMETHOD method)
 //    return false;
 }
 
-bool CRendererVDPAUAllwinner::Supports(EDEINTERLACEMODE mode)
-{
-  if(mode == VS_DEINTERLACEMODE_AUTO
-  || mode == VS_DEINTERLACEMODE_FORCE
-  || mode == VS_DEINTERLACEMODE_OFF)
-    return true;
-
-  return false;
-}
-
 bool CRendererVDPAUAllwinner::Supports(ESCALINGMETHOD method)
 {
+  return false;
+}
+bool CRendererVDPAUAllwinner::Supports(ERENDERFEATURE feature)
+{
+  if(feature == RENDERFEATURE_BRIGHTNESS ||
+     feature == RENDERFEATURE_CONTRAST)
+  {
+    if ((m_renderMethod & RENDER_VDPAU) && !CSettings::GetInstance().GetBool(CSettings::SETTING_VIDEOSCREEN_LIMITEDRANGE))
+      return true;
+
+    return (m_renderMethod & RENDER_GLSL)
+        || ((m_renderMethod & RENDER_SW) && g_Windowing.IsExtSupported("GL_ARB_imaging") == GL_TRUE);
+  }
+  else if (feature == RENDERFEATURE_NOISE ||
+           feature == RENDERFEATURE_SHARPNESS)
+  {
+    if (m_format == RENDER_FMT_VDPAU)
+      return true;
+  }
+  else if (feature == RENDERFEATURE_STRETCH         ||
+           feature == RENDERFEATURE_ZOOM            ||
+           feature == RENDERFEATURE_VERTICAL_SHIFT  ||
+           feature == RENDERFEATURE_PIXEL_RATIO     ||
+           feature == RENDERFEATURE_POSTPROCESS     ||
+           feature == RENDERFEATURE_ROTATION        ||
+           feature == RENDERFEATURE_NONLINSTRETCH)
+    return true;
+
   return false;
 }
 

@@ -1974,7 +1974,6 @@ void CMixer::StateMachine(int signal, Protocol *port, Message *msg)
 
 void CMixer::Process()
 {
-  CLog::Log(LOGDEBUG, " (VDPAU) CMixer %s m_bStop=%d", __FUNCTION__, m_bStop);
   Message *msg = NULL;
   Protocol *port = NULL;
   bool gotMsg;
@@ -3430,7 +3429,6 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
 
 void COutput::Process()
 {
-  CLog::Log(LOGDEBUG, " (VDPAU) COutput %s m_bStop=%d", __FUNCTION__, m_bStop);
   Message *msg = NULL;
   Protocol *port = NULL;
   bool gotMsg;

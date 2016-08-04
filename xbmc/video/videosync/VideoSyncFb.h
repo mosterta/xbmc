@@ -29,7 +29,7 @@ class CVideoSyncFb : public CVideoSync, IDispResource
 public:
   CVideoSyncFb(CVideoReferenceClock *clock, int fbNum);
   virtual bool Setup(PUPDATECLOCK func);
-  virtual void Run(volatile bool& stop);
+  virtual void Run(std::atomic<bool>& stop);
   virtual void Cleanup();
   virtual float GetFps();
   virtual void OnResetDisplay();

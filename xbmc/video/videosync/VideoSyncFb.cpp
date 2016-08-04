@@ -54,7 +54,7 @@ bool CVideoSyncFb::Setup(PUPDATECLOCK func)
   return true;
 }
 
-void CVideoSyncFb::Run(volatile bool& stop)
+void CVideoSyncFb::Run(std::atomic<bool>& stop)
 {
   /* This shouldn't be very busy and timing is important so increase priority */
   CThread::GetCurrentThread()->SetPriority(CThread::GetCurrentThread()->GetPriority()+1);
