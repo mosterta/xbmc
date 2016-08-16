@@ -815,6 +815,9 @@ void CRenderManager::FlipPage(volatile std::atomic_bool& bStop, double pts /* = 
   }
   else
   {
+    if (sync == FS_NONE)
+      presentmethod = PRESENT_METHOD_SINGLE;
+    else
     {
       bool invert = false;
       if (interlacemethod == VS_INTERLACEMETHOD_RENDER_BLEND)
@@ -1404,10 +1407,18 @@ void CRenderManager::CheckEnableClockSync()
 
   if (m_fps != 0)
   {
-    if (g_graphicsContext.GetFPS() >= m_fps)
-      diff = fmod(g_graphicsContext.GetFPS(), m_fps);
+    float fps = m_fps;
+    double refreshrate, clockspeed;
+    int missedvblanks;
+    if (m_dvdClock.GetClockInfo(missedvblanks, clockspeed, refreshrate))
+    {
+      fps *= clockspeed;
+    }
+
+    if (g_graphicsContext.GetFPS() >= fps)
+      diff = fmod(g_graphicsContext.GetFPS(), fps);
     else
-      diff = m_fps - g_graphicsContext.GetFPS();
+      diff = fps - g_graphicsContext.GetFPS();
   }
 
   if (diff < 0.01)
@@ -1419,4 +1430,6 @@ void CRenderManager::CheckEnableClockSync()
     m_clockSync.m_enabled = false;
     m_dvdClock.SetSpeedAdjust(0);
   }
+
+  m_playerPort->UpdateClockSync(m_clockSync.m_enabled);
 }

@@ -299,8 +299,9 @@ public:
   virtual bool SeekTimeRelative(int64_t iTime);
   virtual int64_t GetTime();
   virtual int64_t GetTotalTime();
-  virtual void SetSpeed(int iSpeed) override;
-  virtual int GetSpeed() override;
+  virtual void SetSpeed(float speed) override;
+  virtual float GetSpeed() override;
+  virtual bool SupportsTempo() override;
   virtual bool OnAction(const CAction &action);
 
   virtual int GetSourceBitrate();
@@ -359,6 +360,7 @@ protected:
   virtual void Process();
   virtual void VideoParamsChange() override;
   virtual void GetDebugInfo(std::string &audio, std::string &video, std::string &general) override;
+  virtual void UpdateClockSync(bool enabled) override;
 
   void CreatePlayers();
   void DestroyPlayers();
@@ -429,6 +431,7 @@ protected:
 
   bool OpenInputStream();
   bool OpenDemuxStream();
+  void CloseDemuxer();
   void OpenDefaultStreams(bool reset = true);
 
   void UpdateApplication(double timeout);
@@ -465,6 +468,7 @@ protected:
     int lastseekpts;
     double  lastabstime;
   } m_SpeedState;
+  std::atomic_bool m_canTempo;
 
   int m_errorCount;
   double m_offset_pts;

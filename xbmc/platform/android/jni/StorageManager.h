@@ -1,6 +1,6 @@
 #pragma once
 /*
- *      Copyright (C) 2014 Team XBMC
+ *      Copyright (C) 2015 Team Kodi
  *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -19,20 +19,22 @@
  *
  */
 
-#include "filesystem/IDirectory.h"
+#include "JNIBase.h"
 
-namespace XFILE
-{
+#include "StorageVolume.h"
 
-class CPosixDirectory : public IDirectory
+class CJNIStorageManager : public CJNIBase
 {
 public:
-  CPosixDirectory(void);
-  virtual ~CPosixDirectory(void);
-  virtual bool GetDirectory(const CURL& url, CFileItemList &items);
-  virtual bool Create(const CURL& url);
-  virtual bool Exists(const CURL& url);
-  virtual bool Remove(const CURL& url);
-  virtual bool RemoveRecursive(const CURL& url);
+  CJNIStorageManager(const jni::jhobject &object) : CJNIBase(object) {};
+  ~CJNIStorageManager() {};
+
+  std::vector<CJNIStorageVolume> getVolumeList();
+  std::vector<std::string> getVolumePaths();
+  std::string getVolumeState(const std::string& mountPoint);
+
+private:
+  CJNIStorageManager();
 };
-}
+
+typedef std::vector<CJNIStorageVolume> CJNIStorageVolumes;

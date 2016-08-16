@@ -85,6 +85,7 @@ enum IPlayerSubtitleCapabilities
 
 struct SPlayerAudioStreamInfo
 {
+  bool valid;
   int bitrate;
   int channels;
   int samplerate;
@@ -95,6 +96,7 @@ struct SPlayerAudioStreamInfo
 
   SPlayerAudioStreamInfo()
   {
+    valid = false;
     bitrate = 0;
     channels = 0;
     samplerate = 0;
@@ -110,6 +112,7 @@ struct SPlayerSubtitleStreamInfo
 
 struct SPlayerVideoStreamInfo
 {
+  bool valid;
   int bitrate;
   float videoAspectRatio;
   int height;
@@ -123,6 +126,7 @@ struct SPlayerVideoStreamInfo
 
   SPlayerVideoStreamInfo()
   {
+    valid = false;
     bitrate = 0;
     videoAspectRatio = 1.0f;
     height = 0;
@@ -325,8 +329,10 @@ public:
   virtual void SetTotalTime(int64_t time) { }
   virtual int GetSourceBitrate(){ return 0;}
   virtual bool GetStreamDetails(CStreamDetails &details){ return false;}
-  virtual void SetSpeed(int iSpeed) = 0;
-  virtual int GetSpeed() = 0;
+  virtual void SetSpeed(float speed) = 0;
+  virtual float GetSpeed() = 0;
+  virtual bool SupportsTempo() { return false; }
+
   // Skip to next track/item inside the current media (if supported).
   virtual bool SkipNext(){return false;}
 
