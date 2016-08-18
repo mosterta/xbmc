@@ -66,6 +66,10 @@ CRendererVDPAUAllwinner::~CRendererVDPAUAllwinner()
   CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
                                          CHwLayerManagerAW::ScalerType::Type_Normal);
   g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, prop);
+  
+  for (int i = 0; i < NUM_BUFFERS; ++i)
+    DeleteTexture(i);
+
 }
 
 bool CRendererVDPAUAllwinner::RenderCapture(CRenderCapture* capture)
@@ -95,9 +99,10 @@ void CRendererVDPAUAllwinner::AddVideoPictureHW(DVDVideoPicture &picture, int in
 void CRendererVDPAUAllwinner::ReleaseBuffer(int idx)
 {
   YUVBUFFER &buf = m_buffers[idx];
-  if (buf.hwDec)
+  if (buf.hwDec) {
     ((VDPAU::CVdpauRenderPicture*)buf.hwDec)->Release();
-  buf.hwDec = NULL;
+    buf.hwDec = NULL;
+  }
 }
 
 int CRendererVDPAUAllwinner::GetImageHook(YV12Image *image, int source, bool readonly)
