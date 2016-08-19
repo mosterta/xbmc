@@ -417,7 +417,7 @@ void CApplication::Preflight()
 #if defined(TARGET_DARWIN_OSX)
   std::string install_path;
 
-  CUtil::GetHomePath(install_path);
+  install_path = CUtil::GetHomePath();
   setenv("KODI_HOME", install_path.c_str(), 0);
   install_path += "/tools/darwin/runtime/preflight";
   system(install_path.c_str());
@@ -460,6 +460,7 @@ bool CApplication::Create()
     g_graphicsContext.ResetOverscan((RESOLUTION)i, CDisplaySettings::GetInstance().GetResolutionInfo(i).Overscan);
   }
 
+  //! @todo - move to CPlatformXXX
 #ifdef TARGET_POSIX
   tzset();   // Initialize timezone information variables
 #endif
@@ -467,6 +468,7 @@ bool CApplication::Create()
   // Grab a handle to our thread to be used later in identifying the render thread.
   m_threadID = CThread::GetCurrentThreadId();
 
+  //! @todo - move to CPlatformXXX
 #ifndef TARGET_POSIX
   //floating point precision to 24 bits (faster performance)
   _controlfp(_PC_24, _MCW_PC);
@@ -476,7 +478,8 @@ bool CApplication::Create()
   win32_exception::install_handler();
 
 #endif
-  
+
+  //! @todo - move to CPlatformXXX
   #if defined(TARGET_POSIX)
     // set special://envhome
     CSpecialProtocol::SetEnvHomePath(getenv("HOME"));
@@ -494,6 +497,7 @@ bool CApplication::Create()
   CopyUserDataIfNeeded("special://masterprofile/", "favourites.xml");
   CopyUserDataIfNeeded("special://masterprofile/", "Lircmap.xml");
   
+  //! @todo - move to CPlatformXXX
   #ifdef TARGET_DARWIN_IOS
     CopyUserDataIfNeeded("special://masterprofile/", "iOS/sources.xml", "sources.xml");
   #endif
@@ -522,6 +526,8 @@ bool CApplication::Create()
   buildType = "Unknown";
 #endif
   std::string specialVersion;
+  
+  //! @todo - move to CPlatformXXX
 #if defined(TARGET_RASPBERRY_PI)
   specialVersion = " (version for Raspberry Pi)";
 //#elif defined(some_ID) // uncomment for special version/fork
@@ -542,6 +548,7 @@ bool CApplication::Create()
     CLog::Log(LOGNOTICE, "Running on %s, kernel: %s %s %d-bit version %s", g_sysinfo.GetOsPrettyNameWithVersion().c_str(),
               g_sysinfo.GetKernelName().c_str(), g_sysinfo.GetKernelCpuFamily().c_str(), g_sysinfo.GetKernelBitness(), g_sysinfo.GetKernelVersionFull().c_str());
 
+  //! @todo - move to CPlatformXXX ???
 #if defined(TARGET_LINUX)
 #if USE_STATIC_FFMPEG
   CLog::Log(LOGNOTICE, "FFmpeg statically linked, version: %s", FFMPEG_VERSION);
@@ -562,6 +569,8 @@ bool CApplication::Create()
     CLog::Log(LOGNOTICE, "Host CPU: %s, %d core%s available", cpuModel.c_str(), g_cpuInfo.getCPUCount(), (g_cpuInfo.getCPUCount() == 1) ? "" : "s");
   else
     CLog::Log(LOGNOTICE, "%d CPU core%s available", g_cpuInfo.getCPUCount(), (g_cpuInfo.getCPUCount() == 1) ? "" : "s");
+  
+  //! @todo - move to CPlatformXXX ???
 #if defined(TARGET_WINDOWS)
   CLog::Log(LOGNOTICE, "%s", CWIN32Util::GetResInfoString().c_str());
   CLog::Log(LOGNOTICE, "Running with %s rights", (CWIN32Util::IsCurrentUserLocalAdministrator() == TRUE) ? "administrator" : "restricted");
@@ -599,6 +608,7 @@ bool CApplication::Create()
   std::string strExecutablePath = CUtil::GetHomePath();
 
   // for python scripts that check the OS
+  //! @todo - move to CPlatformXXX
 #if defined(TARGET_DARWIN)
   setenv("OS","OS X",true);
 #elif defined(TARGET_POSIX)
@@ -654,6 +664,7 @@ bool CApplication::Create()
 
   update_emu_environ();//apply the GUI settings
 
+  //! @todo - move to CPlatformXXX
 #ifdef TARGET_WINDOWS
   CWIN32Util::SetThreadLocalLocale(true); // enable independent locale for each thread, see https://connect.microsoft.com/VisualStudio/feedback/details/794122
 #endif // TARGET_WINDOWS
@@ -695,6 +706,7 @@ bool CApplication::Create()
     return false;
   }
 
+  //! @todo - move to CPlatformXXX
 #if defined(TARGET_DARWIN_OSX)
   // Configure and possible manually start the helper.
   XBMCHelper::GetInstance().Configure();
@@ -2240,11 +2252,14 @@ bool CApplication::OnAction(const CAction &action)
       if (action.GetID() == ACTION_PLAYER_FORWARD || action.GetID() == ACTION_PLAYER_REWIND)
       {
         float playSpeed = m_pPlayer->GetPlaySpeed();
-        if (action.GetID() == ACTION_PLAYER_REWIND && (playSpeed >= 0.8 && playSpeed <= 1.5)) // Enables Rewinding
+        if (playSpeed >= 0.75 && playSpeed <= 1.55)
+          playSpeed = 1;
+
+        if (action.GetID() == ACTION_PLAYER_REWIND && (playSpeed == 1)) // Enables Rewinding
           playSpeed *= -2;
-        else if (action.GetID() == ACTION_PLAYER_REWIND && playSpeed > 1.5) //goes down a notch if you're FFing
+        else if (action.GetID() == ACTION_PLAYER_REWIND && playSpeed > 1) //goes down a notch if you're FFing
           playSpeed /= 2;
-        else if (action.GetID() == ACTION_PLAYER_FORWARD && playSpeed < 0.8) //goes up a notch if you're RWing
+        else if (action.GetID() == ACTION_PLAYER_FORWARD && playSpeed < 1) //goes up a notch if you're RWing
           playSpeed /= 2;
         else
           playSpeed *= 2;
@@ -4529,8 +4544,7 @@ void CApplication::ProcessSlow()
   // check for any idle curl connections
   g_curlInterface.CheckIdle();
 
-  if (!m_pPlayer->IsPlayingVideo())
-    g_largeTextureManager.CleanupUnusedImages();
+  g_largeTextureManager.CleanupUnusedImages();
 
   g_TextureManager.FreeUnusedTextures(5000);
 

@@ -361,13 +361,12 @@ ManagerState CPVRManager::GetState(void) const
 
 void CPVRManager::SetState(ManagerState state)
 {
-  {
-    CSingleLock lock(m_managerStateMutex);
-    m_managerState = state;
-    SetChanged();
-  }
+  CSingleLock lock(m_managerStateMutex);
+  if (m_managerState == state)
+    return;
 
-  NotifyObservers(ObservableMessageManagerStateChanged);
+  m_managerState = state;
+  m_events.Publish(m_managerState);
 }
 
 void CPVRManager::Process(void)
@@ -509,6 +508,9 @@ bool CPVRManager::Load(bool bShowProgress)
     ShowProgressDialog(g_localizeStrings.Get(19236), 0); // Loading channels from clients
   if (!m_channelGroups->Load() || !IsInitialising())
     return false;
+
+  SetChanged();
+  NotifyObservers(ObservableMessageChannelGroupsLoaded);
 
   /* get timers from the backends */
   if (bShowProgress)
@@ -1178,6 +1180,7 @@ void CPVRManager::CloseStream(void)
     g_application.SaveFileState();
   }
 
+  m_isChannelPreview = false;
   m_addons->CloseStream();
   SAFE_DELETE(m_currentFile);
 }
@@ -1226,6 +1229,7 @@ void CPVRManager::UpdateCurrentChannel(void)
     delete m_currentFile;
     m_currentFile = new CFileItem(playingChannel);
     UpdateItem(*m_currentFile);
+    m_isChannelPreview = false;
   }
 }
 

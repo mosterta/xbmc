@@ -46,6 +46,7 @@ add_custom_target(bundle
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CORE_SOURCE_DIR}/tools/android/packaging/xbmc/res
                                                ${CMAKE_BINARY_DIR}/tools/android/packaging/xbmc/res
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${DEPENDS_PATH}/lib/python2.7 ${libdir}/python2.7
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${DEPENDS_PATH}/share/${APP_NAME_LC} ${datadir}/${APP_NAME_LC}
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${APP_NAME_LC}>
                                      ${libdir}/${APP_NAME_LC}/$<TARGET_FILE_NAME:${APP_NAME_LC}>)
 add_dependencies(bundle ${APP_NAME_LC})
@@ -94,7 +95,7 @@ foreach(target apk obb apk-unsigned apk-obb apk-obb-unsigned apk-noobb apk-clean
   add_custom_target(${target}
       COMMAND PATH=${NATIVEPREFIX}/bin:$ENV{PATH} ${CMAKE_MAKE_PROGRAM}
               -C ${CMAKE_BINARY_DIR}/tools/android/packaging
-              XBMCROOT=${CORE_SOURCE_DIR}
+              CORE_SOURCE_DIR=${CORE_SOURCE_DIR}
               CC=${CMAKE_C_COMPILER}
               CPU=${CPU}
               ARCH=${ARCH}

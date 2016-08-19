@@ -260,6 +260,7 @@ public:
   static const std::string SETTING_SLIDESHOW_STAYTIME;
   static const std::string SETTING_SLIDESHOW_DISPLAYEFFECTS;
   static const std::string SETTING_SLIDESHOW_SHUFFLE;
+  static const std::string SETTING_SLIDESHOW_HIGHQUALITYDOWNSCALING;
   static const std::string SETTING_WEATHER_CURRENTLOCATION;
   static const std::string SETTING_WEATHER_ADDON;
   static const std::string SETTING_WEATHER_ADDONSETTINGS;
@@ -311,6 +312,7 @@ public:
   static const std::string SETTING_AUDIOOUTPUT_STEREOUPMIX;
   static const std::string SETTING_AUDIOOUTPUT_MAINTAINORIGINALVOLUME;
   static const std::string SETTING_AUDIOOUTPUT_PROCESSQUALITY;
+  static const std::string SETTING_AUDIOOUTPUT_ATEMPOTHRESHOLD;
   static const std::string SETTING_AUDIOOUTPUT_STREAMSILENCE;
   static const std::string SETTING_AUDIOOUTPUT_DSPADDONSENABLED;
   static const std::string SETTING_AUDIOOUTPUT_DSPSETTINGS;
@@ -328,6 +330,8 @@ public:
   static const std::string SETTING_INPUT_PERIPHERALS;
   static const std::string SETTING_INPUT_ENABLEMOUSE;
   static const std::string SETTING_INPUT_CONTROLLERCONFIG;
+  static const std::string SETTING_INPUT_TESTRUMBLE;
+  static const std::string SETTING_INPUT_CONTROLLERPOWEROFF;
   static const std::string SETTING_INPUT_APPLEREMOTEMODE;
   static const std::string SETTING_INPUT_APPLEREMOTEALWAYSON;
   static const std::string SETTING_INPUT_APPLEREMOTESEQUENCETIME;

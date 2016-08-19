@@ -611,6 +611,11 @@
           <default>false</default>
           <control type="toggle" />
         </setting>
+        <setting id="slideshow.highqualitydownscaling" type="boolean" label="36619" help="36620">
+            <level>1</level>
+            <default>false</default>
+            <control type="toggle" />
+        </setting>
       </group>
     </category>
     <category id="language" label="14218" help="38106">
@@ -2370,6 +2375,16 @@
           </constraints>
           <control type="list" format="string" />
         </setting>
+        <setting id="audiooutput.atempothreshold" type="integer" label="13517" help="13518">
+          <level>3</level>
+          <default>2</default> <!-- 2% -->
+          <constraints>
+            <minimum>0</minimum>
+            <step>1</step>
+            <maximum>100</maximum>
+          </constraints>
+          <control type="edit" format="integer" />
+        </setting>
         <setting id="audiooutput.samplerate" type="integer" label="458" help="36523">
           <level>2</level>
           <default>48000</default>
@@ -2578,10 +2593,10 @@
         </setting>
       </group>
     </category>
-    <category id="input" label="15087" help="36374">
+    <category id="input" label="14125" help="36374">
       <group id="1" label="35000">
         <setting id="input.peripherals" type="action" label="35000" help="36375">
-          <level>2</level>
+          <level>1</level>
           <dependencies>
             <dependency type="enable" on="property" name="HasPeripherals" />
           </dependencies>
@@ -2600,6 +2615,21 @@
             <dependency type="enable" on="property" name="SupportsPeripheralControllers" />
           </dependencies>
           <control type="button" format="action" />
+        </setting>
+        <setting id="input.testrumble" type="action" label="35051" help="35052">
+          <level>2</level>
+          <dependencies>
+            <dependency type="enable" on="property" name="HasRumbleFeature" />
+          </dependencies>
+          <control type="button" format="action" />
+        </setting>
+        <setting id="input.controllerpoweroff" type="boolean" label="35088" help="35089">
+          <level>0</level>
+          <default>false</default>
+          <dependencies>
+            <dependency type="enable" on="property" name="SupportsPeripheralControllers" />
+          </dependencies>
+          <control type="toggle" />
         </setting>
       </group>
     </category>

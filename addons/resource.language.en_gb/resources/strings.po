@@ -6818,7 +6818,18 @@ msgctxt "#13516"
 msgid "Add art"
 msgstr ""
 
-#empty strings from id 13517 to 13549
+#: system/settings/settings.xml
+msgctxt "#13517"
+msgid "Threshold for pitch correction"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#13518"
+msgid "When the speed change exceeds this threshold, a pitch-correction filter will be applied. This avoids the \"chipmonk voices\" that normally result from speeding up a video"
+msgstr ""
+
+
+#empty strings from id 13519 to 13549
 
 #: system/settings/settings.xml
 msgctxt "#13550"
@@ -7495,7 +7506,13 @@ msgctxt "#14124"
 msgid "Region C"
 msgstr ""
 
-#empty strings from id 14125 to 14199
+#. This is in the context of input devices!
+#: system/settings/settings.xml
+msgctxt "#14125"
+msgid "Input"
+msgstr ""
+
+#empty strings from id 14126 to 14199
 
 #: system/settings/settings.xml
 msgctxt "#14200"
@@ -8134,7 +8151,7 @@ msgctxt "#15086"
 msgid "Post-process"
 msgstr ""
 
-#. Audio DSP process chain indication
+#. Audio DSP process chain indication - this is in the context of input signal
 #: xbmc/settings/dialogs/GUIDialogAudioDSPSettings.cpp
 #: system/settings/settings.xml
 msgctxt "#15087"
@@ -8777,16 +8794,22 @@ msgstr ""
 #. Description of OSD video settings for deinterlace method with label #16334
 #: xbmc/video/dialogs/GUIDialogVideoSettings.cpp
 msgctxt "#16334"
-msgid "IMX - Fast motion"
+msgid "Bob (half)"
 msgstr ""
 
 #. Description of OSD video settings for deinterlace method with label #16335
 #: xbmc/video/dialogs/GUIDialogVideoSettings.cpp
 msgctxt "#16335"
-msgid "IMX - Fast motion (double)"
+msgid "IMX - Advanced (half)"
 msgstr ""
 
-#empty strings from id 16336 to 16399
+#. Description of OSD video settings for deinterlace method with label #16336
+#: xbmc/video/dialogs/GUIDialogVideoSettings.cpp
+msgctxt "#16336"
+msgid "IMX - Advanced"
+msgstr ""
+
+#empty strings from id 16337 to 16399
 
 #: xbmc/video/dialogs/GUIDialogVideoSettings.cpp
 msgctxt "#16400"
@@ -9744,9 +9767,10 @@ msgctxt "#19179"
 msgid "Deleted"
 msgstr ""
 
+#. Settings -> Interface -> Other -> Startup window
 #: system/settings/settings.xml
 msgctxt "#19180"
-msgid "TV"
+msgid "TV channels"
 msgstr ""
 
 #: system/settings/settings.xml
@@ -9759,9 +9783,10 @@ msgctxt "#19182"
 msgid "Days to display"
 msgstr ""
 
+#. Settings -> Interface -> Other -> Startup window
 #: system/settings/settings.xml
 msgctxt "#19183"
-msgid "Radio"
+msgid "Radio channels"
 msgstr ""
 
 #. Used on pvr recordings as button to show of them
@@ -10181,7 +10206,17 @@ msgctxt "#19272"
 msgid "You need a tuner, backend software, and an add-on for the backend to be able to use PVR. Please visit http://kodi.wiki/view/PVR to learn more."
 msgstr ""
 
-#empty strings from id 19273 to 19274
+#. Settings -> Interface -> Other -> Startup window
+#: system/settings/settings.xml
+msgctxt "#19273"
+msgid "TV guide"
+msgstr ""
+
+#. Settings -> Interface -> Other -> Startup window
+#: system/settings/settings.xml
+msgctxt "#19274"
+msgid "Radio guide"
+msgstr ""
 
 #: xbmc/pvr/timers/PVRTimerInfoTag.cpp
 msgctxt "#19275"
@@ -15952,7 +15987,19 @@ msgctxt "#35050"
 msgid "Controller profiles"
 msgstr ""
 
-#empty strings from id 35051 to 35054
+#. Setting to test rumble
+#: system/settings/settings.xml
+msgctxt "#35051"
+msgid "Test rumble"
+msgstr ""
+
+#. Description of setting to test rumble
+#: system/settings/settings.xml
+msgctxt "#35052"
+msgid "Activate the rumble motors of all controllers."
+msgstr ""
+
+#empty strings from id 35053 to 35054
 
 #. Help text for controller window
 #: xbmc/games/controllers/windows/GUIControllerWindow.cpp
@@ -16014,7 +16061,41 @@ msgctxt "#35064"
 msgid "Pair your controllers with the various input devices of different game systems."
 msgstr ""
 
-#empty strings from id 35065 to 35089
+#empty strings from id 35065 to 35073
+
+#. Label for buttons that appear on the face of the controller. Used in the controller mapping dialog.
+msgctxt "#35074"
+msgid "Face buttons"
+msgstr ""
+
+#. Label for buttons that appear on the shoulders of the controller. Used in the controller mapping dialog.
+msgctxt "#35075"
+msgid "Shoulder buttons"
+msgstr ""
+
+#. Label for triggers on the controller. Used in the controller mapping dialog.
+msgctxt "#35076"
+msgid "Triggers"
+msgstr ""
+
+#. Label for analog sticks on the controller. Used in the controller mapping dialog.
+msgctxt "#35077"
+msgid "Analog sticks"
+msgstr ""
+
+#empty strings from id 35078 to 35087
+
+#. Name of the setting that enables/disables powering off controllers on exit
+#: system/settings/settings.xml
+msgctxt "#35088"
+msgid "Power off controllers on exit"
+msgstr ""
+
+#. Description for the setting that enables/disables powering off controllers on exit
+#: system/settings/settings.xml
+msgctxt "#35089"
+msgid "Powers off any controller that supports it on exit."
+msgstr ""
 
 #. Button prompt without timeout. %s - button name
 #: xbmc/games/controllers/guicontrols/GUIScalarFeatureButton.cpp
@@ -18858,7 +18939,19 @@ msgctxt "#36618"
 msgid "Add-ons will be given access to personal data stored on this device. By allowing, you agree that you are solely responsible for any loss of data, unwanted behaviour, or damage to your device. Proceed?"
 msgstr ""
 
-#empty strings from id 36619 to 36899
+#. Label of a setting, allow the user to specifiy high quality downscaling of pictures
+#: system/settings/settings.xml
+msgctxt "#36619"
+msgid "High quality downscaling"
+msgstr ""
+
+#. Description of setting "Pictures -> Slideshow -> High Quality Downscaling" with label #36619
+#: system/settings/settings.xml
+msgctxt "#36620"
+msgid "Enable high quality downscaling of pictures (uses more memory and has moderate performance impact)."
+msgstr ""
+
+#empty strings from id 36621 to 36899
 
 #: xbmc/media/MediaType.cpp
 msgctxt "#36900"

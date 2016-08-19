@@ -102,8 +102,6 @@
 
 #if defined(TARGET_DARWIN_OSX)
 #include "platform/darwin/osx/smc.h"
-#include "linux/LinuxResourceCounter.h"
-static CLinuxResourceCounter m_resourceCounter;
 #endif
 
 #ifdef TARGET_POSIX
@@ -5173,7 +5171,7 @@ int CGUIInfoManager::TranslateSingleString(const std::string &strCondition, bool
       {
         for (size_t i = 0; i < sizeof(player_process) / sizeof(infomap); i++)
         {
-          if (prop.param() == player_process[i].str)
+          if (StringUtils::EqualsNoCase(prop.param(), player_process[i].str))
             return player_process[i].val;
         }
       }
@@ -7029,7 +7027,7 @@ bool CGUIInfoManager::GetBool(int condition1, int contextWindow, const CGUIListI
     case PLAYER_IS_TEMPO:
       {
         float speed = g_application.m_pPlayer->GetPlaySpeed();
-        bReturn = (speed >= 0.75 && speed <= 1.55 & speed != 1);
+        bReturn = (speed >= 0.75 && speed <= 1.55 && speed != 1);
       }
       break;
     case PLAYER_RECORDING:
@@ -9163,9 +9161,7 @@ std::string CGUIInfoManager::GetSystemHeatInfo(int info)
       text = StringUtils::Format("%i%%", m_fanSpeed * 2);
       break;
     case SYSTEM_CPU_USAGE:
-#if defined(TARGET_DARWIN_OSX)
-      text = StringUtils::Format("%4.2f%%", m_resourceCounter.GetCPUUsage());
-#elif defined(TARGET_DARWIN) || defined(TARGET_WINDOWS)
+#if defined(TARGET_DARWIN) || defined(TARGET_WINDOWS)
       text = StringUtils::Format("%d%%", g_cpuInfo.getUsedPercentage());
 #else
       text = StringUtils::Format("%s", g_cpuInfo.GetCoresUsageString().c_str());
@@ -9229,6 +9225,15 @@ bool CGUIInfoManager::GetDisplayAfterSeek()
 void CGUIInfoManager::SetShowInfo(bool showinfo)
 {
   m_playerShowInfo = showinfo;
+
+  if (!showinfo)
+    m_isPvrChannelPreview = false;
+}
+
+bool CGUIInfoManager::ToggleShowInfo()
+{
+  SetShowInfo(!m_playerShowInfo);
+  return m_playerShowInfo;
 }
 
 void CGUIInfoManager::Clear()
@@ -10092,7 +10097,8 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
     if (item->HasPVRChannelInfoTag())
     {
       CEpgInfoTagPtr tag(item->GetPVRChannelInfoTag()->GetEPGNow());
-      return tag ? tag->StartAsLocalTime().GetAsLocalizedTime("", false) : CDateTime::GetCurrentDateTime().GetAsLocalizedTime("", false);
+      if (tag)
+        return tag->StartAsLocalTime().GetAsLocalizedTime("", false);
     }
     if (item->HasEPGInfoTag())
       return item->GetEPGInfoTag()->StartAsLocalTime().GetAsLocalizedTime("", false);
@@ -10115,7 +10121,8 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
     if (item->HasPVRChannelInfoTag())
     {
       CEpgInfoTagPtr tag(item->GetPVRChannelInfoTag()->GetEPGNow());
-      return tag ? tag->EndAsLocalTime().GetAsLocalizedTime("", false) : CDateTime::GetCurrentDateTime().GetAsLocalizedTime("", false);
+      if (tag)
+        return tag->EndAsLocalTime().GetAsLocalizedTime("", false);
     }
     else if (item->HasEPGInfoTag())
       return item->GetEPGInfoTag()->EndAsLocalTime().GetAsLocalizedTime("", false);
@@ -10133,7 +10140,8 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
     if (item->HasPVRChannelInfoTag())
     {
       CEpgInfoTagPtr tag(item->GetPVRChannelInfoTag()->GetEPGNow());
-      return tag ? tag->StartAsLocalTime().GetAsLocalizedDate(true) : CDateTime::GetCurrentDateTime().GetAsLocalizedDate(true);
+      if (tag)
+        return tag->StartAsLocalTime().GetAsLocalizedDate(true);
     }
     if (item->HasEPGInfoTag())
       return item->GetEPGInfoTag()->StartAsLocalTime().GetAsLocalizedDate(true);
@@ -10148,7 +10156,8 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
     if (item->HasPVRChannelInfoTag())
     {
       CEpgInfoTagPtr tag(item->GetPVRChannelInfoTag()->GetEPGNow());
-      return tag ? tag->EndAsLocalTime().GetAsLocalizedDate(true) : CDateTime::GetCurrentDateTime().GetAsLocalizedDate(true);
+      if (tag)
+        return tag->EndAsLocalTime().GetAsLocalizedDate(true);
     }
     if (item->HasEPGInfoTag())
       return item->GetEPGInfoTag()->EndAsLocalTime().GetAsLocalizedDate(true);
@@ -10950,12 +10959,21 @@ bool CGUIInfoManager::ConditionsChangedValues(const std::map<INFO::InfoPtr, bool
 
 bool CGUIInfoManager::IsPlayerChannelPreviewActive() const
 {
-  bool streamValid = m_videoInfo.valid;
-  if (m_currentFile->HasPVRChannelInfoTag() && m_currentFile->GetPVRChannelInfoTag()->IsRadio())
-    streamValid = m_audioInfo.valid;
-
-  return m_playerShowInfo &&
-         (m_isPvrChannelPreview || !streamValid);
+  bool bReturn(false);
+  if (m_playerShowInfo && m_currentFile->HasPVRChannelInfoTag())
+  {
+    if (m_isPvrChannelPreview)
+    {
+      bReturn = true;
+    }
+    else
+    {
+      bReturn = !m_videoInfo.valid;
+      if (bReturn && m_currentFile->GetPVRChannelInfoTag()->IsRadio())
+        bReturn = !m_audioInfo.valid;
+    }
+  }
+  return bReturn;
 }
 
 CEpgInfoTagPtr CGUIInfoManager::GetEpgInfoTag() const

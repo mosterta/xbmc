@@ -928,7 +928,10 @@ void CVideoPlayer::OpenDefaultStreams(bool reset)
     }
   }
   if(!valid)
+  {
     CloseStream(m_CurrentVideo, true);
+    m_processInfo->ResetVideoCodecInfo();
+  }
 
   // open audio stream
   valid   = false;
@@ -945,7 +948,10 @@ void CVideoPlayer::OpenDefaultStreams(bool reset)
   }
 
   if(!valid)
+  {
     CloseStream(m_CurrentAudio, true);
+    m_processInfo->ResetAudioCodecInfo();
+  }
 
   // enable  or disable subtitles
   bool visible = CMediaSettings::GetInstance().GetCurrentVideoSettings().m_SubtitleOn;
@@ -1971,7 +1977,6 @@ void CVideoPlayer::HandlePlaySpeed()
             m_clock.SetSpeedAdjust(adjust);
             if (m_omxplayer_mode)
               m_OmxPlayerState.av_clock.OMXSetSpeedAdjust(adjust);
-            CLog::Log(LOGDEBUG, "CVideoPlayer::HandlePlaySpeed set clock adjust: %f", adjust);
           }
         }
       }
@@ -2114,13 +2119,13 @@ void CVideoPlayer::HandlePlaySpeed()
           error /= errorwin;
         }
 
-        if(error > DVD_MSEC_TO_TIME(1000))
+        if (error > DVD_MSEC_TO_TIME(1000))
         {
           error  = (int)DVD_TIME_TO_MSEC(m_clock.GetClock()) - m_SpeedState.lastseekpts;
 
-          if(std::abs(error) > 1000)
+          if (std::abs(error) > 1000 || (m_VideoPlayerVideo->IsRewindStalled() && std::abs(error) > 100))
           {
-            CLog::Log(LOGDEBUG, "CVideoPlayer::Process - Seeking to catch up");
+            CLog::Log(LOGDEBUG, "CVideoPlayer::Process - Seeking to catch up, error was: %f", error);
             m_SpeedState.lastseekpts = (int)DVD_TIME_TO_MSEC(m_clock.GetClock());
             int direction = (m_playSpeed > 0) ? 1 : -1;
             int iTime = DVD_TIME_TO_MSEC(m_clock.GetClock() + m_State.time_offset + 1000000.0 * direction);
@@ -4614,6 +4619,12 @@ void CVideoPlayer::AddSubtitle(const std::string& strSubPath)
   m_messenger.Put(new CDVDMsgType<std::string>(CDVDMsg::SUBTITLE_ADDFILE, strSubPath));
 }
 
+bool CVideoPlayer::IsCaching() const
+{
+  CSingleLock lock(m_StateSection);
+  return m_State.caching;
+}
+
 int CVideoPlayer::GetCacheLevel() const
 {
   CSingleLock lock(m_StateSection);
@@ -4866,11 +4877,16 @@ void CVideoPlayer::UpdatePlayState(double timeout)
     state.time_total  = (double) m_Edl.RemoveCutTime(llrint(state.time_total));
   }
 
-  if(state.time_total <= 0)
+  if (state.time_total <= 0)
     state.canseek  = false;
 
+  if (m_caching > CACHESTATE_DONE && m_caching < CACHESTATE_PLAY)
+    state.caching = true;
+  else
+    state.caching = false;
+
   double level, delay, offset;
-  if(GetCachingTimes(level, delay, offset))
+  if (GetCachingTimes(level, delay, offset))
   {
     state.cache_delay  = std::max(0.0, delay);
     state.cache_level  = std::max(0.0, std::min(1.0, level));
@@ -4884,7 +4900,7 @@ void CVideoPlayer::UpdatePlayState(double timeout)
   }
 
   XFILE::SCacheStatus status;
-  if(m_pInputStream && m_pInputStream->GetCacheStatus(&status))
+  if (m_pInputStream && m_pInputStream->GetCacheStatus(&status))
   {
     state.cache_bytes = status.forward;
     if(state.time_total)

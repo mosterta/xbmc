@@ -1401,7 +1401,14 @@ void CGUIEPGGridContainer::SetTimelineItems(const std::unique_ptr<CFileItemList>
 #if 0
   if (channelIndex > m_gridModel->ChannelItemsSize() - m_channelsPerPage)
   {
+    // last page
     ScrollToChannelOffset(m_gridModel->ChannelItemsSize() - m_channelsPerPage);
+  }
+  else if (channelIndex < m_channelsPerPage)
+  {
+    // first page
+    ScrollToChannelOffset(0);
+    SetChannel(channelIndex, false);
   }
   else
   {
@@ -1415,8 +1422,15 @@ void CGUIEPGGridContainer::GoToBlock(int blockIndex)
 {
   if (blockIndex > m_gridModel->GetBlockCount() - m_blocksPerPage)
   {
+    // last block
     ScrollToBlockOffset(m_gridModel->GetBlockCount() - m_blocksPerPage);
     SetBlock(blockIndex - (m_gridModel->GetBlockCount() - m_blocksPerPage));
+  }
+  else if (blockIndex < m_blocksPerPage)
+  {
+    // first block
+    ScrollToBlockOffset(0);
+    SetBlock(blockIndex);
   }
   else
   {
