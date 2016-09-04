@@ -36,7 +36,9 @@ CHwLayerAllwinnerA10::CHwLayerAllwinnerA10(CHwLayerConfigAllwinner &config) :
              m_layerOpened(false), m_layerVideoStarted(false),
              m_alphaValue(PropertyKey::AlphaValue, 0), m_alphaEnable(PropertyKey::AlphaEnable, 0),
              m_colorKeyEnable(PropertyKey::ColorKeyEnable, 0), 
-             m_scalerType(PropertyKey::ScalerType, (int)ScalerType::Type_Normal)
+             m_scalerType(PropertyKey::ScalerType, (int)ScalerType::Type_Normal),
+             m_colorSpace(PropertyKey::ColorSpace, (int)ColorSpace::BT709),
+             m_interlaceMode(PropertyKey::InterlaceMode, (int)Interlace::IlaceOff)
 {
 }
 
@@ -188,7 +190,19 @@ bool CHwLayerAllwinnerA10::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRect
   layer_info.fb.addr[1] = (__u32)config.addrU;
   layer_info.fb.addr[2] = (__u32)config.addrV;
 
-  layer_info.fb.cs_mode = DISP_BT709;
+  switch(m_colorSpace.value)
+  {
+    case ColorSpace::BT709:
+      layer_info.fb.cs_mode = DISP_BT709;
+      break;
+    case ColorSpace::BT601:
+      layer_info.fb.cs_mode = DISP_BT601;
+      break;
+    default:
+      layer_info.fb.cs_mode = DISP_BT709;
+      break;
+  }
+      
   layer_info.fb.size.width = config.fbSize.width;
   layer_info.fb.size.height = config.fbSize.height;
   layer_info.src_win.x = srcRect.x1;
@@ -336,7 +350,7 @@ bool CHwLayerAllwinnerA10::back()
   return true;
 };
 
-bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int frameId)
+bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int frameId, int top_field)
 {
   bool status = true;
   int ret;
@@ -354,6 +368,11 @@ bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, in
   fb_info.addr[0] = (__u32)config.addrY;
   fb_info.addr[1] = (__u32)config.addrU;
   fb_info.addr[2] = (__u32)config.addrV;
+  if(m_interlaceMode.value == CPropertyValue::IlaceOff)
+    fb_info.interlace = 0;
+  else
+    fb_info.interlace = 1;
+  fb_info.top_field_first = top_field;
 
   unsigned long args[4];
   args[0] =  m_config.m_screenId;
@@ -369,7 +388,22 @@ bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, in
   }
 
   return status;
-};
+}
+
+bool CHwLayerAllwinnerA10::syncFrame(VDPAU::CVdpauRenderPicture *pic)
+{
+  bool busy = false;
+  int curDisplayedFrameId;
+  bool status = getCurrentFrameId(curDisplayedFrameId);
+  if(! status )
+    CLog::Log(LOGERROR, "CHwLayerAllwinnerA10:%s error calling getCurrentFrameId", __FUNCTION__);
+
+  if(status && curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId))
+  {
+    busy = true;
+  }
+  return busy;
+}
 
 bool CHwLayerAllwinnerA10::getCurrentFrameId(int &frameId)
 {
@@ -412,6 +446,12 @@ bool CHwLayerAllwinnerA10::setProperty(CPropertyValue &prop)
       m_scalerType = prop;
       if(m_layerCreated)
         status = setScalerType((ScalerType)m_scalerType.value);
+      break;
+    case PropertyKey::ColorSpace:
+      m_colorSpace = prop;
+      break;
+    case PropertyKey::InterlaceMode:
+      m_interlaceMode = prop;
       break;
     default:
       status = false;

@@ -31,7 +31,10 @@
 #include "settings/Settings.h"
 #include "settings/AdvancedSettings.h"
 
-CRendererVDPAUAllwinner::CRendererVDPAUAllwinner(): glVDPAUPresentSurfaceCedar(NULL), 
+#define CS_MODE_BT709 1
+#define CS_MODE_BT601 0
+
+CRendererVDPAUAllwinner::CRendererVDPAUAllwinner():
     m_dlHandle(NULL), m_needReconfigure(false), m_frameId(0)
 {
   bool status;
@@ -52,16 +55,6 @@ CRendererVDPAUAllwinner::CRendererVDPAUAllwinner(): glVDPAUPresentSurfaceCedar(N
 
 CRendererVDPAUAllwinner::~CRendererVDPAUAllwinner()
 {
-  void* videoLayer;
-  void* dispId;
-//    CWinSystemEGL::CWinLayerInfoPtr layerInfo;
-
-#if 0
-  g_Windowing.GetVideoLayer(videoLayer);
-  g_Windowing.GetDispId(dispId);
-  glVDPAUCloseVideoLayerCedar((int)videoLayer, (int)dispId);
-#endif
-  
   g_HwLayer.hideLayer(CHwLayerManagerAW::HwLayerType::Video);
   CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
                                          CHwLayerManagerAW::ScalerType::Type_Normal);
@@ -120,11 +113,12 @@ bool CRendererVDPAUAllwinner::Supports(EINTERLACEMETHOD method)
   if(method == VS_INTERLACEMETHOD_AUTO)
     return true;
 
-//  if(method == VS_INTERLACEMETHOD_IMX_FASTMOTION
-//  || method == VS_INTERLACEMETHOD_IMX_FASTMOTION_DOUBLE)
+  if(method == VS_INTERLACEMETHOD_RENDER_BLEND ||
+     method == VS_INTERLACEMETHOD_RENDER_WEAVE ||
+     method == VS_INTERLACEMETHOD_RENDER_BOB)
     return true;
-//  else
-//    return false;
+  else
+    return false;
 }
 
 bool CRendererVDPAUAllwinner::Supports(ESCALINGMETHOD method)
@@ -192,6 +186,8 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
 {
   ManageRenderArea();
 
+  int top_field = (flags & RENDER_FLAG_TOP) == RENDER_FLAG_TOP;
+
   VDPAU::CVdpauRenderPicture *buffer = static_cast<VDPAU::CVdpauRenderPicture*>(m_buffers[m_iYV12RenderBuffer].hwDec);
   if (buffer != NULL && buffer->valid)
   {
@@ -211,7 +207,30 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
       if(! status )
         CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error setting property scaler", __FUNCTION__);
 
+      CHwLayerManagerAW::CPropertyValue cs_prop(CHwLayerManagerAW::PropertyKey::ColorSpace, 0);
+      switch(CONF_FLAGS_YUVCOEF_MASK(flags)) 
+      {
+        case CONF_FLAGS_YUVCOEF_BT709:
+          cs_prop.setValue(CHwLayerManagerAW::ColorSpace::BT709);
+          break;
+        case CONF_FLAGS_YUVCOEF_BT601:
+          cs_prop.setValue(CHwLayerManagerAW::ColorSpace::BT601);
+          break;
+        default:
+          cs_prop.setValue(CHwLayerManagerAW::ColorSpace::BT709);
+          break;
+      }
 
+      status = g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, cs_prop);
+      
+      CHwLayerManagerAW::CPropertyValue ilace(CHwLayerManagerAW::PropertyKey::InterlaceMode, 0);
+      if (flags & (RENDER_FLAG_TOP|RENDER_FLAG_BOT))
+          ilace.setValue(CHwLayerManagerAW::Interlace::IlaceOn);
+      else
+          ilace.setValue(CHwLayerManagerAW::Interlace::IlaceOff) ;
+
+      status = g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, ilace);
+      
       status = g_HwLayer.configure(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, 
                                    m_sourceRect, m_destRect);
 
@@ -224,7 +243,9 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
       m_oldDst = m_destRect;
     }
     buffer->frameId = m_frameId++;
-    g_HwLayer.displayFrame(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, buffer->frameId);
+    
+    g_HwLayer.displayFrame(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, buffer->frameId,
+                          top_field);
   }
 
   return true;
@@ -232,11 +253,13 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
 
 bool CRendererVDPAUAllwinner::CreateTexture(int index)
 {
+  CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s ", __FUNCTION__);
   return true;
 }
 
 void CRendererVDPAUAllwinner::DeleteTexture(int index)
 {
+  CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s index=%d", __FUNCTION__, index);
   ReleaseBuffer(index);
 }
 

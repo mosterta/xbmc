@@ -24,6 +24,7 @@
 #include "HwLayerAllwinnerA10.h"
 #include "HwLayerAdaptorVdpau.h"
 #include "xbmc/guilib/Geometry.h"
+#include "DVDCodecs/Video/VDPAU.h"
 
 class CHwLayerConfigAllwinner
 {
@@ -40,6 +41,8 @@ class CHwLayerAllwinnerA10 : public CHwLayer<CHwLayerAdaptorVdpauAllwinner, CHwL
 
     typedef typename CHwLayer<CHwLayerAdaptorVdpauAllwinner, CHwLayerConfigAllwinner>::CPropertyValue::Property PropertyKey;
     typedef typename CHwLayer<CHwLayerAdaptorVdpauAllwinner, CHwLayerConfigAllwinner>::CPropertyValue::ScalerTypeValues ScalerType;
+    typedef typename CHwLayer<CHwLayerAdaptorVdpauAllwinner, CHwLayerConfigAllwinner>::CPropertyValue::ColorSpaceValues ColorSpace;
+    typedef typename CHwLayer<CHwLayerAdaptorVdpauAllwinner, CHwLayerConfigAllwinner>::CPropertyValue::InterlaceValues Interlace;
 
    CHwLayerAllwinnerA10(CHwLayerConfigAllwinner &config);
    virtual ~CHwLayerAllwinnerA10();
@@ -51,8 +54,9 @@ class CHwLayerAllwinnerA10 : public CHwLayer<CHwLayerAdaptorVdpauAllwinner, CHwL
    virtual bool show();
    virtual bool top();
    virtual bool back();
-   virtual bool displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int frameId);
+   virtual bool displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int frameId, int top_field);
    virtual bool getCurrentFrameId(int &frameId);
+   virtual bool syncFrame(VDPAU::CVdpauRenderPicture *pic);
 
    virtual bool setProperty(CPropertyValue &prop);
 
@@ -72,5 +76,7 @@ class CHwLayerAllwinnerA10 : public CHwLayer<CHwLayerAdaptorVdpauAllwinner, CHwL
    CPropertyValue m_alphaEnable;
    CPropertyValue m_colorKeyEnable;
    CPropertyValue m_scalerType;
+   CPropertyValue m_colorSpace;
+   CPropertyValue m_interlaceMode;
 };
 

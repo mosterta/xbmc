@@ -37,10 +37,15 @@ class CHwLayer
           AlphaValue,
           AlphaEnable,
           ColorKeyEnable,
-          ScalerType
+          ScalerType,
+          ColorSpace,
+          InterlaceMode
         };
         enum ScalerTypeValues {Type_Scale, Type_Normal};
+        enum ColorSpaceValues {BT601, BT709, YCC, VXYCC};
+        enum InterlaceValues {IlaceOn, IlaceOff};
         CPropertyValue(Property k, int v) { key = k; value = v; };
+        void setValue(int v) { value = v; };
         Property key;
         int value;
     };
@@ -73,6 +78,6 @@ class CHwLayer
    virtual bool show() = 0;
    virtual bool top() = 0;
    virtual bool back() = 0;
-   virtual bool displayFrame(CVideoDataProvider &frame, int frameId) = 0;
+   virtual bool displayFrame(CVideoDataProvider &frame, int frameId, int top_field) = 0;
 };
 

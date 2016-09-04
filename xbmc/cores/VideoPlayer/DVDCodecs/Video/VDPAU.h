@@ -124,8 +124,6 @@ typedef struct cdRect
   uint32_t       height;
 } cdRect_t;
 
-typedef void (GL_APIENTRYP PFNGLVDPAUCONFIGURESURFACECEDAR)(vdpauSurfaceCedar surface, int hLayer, int dispFd, cdRect_t srcRect, cdRect_t dstRect);
-typedef void (GL_APIENTRYP PFNGLVDPAUPRESENTSURFACECEDAR)(vdpauSurfaceCedar surface, int hLayer, int dispFd, int frameId);
 typedef void (GL_APIENTRYP PFNGLVDPAUUNMAPSURFACESCEDAR)(GLsizei numSurfaces, const vdpauSurfaceCedar *surfaces);
 typedef void (GL_APIENTRYP PFNGLVDPAUINITCEDAR)(const void *vdpDevice, const void *getProcAddress);
 typedef void (GL_APIENTRYP PFNGLVDPAUFINICEDAR)(void);
@@ -604,9 +602,6 @@ protected:
   PFNGLVDPAUMAPSURFACESCEDAR glVDPAUMapSurfacesCedar;
   PFNGLVDPAUUNMAPSURFACESCEDAR glVDPAUUnmapSurfacesCedar;
 //  PFNGLVDPAUGETSURFACEIVCEDAR glVDPAUGetSurfaceivCedar;
-  PFNGLVDPAUCONFIGURESURFACECEDAR glVDPAUConfigureSurfaceCedar;
-  PFNGLVDPAUPRESENTSURFACECEDAR glVDPAUPresentSurfaceCedar;
-  PFNGLVDPAUGETFRAMEIDCEDAR glVDPAUGetFrameIdCedar;
 #endif
 
 };

@@ -319,13 +319,13 @@ bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::configure(HwLayerTyp
 };
 
 template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::displayFrame(HwLayerType type, CVideoDataProvider &frame, int frameId)
+bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::displayFrame(HwLayerType type, CVideoDataProvider &frame, int frameId, int top_field)
 {
   if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
   {
     CHwLayer *layer = Base::m_layers[type];
     if(layer)
-      return layer->displayFrame(frame, frameId);
+      return layer->displayFrame(frame, frameId, top_field);
     else
       return false;
   }
@@ -343,6 +343,23 @@ bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::getCurrentFrameId(Hw
     CHwLayer *layer = Base::m_layers[type];
     if(layer)
       return layer->getCurrentFrameId(frameId);
+    else
+      return false;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+template<class CHwLayer,typename CVideoDataProvider>
+bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+{
+  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
+  {
+    CHwLayer *layer = Base::m_layers[type];
+    if(layer)
+      return layer->syncFrame(pic);
     else
       return false;
   }

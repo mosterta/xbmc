@@ -27,6 +27,7 @@
 #include "utils/GlobalsHandling.h"
 #include "guilib/Geometry.h"
 
+#include "DVDCodecs/Video/VDPAU.h"
 
 template<typename CHwLayer, typename CVideoDataProvider>
 class CHwLayerManagerAllwinner : public CHwLayerManager<CHwLayer, CHwLayerManagerConfigAllwinner>
@@ -36,6 +37,8 @@ class CHwLayerManagerAllwinner : public CHwLayerManager<CHwLayer, CHwLayerManage
    typedef typename CHwLayer::CPropertyValue CPropertyValue;
    typedef typename CHwLayer::CPropertyValue::Property PropertyKey;
    typedef typename CHwLayer::CPropertyValue::ScalerTypeValues ScalerType;
+   typedef typename CHwLayer::CPropertyValue::ColorSpaceValues ColorSpace;
+   typedef typename CHwLayer::CPropertyValue::InterlaceValues Interlace;
    typedef typename CHwLayer::CColorKey CColorKey;
 
    typedef CHwLayerManager<CHwLayer, CHwLayerManagerConfigAllwinner> Base;
@@ -50,8 +53,10 @@ class CHwLayerManagerAllwinner : public CHwLayerManager<CHwLayer, CHwLayerManage
    virtual bool sendTop(HwLayerType type);
    virtual bool sendBack(HwLayerType type);
    virtual bool configure(HwLayerType type, CVideoDataProvider &frame, CRect &srcRect, CRect &dstRect);
-   virtual bool displayFrame(HwLayerType type, CVideoDataProvider &frame, int frameId);
+   virtual bool displayFrame(HwLayerType type, CVideoDataProvider &frame, int frameId, int top_field);
    virtual bool getCurrentFrameId(HwLayerType type, int &frameId);
+   virtual bool syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic);
+
    virtual bool setProperty(HwLayerType type, CPropertyValue &prop);
    virtual bool setProperty(HwLayerType type, CColorKey &prop);
    

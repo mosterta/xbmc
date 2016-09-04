@@ -67,10 +67,6 @@ protected:
 private:
   bool LoadSymbols();
   
-  PFNGLVDPAUPRESENTSURFACECEDAR glVDPAUPresentSurfaceCedar;
-  PFNGLVDPAUCONFIGURESURFACECEDAR glVDPAUConfigureSurfaceCedar;
-  PFGLVDPAUCLOSEVIDEOLAYERCEDAR glVDPAUCloseVideoLayerCedar;
-
   void *m_dlHandle;
   bool m_needReconfigure;
   int m_frameId;

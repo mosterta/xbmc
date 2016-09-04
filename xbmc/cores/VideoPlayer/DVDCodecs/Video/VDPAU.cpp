@@ -3786,14 +3786,9 @@ bool COutput::ProcessSyncPicture(bool cleanup)
 #elif ALLWINNER_FRAME_sync
     if(pic->usefence)
     {
-      int curDisplayedFrameId;
-      bool status = g_HwLayer.getCurrentFrameId(CHwLayerManagerAW::HwLayerType::Video, curDisplayedFrameId);
-      if(! status )
-        CLog::Log(LOGERROR, "COutput:%s error calling showlayer", __FUNCTION__);
-
       if(! cleanup)
       {
-        if(status && curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId))
+        if(g_HwLayer.syncFrame(CHwLayerManagerAW::HwLayerType::Video, pic))
         {
           busy = true;
           ++it;
@@ -3803,10 +3798,9 @@ bool COutput::ProcessSyncPicture(bool cleanup)
       else
       {
         XbmcThreads::EndTime timeout(80);
-        while(status && curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId) && !timeout.IsTimePast())
+        while(g_HwLayer.syncFrame(CHwLayerManagerAW::HwLayerType::Video, pic) && !timeout.IsTimePast())
         {
           Sleep(5);
-          bool status = g_HwLayer.getCurrentFrameId(CHwLayerManagerAW::HwLayerType::Video, curDisplayedFrameId);
         }
       }
     }
@@ -3991,13 +3985,9 @@ void COutput::ReleaseBufferPool()
 #elif ALLWINNER_FRAME_sync
       if(pic->usefence)
       {
-        int curDisplayedFrameId;
-        //curDisplayedFrameId = glVDPAUGetFrameIdCedar((int)videoLayer, (int)dispId);
-        bool status = g_HwLayer.getCurrentFrameId(CHwLayerManagerAW::HwLayerType::Video, curDisplayedFrameId);
-        while(status && (curDisplayedFrameId != -1 && pic->frameId >= curDisplayedFrameId) && !timeout.IsTimePast())
+        while(g_HwLayer.syncFrame(CHwLayerManagerAW::HwLayerType::Video, pic) && !timeout.IsTimePast())
         {
           Sleep(5);
-          bool status = g_HwLayer.getCurrentFrameId(CHwLayerManagerAW::HwLayerType::Video, curDisplayedFrameId);
         }
       }
 #endif
@@ -4133,9 +4123,6 @@ bool COutput::GLInit()
   glVDPAUMapSurfacesCedar = NULL;
   glVDPAUUnmapSurfacesCedar = NULL;
 //  glVDPAUGetSurfaceivCedar = NULL;
-  glVDPAUPresentSurfaceCedar = NULL;
-  glVDPAUConfigureSurfaceCedar = NULL;
-  glVDPAUGetFrameIdCedar = NULL;
 #endif
 
 #ifdef GL_NV_vdpau_sim_interop
@@ -4235,12 +4222,6 @@ bool COutput::GLInit()
     glVDPAUMapSurfacesCedar = (PFNGLVDPAUMAPSURFACESCEDAR)GLNVGetProcAddress("glVDPAUMapSurfacesCedar");
   if (!glVDPAUUnmapSurfacesCedar)
     glVDPAUUnmapSurfacesCedar = (PFNGLVDPAUUNMAPSURFACESCEDAR)GLNVGetProcAddress("glVDPAUUnmapSurfacesCedar");
-  if (!glVDPAUPresentSurfaceCedar)
-    glVDPAUPresentSurfaceCedar = (PFNGLVDPAUPRESENTSURFACECEDAR)GLNVGetProcAddress("glVDPAUPresentSurfaceCedar");
-  if (!glVDPAUConfigureSurfaceCedar)
-    glVDPAUConfigureSurfaceCedar = (PFNGLVDPAUCONFIGURESURFACECEDAR)GLNVGetProcAddress("glVDPAUConfigureSurfaceCedar");
-  if( !glVDPAUGetFrameIdCedar)
-    glVDPAUGetFrameIdCedar = (PFNGLVDPAUGETFRAMEIDCEDAR)GLNVGetProcAddress("glVDPAUGetFrameIdCedar");
   
   glVDPAUInitCedar(reinterpret_cast<void*>(m_config.context->GetDevice()), 
                 reinterpret_cast<void*>(m_config.context->GetProcs().vdp_get_proc_address));
