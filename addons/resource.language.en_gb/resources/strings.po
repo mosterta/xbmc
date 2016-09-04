@@ -923,6 +923,7 @@ msgctxt "#207"
 msgid "Plot"
 msgstr ""
 
+#: xbmc/pvr/windows/PVRGUIWindowRecordings.cpp
 #: xbmc/dialogs/GUIDialogPlayEject.cpp
 #: system/settings/settings.xml
 msgctxt "#208"
@@ -5176,6 +5177,8 @@ msgctxt "#12022"
 msgid "Resume from %s"
 msgstr ""
 
+#. Label of video/recordings context menu items
+#: xbmc/pvr/windows/PVRGUIWindowRecordings.cpp
 #: xbmc/video/ContextMenus.cpp
 msgctxt "#12023"
 msgid "Play from beginning"
@@ -6827,7 +6830,6 @@ msgstr ""
 msgctxt "#13518"
 msgid "When the speed change exceeds this threshold, a pitch-correction filter will be applied. This avoids the \"chipmonk voices\" that normally result from speeding up a video"
 msgstr ""
-
 
 #empty strings from id 13519 to 13549
 
@@ -8519,12 +8521,12 @@ msgctxt "#16039"
 msgid "Off"
 msgstr ""
 
-#empty strings from id 16040 to 16040
+#empty string with id 16040
 
 #: xbmc/guilib/GUIRadioButtonControl.cpp"
-msgctxt "#16041"		
-msgid "On"		
-msgstr ""		
+msgctxt "#16041"
+msgid "On"
+msgstr ""
 
 #empty strings from id 16042 to 16099
 
@@ -19558,4 +19560,3 @@ msgstr ""
 msgctxt "#39007"
 msgid "This provides access to where picture sources can be added and otherwise managed."
 msgstr ""
-
