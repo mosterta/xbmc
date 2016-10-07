@@ -35,7 +35,7 @@
 #define CS_MODE_BT601 0
 
 CRendererVDPAUAllwinner::CRendererVDPAUAllwinner():
-    m_dlHandle(NULL), m_needReconfigure(false), m_frameId(0)
+    m_dlHandle(NULL), m_needReconfigure(false), m_frameId(0), m_lastRenderTime(0)
 {
   bool status;
   CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
@@ -76,6 +76,7 @@ bool CRendererVDPAUAllwinner::Configure(unsigned int width, unsigned int height,
   bool result = CLinuxRendererGLES::Configure(width, height, d_width, d_height, fps, 
                                               flags, format, extended_formatunsigned, orientation);
   m_needReconfigure = true;
+  m_lastRenderTime = XbmcThreads::SystemClockMillis();
   return result;
 }
 
@@ -246,6 +247,18 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
     
     g_HwLayer.displayFrame(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, buffer->frameId,
                           top_field);
+
+    // This code reduces rendering fps of the video layer when playing videos in fullscreen mode
+    // it makes only sense on architectures with multiple layers
+    int fps = m_fps*2;
+
+    unsigned int now = XbmcThreads::SystemClockMillis();
+    unsigned int frameTime = now - m_lastRenderTime;
+    if (fps > 0 && frameTime * fps < 1000)
+      XbmcThreads::ThreadSleep(1000/fps - frameTime);
+
+    m_lastRenderTime = now;
+
   }
 
   return true;

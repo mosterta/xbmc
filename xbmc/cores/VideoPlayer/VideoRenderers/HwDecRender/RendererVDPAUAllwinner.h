@@ -73,6 +73,7 @@ private:
   CRect m_oldSrc;
   CRect m_oldDst;
   CHwLayerAdaptorVdpauAllwinner m_vdpauAdaptor;
+  unsigned int m_lastRenderTime;
 };
 
 #endif

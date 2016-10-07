@@ -1905,16 +1905,6 @@ void CApplication::Render()
 
   if (!extPlayerActive && g_graphicsContext.IsFullScreenVideo() && !m_pPlayer->IsPausedPlayback())
   {
-#if 0
-//#ifdef ALLWINNERA10
-      if (IsInScreenSaver())
-      {
-        //so the mk802 does not burn down the house when i'm sleeping :)
-        limitFrames = true;
-        singleFrameTime = 100;
-      }
-#endif
-
     ResetScreenSaver();
   }
 
@@ -2795,20 +2785,6 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
   }
 
   m_pPlayer->FrameMove();
-  
-#if defined(TARGET_RASPBERRY_PI) || defined(HAS_IMXVPU) || defined(ALLWINNERA10)
-    // This code reduces rendering fps of the GUI layer when playing videos in fullscreen mode
-    // it makes only sense on architectures with multiple layers
-  int fps = 50;
-  if (g_graphicsContext.IsFullScreenVideo() && !m_pPlayer->IsPausedPlayback() && m_pPlayer->IsRenderingVideoLayer())
-    fps = CSettings::GetInstance().GetInt(CSettings::SETTING_VIDEOPLAYER_LIMITGUIUPDATE);
-  
-  unsigned int now = XbmcThreads::SystemClockMillis();
-  unsigned int frameTime = now - m_lastRenderTime;
-  if (fps > 0 && frameTime * fps < 1000)
-    Sleep(1000/fps - frameTime);
-
-#endif
 }
 
 

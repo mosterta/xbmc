@@ -83,7 +83,7 @@ INT CXBApplicationEx::Run()
 
   unsigned int lastFrameTime = 0;
   unsigned int frameTime = 0;
-  const unsigned int noRenderFrameTime = 15;  // Simulates ~66fps
+  const unsigned int noRenderFrameTime = 10;  // Simulates ~100fps
 
   // Run xbmc
   while (!m_bStop)
@@ -144,9 +144,6 @@ INT CXBApplicationEx::Run()
       if (m_renderGUI && !m_bStop) Render();
       else if (!m_renderGUI)
       {
-        frameTime = XbmcThreads::SystemClockMillis() - lastFrameTime;
-        if(frameTime < noRenderFrameTime)
-          Sleep(noRenderFrameTime - frameTime);
       }
 #ifdef XBMC_TRACK_EXCEPTIONS
     }
@@ -161,6 +158,11 @@ INT CXBApplicationEx::Run()
       throw;
     }
 #endif
+
+    frameTime = (XbmcThreads::SystemClockMillis() - lastFrameTime)*2;
+    if(frameTime < noRenderFrameTime)
+      Sleep(noRenderFrameTime - frameTime);
+
   } // while (!m_bStop)
   Destroy();
 
