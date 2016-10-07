@@ -103,10 +103,6 @@ bool CDVDFileInfo::ExtractThumb(const std::string &strPath,
   unsigned int nTime = XbmcThreads::SystemClockMillis();
   CFileItem item(strPath, false);
 
-  if (item.IsDiscImage() ||
-      item.IsPVR())
-    return false;
-
   item.SetMimeTypeForInternetFile();
   CDVDInputStream *pInputStream = CDVDFactoryInputStream::CreateInputStream(NULL, item);
   if (!pInputStream)
@@ -210,22 +206,13 @@ bool CDVDFileInfo::ExtractThumb(const std::string &strPath,
       CDVDCodecOptions dvdOptions;
       pVideoCodec = CDVDFactoryCodec::OpenCodec(new CDVDVideoCodecFFmpeg(*pProcessInfo), hint, dvdOptions);
 #else
-    if (hint.codec == AV_CODEC_ID_MPEG2VIDEO || hint.codec == AV_CODEC_ID_MPEG1VIDEO)
-    {
-      // libmpeg2 is not thread safe so use ffmepg for mpeg2/mpeg1 thumb extraction
-      CDVDCodecOptions dvdOptions;
-      pVideoCodec = CDVDFactoryCodec::OpenCodec(new CDVDVideoCodecFFmpeg(*pProcessInfo), hint, dvdOptions);
-    }
-    else
-    {
-      pVideoCodec = CDVDFactoryCodec::CreateVideoCodec(hint, *pProcessInfo);
-    }
+    pVideoCodec = CDVDFactoryCodec::CreateVideoCodec(hint, *pProcessInfo);
 #endif
 
     if (pVideoCodec)
     {
       int nTotalLen = pDemuxer->GetStreamLength();
-      int nSeekTo = (pos==-1?nTotalLen / 3:pos);
+      int nSeekTo = (pos==-1) ? nTotalLen / 3 : pos;
 
       CLog::Log(LOGDEBUG,"%s - seeking to pos %dms (total: %dms) in %s", __FUNCTION__, nSeekTo, nTotalLen, redactPath.c_str());
       if (pDemuxer->SeekTime(nSeekTo, true))
@@ -503,8 +490,7 @@ bool CDVDFileInfo::AddExternalSubtitleToDetails(const std::string &path, CStream
   }
 
   CStreamDetailSubtitle *dsub = new CStreamDetailSubtitle();
-  ExternalStreamInfo info;
-  CUtil::GetExternalStreamDetailsFromFilename(path, filename, info);
+  ExternalStreamInfo info = CUtil::GetExternalStreamDetailsFromFilename(path, filename);
   dsub->m_strLanguage = g_LangCodeExpander.ConvertToISO6392T(info.language);
   details.AddStream(dsub);
 

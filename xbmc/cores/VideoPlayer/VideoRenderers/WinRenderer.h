@@ -171,19 +171,19 @@ public:
   virtual void Reset(); /* resets renderer after seek for example */
   virtual bool IsConfigured() { return m_bConfigured; }
   virtual void Flush();
-  virtual EINTERLACEMETHOD AutoInterlaceMethod();
   virtual CRenderInfo GetRenderInfo();
   virtual void RenderUpdate(bool clear, unsigned int flags = 0, unsigned int alpha = 255);
   virtual void SetBufferSize(int numBuffers) { m_neededBuffers = numBuffers; }
   virtual void ReleaseBuffer(int idx);
-  virtual bool NeedBufferForRef(int idx);
+  virtual bool NeedBuffer(int idx);
   virtual bool HandlesRenderFormat(ERenderFormat format) override;
 
   // Feature support
   virtual bool SupportsMultiPassRendering() { return false; }
   virtual bool Supports(ERENDERFEATURE feature);
-  virtual bool Supports(EINTERLACEMETHOD method);
   virtual bool Supports(ESCALINGMETHOD method);
+
+  virtual bool WantsDoublePass() override;
 
 protected:
   virtual void Render(DWORD flags);
@@ -236,5 +236,3 @@ protected:
 #else
 #include "LinuxRenderer.h"
 #endif
-
-

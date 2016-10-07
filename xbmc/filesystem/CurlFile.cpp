@@ -506,13 +506,8 @@ void CCurlFile::SetCommonOptions(CReadState* state)
   g_curlInterface.easy_setopt(h, CURLOPT_FOLLOWLOCATION, TRUE);
   g_curlInterface.easy_setopt(h, CURLOPT_MAXREDIRS, 5);
 
-  // Enable cookie engine for current handle to re-use them in future requests
-  std::string strCookieFile;
-  std::string strTempPath = CSpecialProtocol::TranslatePath(g_advancedSettings.m_cachePath);
-  strCookieFile = URIUtils::AddFileToFolder(strTempPath, "cookies.dat");
-
-  g_curlInterface.easy_setopt(h, CURLOPT_COOKIEFILE, strCookieFile.c_str());
-  g_curlInterface.easy_setopt(h, CURLOPT_COOKIEJAR, strCookieFile.c_str());
+  // Enable cookie engine for current handle
+  g_curlInterface.easy_setopt(h, CURLOPT_COOKIEFILE, "");
 
   // Set custom cookie if requested
   if (!m_cookie.empty())
@@ -829,8 +824,29 @@ void CCurlFile::ParseAndCorrectUrl(CURL &url2)
           m_postdata = Base64::Decode(value);
           m_postdataset = true;
         }
-        else
+        // other standard headers (see https://en.wikipedia.org/wiki/List_of_HTTP_header_fields)
+        else if (name == "accept" || name == "accept-language" || name == "accept-datetime" ||
+          name == "authorization" || name == "cache-control" || name == "connection" || name == "content-md5" || name == "content-type" || 
+          name == "date" || name == "expect" || name == "forwarded" || name == "from" || name == "if-match" || 
+          name == "if-modified-since" || name == "if-none-match" || name == "if-range" || name == "if-unmodified-since" || name == "max-forwards" || 
+          name == "origin" || name == "pragma" || name == "range" || name == "te" || name == "upgrade" || 
+          name == "via" || name == "warning" || name == "x-requested-with" || name == "dnt" || name == "x-forwarded-for" || name == "x-forwarded-host" || 
+          name == "x-forwarded-proto" || name == "front-end-https" || name == "x-http-method-override" || name == "x-att-deviceid" ||
+          name == "x-wap-profile" || name == "x-uidh" || name == "x-csrf-token" || name == "x-request-id" || name == "x-correlation-id")
+        {
           SetRequestHeader(it->first, value);
+          if (name == "authorization")
+            CLog::Log(LOGDEBUG, "CurlFile::ParseAndCorrectUrl() adding custom header option '%s: ***********'", it->first.c_str());
+          else
+            CLog::Log(LOGDEBUG, "CurlFile::ParseAndCorrectUrl() adding custom header option '%s: %s'", it->first.c_str(), value.c_str());
+        }
+        // we don't add blindly all options to headers anymore
+        // if anybody wants to pass options to ffmpeg, explicitly prefix those
+        // to be identified here
+        else
+        {
+          CLog::Log(LOGDEBUG, "CurlFile::ParseAndCorrectUrl() ignoring header option '%s: %s'", it->first.c_str(), value.c_str());
+        }
       }
     }
   }
@@ -1751,6 +1767,11 @@ std::string CCurlFile::GetServerReportedCharset(void)
     return "";
 
   return m_state->m_httpheader.GetCharset();
+}
+
+std::string CCurlFile::GetURL(void)
+{
+  return m_url;
 }
 
 /* STATIC FUNCTIONS */

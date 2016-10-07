@@ -145,9 +145,12 @@ std::string GetHomePath(const std::string& strTarget, std::string strPath)
       {
         strPathW = buf.get();
         CWIN32Util::RemoveExtraLongPathPrefix(strPathW);
-        g_charsetConverter.wToUTF8(strPathW, strPath);
+
         if (IsDirectoryValidRoot(strPathW))
+        {
+          g_charsetConverter.wToUTF8(strPathW, strPath);
           return strPath;
+        }
       }
     }
   }
@@ -172,16 +175,18 @@ std::string GetHomePath(const std::string& strTarget, std::string strPath)
   auto bufSize = GetCurrentDirectoryW(0, nullptr);
   if (bufSize > 0)
   {
-    auto buf = new wchar_t[bufSize];
-    if (0 != GetCurrentDirectoryW(bufSize, buf))
+    auto buf = std::make_unique<wchar_t[]>(bufSize);
+    if (0 != GetCurrentDirectoryW(bufSize, buf.get()))
     {
       std::string currentDirectory;
-      std::wstring currentDirectoryW(buf);
+      std::wstring currentDirectoryW(buf.get());
       CWIN32Util::RemoveExtraLongPathPrefix(currentDirectoryW);
-      g_charsetConverter.wToUTF8(currentDirectoryW, currentDirectory);
-
+      
       if (IsDirectoryValidRoot(currentDirectoryW))
+      {
+        g_charsetConverter.wToUTF8(currentDirectoryW, currentDirectory);
         return currentDirectory;
+      }
     }
   }
 
@@ -191,6 +196,12 @@ std::string GetHomePath(const std::string& strTarget, std::string strPath)
 }
 #endif
 #if defined(TARGET_DARWIN)
+bool IsDirectoryValidRoot(std::string path)
+{
+  path += "/system/settings/settings.xml";
+  return CFile::Exists(path);
+}
+
 std::string GetHomePath(const std::string& strTarget, std::string strPath)
 {
   if (strPath.empty())
@@ -214,6 +225,26 @@ std::string GetHomePath(const std::string& strTarget, std::string strPath)
       strcat(given_path, "../Resources/");
       strcat(given_path, CCompileInfo::GetAppName());
       strcat(given_path, "/");
+      
+      // if this path doesn't exist we
+      // might not be started from the app bundle
+      // but from the debugger/xcode. Lets
+      // see if this assumption is valid
+      if (!CDirectory::Exists(given_path))
+      {
+        std::string given_path_stdstr = CUtil::ResolveExecutablePath();
+        // try to find the correct folder by going back
+        // in the executable path until settings.xml was found
+        bool validRoot = false;
+        do
+        {
+          given_path_stdstr = URIUtils::GetParentPath(given_path_stdstr);
+          validRoot = IsDirectoryValidRoot(given_path_stdstr);
+        }
+        while(given_path_stdstr.length() > 0 && !validRoot);
+        strncpy(given_path, given_path_stdstr.c_str(), sizeof(given_path)-1);
+      }
+      
 #endif
 
       // Convert to real path.
@@ -2035,25 +2066,27 @@ void CUtil::ScanForExternalSubtitles(const std::string& strMovie, std::vector<st
   CLog::Log(LOGDEBUG, "%s: END (total time: %i ms)", __FUNCTION__, (int)(XbmcThreads::SystemClockMillis() - startTimer));
 }
 
-void CUtil::GetExternalStreamDetailsFromFilename(const std::string& strVideo, const std::string& strStream, ExternalStreamInfo& info)
+ExternalStreamInfo CUtil::GetExternalStreamDetailsFromFilename(const std::string& videoPath, const std::string& associatedFile)
 {
-  std::string videoBaseName = URIUtils::GetFileName(strVideo);
+  ExternalStreamInfo info;
+
+  std::string videoBaseName = URIUtils::GetFileName(videoPath);
   URIUtils::RemoveExtension(videoBaseName);
 
-  std::string toParse = URIUtils::GetFileName(strStream);
+  std::string toParse = URIUtils::GetFileName(associatedFile);
   URIUtils::RemoveExtension(toParse);
 
   // we check left part - if it's same as video base name - strip it
   if (StringUtils::StartsWithNoCase(toParse, videoBaseName))
     toParse = toParse.substr(videoBaseName.length());
-  else if (URIUtils::GetExtension(strStream) == ".sub" && URIUtils::IsInArchive(strStream))
+  else if (URIUtils::GetExtension(associatedFile) == ".sub" && URIUtils::IsInArchive(associatedFile))
   {
-    // exclude parsing of vobsub file names that embedded in an archive
-    CLog::Log(LOGDEBUG, "%s - skipping archived vobsub filename parsing: %s", __FUNCTION__, CURL::GetRedacted(strStream).c_str());
+    // exclude parsing of vobsub file names that are embedded in an archive
+    CLog::Log(LOGDEBUG, "%s - skipping archived vobsub filename parsing: %s", __FUNCTION__, CURL::GetRedacted(associatedFile).c_str());
     toParse.clear();
   }
 
-  // trim any non-alphanumeric char in the begining
+  // trim any non-alphanumeric char in the beginning
   std::string::iterator result = std::find_if(toParse.begin(), toParse.end(), StringUtils::isasciialphanum);
 
   std::string name;
@@ -2108,7 +2141,9 @@ void CUtil::GetExternalStreamDetailsFromFilename(const std::string& strVideo, co
     info.flag = CDemuxStream::FLAG_NONE;
 
   CLog::Log(LOGDEBUG, "%s - Language = '%s' / Name = '%s' / Flag = '%u' from %s",
-             __FUNCTION__, info.language.c_str(), info.name.c_str(), info.flag, CURL::GetRedacted(strStream).c_str());
+             __FUNCTION__, info.language.c_str(), info.name.c_str(), info.flag, CURL::GetRedacted(associatedFile).c_str());
+
+  return info;
 }
 
 /*! \brief in a vector of subtitles finds the corresponding .sub file for a given .idx file

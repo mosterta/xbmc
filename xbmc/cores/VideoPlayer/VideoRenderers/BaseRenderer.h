@@ -90,20 +90,18 @@ public:
   virtual void Flush() {};
   virtual void SetBufferSize(int numBuffers) { }
   virtual void ReleaseBuffer(int idx) { }
-  virtual bool NeedBufferForRef(int idx) { return false; }
+  virtual bool NeedBuffer(int idx) { return false; }
   virtual bool IsGuiLayer() { return true; }
   // Render info, can be called before configure
   virtual CRenderInfo GetRenderInfo() { return CRenderInfo(); }
   virtual void Update() = 0;
   virtual void RenderUpdate(bool clear, unsigned int flags = 0, unsigned int alpha = 255) = 0;
   virtual bool RenderCapture(CRenderCapture* capture) = 0;
-  virtual EINTERLACEMETHOD AutoInterlaceMethod() = 0;
   virtual bool HandlesRenderFormat(ERenderFormat format) { return format == m_format; };
 
   // Feature support
   virtual bool SupportsMultiPassRendering() = 0;
   virtual bool Supports(ERENDERFEATURE feature) { return false; };
-  virtual bool Supports(EINTERLACEMETHOD method) = 0;
   virtual bool Supports(ESCALINGMETHOD method) = 0;
 
   virtual bool WantsDoublePass() { return false; };

@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "addons/AddonManager.h"
+#include "addons/AddonSystemSettings.h"
 #include "addons/Scraper.h"
 #include "dialogs/GUIDialogExtendedProgressBar.h"
 #include "dialogs/GUIDialogProgress.h"
@@ -673,35 +674,53 @@ void CMusicInfoScanner::FileItemsToAlbums(CFileItemList& items, VECALBUMS& album
     }
 
     /*
-     We have a compilation if
-     1. album name is non-empty AND
-     2a. no tracks overlap OR
-     2b. all tracks are marked as part of compilation AND
-     3a. a unique primary artist is specified as "various" or "various artists" OR
-     3b. we have at least two primary artists and no album artist specified.
-     */
+    We have a Various Artists compilation if
+    1. album name is non-empty AND
+    2a. no tracks overlap OR
+    2b. all tracks are marked as part of compilation AND
+    3a. a unique primary artist is specified as "various", "various artists" or the localized value
+    OR
+    3b. we have at least two primary artists and no album artist specified.
+    */
+    std::string various = g_localizeStrings.Get(340); // Various Artists
     bool compilation = !songsByAlbumName->first.empty() && (isCompilation || !tracksOverlap); // 1+2b+2a
     if (artists.size() == 1)
     {
       std::string artist = artists.begin()->first; StringUtils::ToLower(artist);
       if (!StringUtils::EqualsNoCase(artist, "various") &&
-          !StringUtils::EqualsNoCase(artist, "various artists")) // 3a
+        !StringUtils::EqualsNoCase(artist, "various artists") &&
+        !StringUtils::EqualsNoCase(artist, various)) // 3a
         compilation = false;
     }
     else if (hasAlbumArtist) // 3b
       compilation = false;
 
+    //Such a compilation album is stored with the localized value for "various artists" as the album artist
     if (compilation)
     {
       CLog::Log(LOGDEBUG, "Album '%s' is a compilation as there's no overlapping tracks and %s", songsByAlbumName->first.c_str(), hasAlbumArtist ? "the album artist is 'Various'" : "there is more than one unique artist");
       artists.clear();
-      std::string various = g_localizeStrings.Get(340); // Various Artists
       std::vector<std::string> va; va.push_back(various);
       for (VECSONGS::iterator song = songs.begin(); song != songs.end(); ++song)
       {
         song->SetAlbumArtist(va);
         artists[various].push_back(&(*song));
       }
+    }
+
+    /*
+    We also have a compilation album when album name is non-empty and ALL tracks are marked as part of
+    a compilation even if an album artist is given, or all songs have the same primary artist. For
+    example an anthology - a collection of recordings from various old sources
+    combined together such as a "best of", retrospective or rarities type release.
+
+    Such an anthology compilation will not have been caught by the previous tests as it fails 3a and 3b.
+    The album artist can be determined just like any normal album.
+    */
+    if (!compilation && !songsByAlbumName->first.empty() && isCompilation)
+    {
+      compilation = true;
+      CLog::Log(LOGDEBUG, "Album '%s' is a compilation as all songs are marked aspart of a compilation", songsByAlbumName->first.c_str());
     }
 
     /*
@@ -744,6 +763,8 @@ void CMusicInfoScanner::FileItemsToAlbums(CFileItemList& items, VECALBUMS& album
         album.genre = (*k)->genre;
         //       in addition, we may want to use year as discriminating for albums
         album.iYear = (*k)->iYear;
+        album.strLabel = (*k)->strRecordLabel;
+        album.strType = (*k)->strAlbumType;
         album.songs.push_back(**k);
       }
       albums.push_back(album);
@@ -771,10 +792,10 @@ int CMusicInfoScanner::RetrieveMusicInfo(const std::string& strDirectory, CFileI
   ADDON::AddonPtr addon;
   ADDON::ScraperPtr albumScraper;
   ADDON::ScraperPtr artistScraper;
-  if(ADDON::CAddonMgr::GetInstance().GetDefault(ADDON::ADDON_SCRAPER_ALBUMS, addon))
+  if(ADDON::CAddonSystemSettings::GetInstance().GetActive(ADDON::ADDON_SCRAPER_ALBUMS, addon))
     albumScraper = std::dynamic_pointer_cast<ADDON::CScraper>(addon);
 
-  if(ADDON::CAddonMgr::GetInstance().GetDefault(ADDON::ADDON_SCRAPER_ARTISTS, addon))
+  if(ADDON::CAddonSystemSettings::GetInstance().GetActive(ADDON::ADDON_SCRAPER_ARTISTS, addon))
     artistScraper = std::dynamic_pointer_cast<ADDON::CScraper>(addon);
 
   // Add each album
@@ -1113,7 +1134,7 @@ INFO_RET CMusicInfoScanner::DownloadAlbumInfo(const CAlbum& album, const ADDON::
       scraper.GetAlbums().clear();
       scraper.GetAlbums().push_back(albumNfo);
     }
-    else
+    else if (result != CNfoFile::PARTIAL_NFO)
       CLog::Log(LOGERROR,"Unable to find an url in nfo file: %s", strNfo.c_str());
   }
 
@@ -1140,7 +1161,8 @@ INFO_RET CMusicInfoScanner::DownloadAlbumInfo(const CAlbum& album, const ADDON::
 
   CGUIDialogSelect *pDlg = NULL;
   int iSelectedAlbum=0;
-  if (result == CNfoFile::NO_NFO && !bMusicBrainz)
+  if ((result == CNfoFile::NO_NFO || result == CNfoFile::PARTIAL_NFO)
+      && !bMusicBrainz)
   {
     iSelectedAlbum = -1; // set negative so that we can detect a failure
     if (scraper.Succeeded() && scraper.GetAlbumCount() >= 1)
@@ -1258,7 +1280,7 @@ INFO_RET CMusicInfoScanner::DownloadAlbumInfo(const CAlbum& album, const ADDON::
 
   albumInfo = scraper.GetAlbum(iSelectedAlbum);
   
-  if (result == CNfoFile::COMBINED_NFO)
+  if (result == CNfoFile::COMBINED_NFO || result == CNfoFile::PARTIAL_NFO)
     nfoReader.GetDetails(albumInfo.GetAlbum(), NULL, true);
   
   return INFO_ADDED;

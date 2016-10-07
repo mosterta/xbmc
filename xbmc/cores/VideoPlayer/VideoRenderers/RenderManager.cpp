@@ -303,6 +303,8 @@ bool CRenderManager::Configure()
     m_pRenderer->SetBufferSize(m_QueueSize);
     m_pRenderer->Update();
 
+    m_playerPort->UpdateRenderInfo(info);
+
     m_queued.clear();
     m_discard.clear();
     m_free.clear();
@@ -352,6 +354,9 @@ void CRenderManager::FrameWait(int ms)
 
 bool CRenderManager::HasFrame()
 {
+  if (!IsConfigured())
+    return false;
+
   CSingleLock lock(m_presentlock);
   if (m_presentstep == PRESENT_READY ||
       m_presentstep == PRESENT_FRAME || m_presentstep == PRESENT_FRAME2)
@@ -362,6 +367,8 @@ bool CRenderManager::HasFrame()
 
 void CRenderManager::FrameMove()
 {
+  UpdateResolution();
+
   {
     CSingleLock lock(m_statelock);
 
@@ -407,7 +414,7 @@ void CRenderManager::FrameMove()
     for (std::deque<int>::iterator it = m_discard.begin(); it != m_discard.end(); )
     {
       // renderer may want to keep the frame for postprocessing
-      if (!m_pRenderer->NeedBufferForRef(*it) || !m_bRenderGUI)
+      if (!m_pRenderer->NeedBuffer(*it) || !m_bRenderGUI)
       {
         m_pRenderer->ReleaseBuffer(*it);
         m_overlays.Release(*it);
@@ -421,7 +428,6 @@ void CRenderManager::FrameMove()
     m_bRenderGUI = true;
   }
 
-  UpdateResolution();
   ManageCaptures();
 }
 
@@ -744,9 +750,8 @@ void CRenderManager::ManageCaptures()
         //if rendering this capture continuously, and readout is async, render a new capture immediately
         if (capture->IsAsync() && !(capture->GetFlags() & CAPTUREFLAG_IMMEDIATELY))
           RenderCapture(capture);
-
-        ++it;
       }
+      ++it;
     }
     else
     {
@@ -793,7 +798,7 @@ void CRenderManager::SetViewMode(int iViewMode)
   m_playerPort->VideoParamsChange();
 }
 
-void CRenderManager::FlipPage(volatile std::atomic_bool& bStop, double pts /* = 0 */, int source /*= -1*/, EFIELDSYNC sync /*= FS_NONE*/)
+void CRenderManager::FlipPage(volatile std::atomic_bool& bStop, double pts, EINTERLACEMETHOD deintMethod, EFIELDSYNC sync)
 {
   { CSingleLock lock(m_statelock);
 
@@ -806,7 +811,7 @@ void CRenderManager::FlipPage(volatile std::atomic_bool& bStop, double pts /* = 
 
   EPRESENTMETHOD presentmethod;
 
-  EINTERLACEMETHOD interlacemethod = AutoInterlaceMethodInternal(CMediaSettings::GetInstance().GetCurrentVideoSettings().m_InterlaceMethod);
+  EINTERLACEMETHOD interlacemethod = deintMethod;
 
   if (interlacemethod == VS_INTERLACEMETHOD_NONE)
   {
@@ -819,41 +824,18 @@ void CRenderManager::FlipPage(volatile std::atomic_bool& bStop, double pts /* = 
       presentmethod = PRESENT_METHOD_SINGLE;
     else
     {
-      bool invert = false;
       if (interlacemethod == VS_INTERLACEMETHOD_RENDER_BLEND)
         presentmethod = PRESENT_METHOD_BLEND;
       else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_WEAVE)
         presentmethod = PRESENT_METHOD_WEAVE;
-      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_WEAVE_INVERTED)
-      {
-        presentmethod = PRESENT_METHOD_WEAVE;
-        invert = true;
-      }
       else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_BOB)
         presentmethod = PRESENT_METHOD_BOB;
-      else if (interlacemethod == VS_INTERLACEMETHOD_RENDER_BOB_INVERTED)
-      {
-        presentmethod = PRESENT_METHOD_BOB;
-        invert = true;
-      }
       else
       {
         if (!m_pRenderer->WantsDoublePass())
           presentmethod = PRESENT_METHOD_SINGLE;
         else
           presentmethod = PRESENT_METHOD_BOB;
-      }
-
-      if (presentmethod != PRESENT_METHOD_SINGLE)
-      {
-        /* invert present field */
-        if (invert)
-        {
-          if (sync == FS_BOT)
-            sync = FS_TOP;
-          else
-            sync = FS_BOT;
-        }
       }
     }
   }
@@ -863,8 +845,7 @@ void CRenderManager::FlipPage(volatile std::atomic_bool& bStop, double pts /* = 
   if(m_free.empty())
     return;
 
-  if(source < 0)
-    source = m_free.front();
+  int source = m_free.front();
 
   SPresent& m = m_Queue[source];
   m.presentfield  = sync;
@@ -990,7 +971,8 @@ bool CRenderManager::IsGuiLayer()
     if (!m_pRenderer)
       return false;
 
-    if (m_pRenderer->IsGuiLayer() || m_renderedOverlay || m_overlays.HasOverlay(m_presentsource))
+    if ((m_pRenderer->IsGuiLayer() && HasFrame()) ||
+        m_renderedOverlay || m_overlays.HasOverlay(m_presentsource))
       return true;
 
     if (m_renderDebug && m_debugTimer.IsTimePast())
@@ -1201,18 +1183,6 @@ bool CRenderManager::Supports(ERENDERFEATURE feature)
     return false;
 }
 
-bool CRenderManager::Supports(EINTERLACEMETHOD method)
-{
-  if (method == VS_INTERLACEMETHOD_NONE)
-    return true;
-  
-  CSingleLock lock(m_statelock);
-  if (m_pRenderer)
-    return m_pRenderer->Supports(method);
-  else
-    return false;
-}
-
 bool CRenderManager::Supports(ESCALINGMETHOD method)
 {
   CSingleLock lock(m_statelock);
@@ -1220,26 +1190,6 @@ bool CRenderManager::Supports(ESCALINGMETHOD method)
     return m_pRenderer->Supports(method);
   else
     return false;
-}
-
-EINTERLACEMETHOD CRenderManager::AutoInterlaceMethod(EINTERLACEMETHOD mInt)
-{
-  CSingleLock lock(m_statelock);
-  return AutoInterlaceMethodInternal(mInt);
-}
-
-EINTERLACEMETHOD CRenderManager::AutoInterlaceMethodInternal(EINTERLACEMETHOD mInt)
-{
-  if (mInt == VS_INTERLACEMETHOD_NONE)
-    return VS_INTERLACEMETHOD_NONE;
-
-  if(m_pRenderer && !m_pRenderer->Supports(mInt))
-    mInt = VS_INTERLACEMETHOD_AUTO;
-
-  if (m_pRenderer && mInt == VS_INTERLACEMETHOD_AUTO)
-    return m_pRenderer->AutoInterlaceMethod();
-
-  return mInt;
 }
 
 int CRenderManager::WaitForBuffer(volatile std::atomic_bool&bStop, int timeout)
@@ -1368,7 +1318,7 @@ void CRenderManager::PrepareNextRender()
       m_QueueSkip++;
     }
 
-    int lateframes = (renderPts - m_Queue[idx].pts) / frametime;
+    int lateframes = (renderPts - m_Queue[idx].pts) * m_fps / DVD_TIME_BASE;
     if (lateframes)
       m_lateframes += lateframes;
     else
