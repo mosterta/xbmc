@@ -1745,9 +1745,6 @@ bool CLinuxRendererGLES::Supports(ESCALINGMETHOD method)
   return false;
 }
 
-
-  if(m_renderMethod & RENDER_VDPAU)
-    return VS_INTERLACEMETHOD_NONE;
 CRenderInfo CLinuxRendererGLES::GetRenderInfo()
 {
   CRenderInfo info;

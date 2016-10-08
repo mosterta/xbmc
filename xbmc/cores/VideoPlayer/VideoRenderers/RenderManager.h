@@ -127,10 +127,6 @@ public:
   void FlipPage(volatile std::atomic_bool& bStop, double pts, EINTERLACEMETHOD deintMethod, EFIELDSYNC sync);
 
   void AddOverlay(CDVDOverlay* o, double pts);
-#if defined( ALLWINNERA10 ) && not defined (HAVE_LIBVDPAU)
-  CLinuxRendererA10   *m_pRenderer;
-#else
-#endif
 
   // Get renderer info, can be called before configure
   CRenderInfo GetRenderInfo();
@@ -269,4 +265,9 @@ protected:
   //set to true when adding something to m_captures, set to false when m_captures is made empty
   //std::list::empty() isn't thread safe, using an extra bool will save a lock per render when no captures are requested
   bool m_hasCaptures;
+
+#if defined( ALLWINNERA10 ) && not defined (HAVE_LIBVDPAU)
+  CLinuxRendererA10   *m_pRenderer;
+#endif
+
 };

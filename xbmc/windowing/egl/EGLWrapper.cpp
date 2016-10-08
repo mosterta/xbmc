@@ -102,8 +102,9 @@ bool CEGLWrapper::Initialize(const std::string &implementation)
 #elif defined(HAS_IMXVPU)
       (nativeGuess = CreateEGLNativeType<CEGLNativeTypeIMX>(implementation))
 #elif defined(TARGET_LINUX) && defined(HAS_LIBAMCODEC)
-      (nativeGuess = CreateEGLNativeType<CEGLNativeTypeA10>(implementation)) ||
       (nativeGuess = CreateEGLNativeType<CEGLNativeTypeAmlogic>(implementation))
+#elif defined(TARGET_LINUX) && defined(ALLWINNERA10)
+      (nativeGuess = CreateEGLNativeType<CEGLNativeTypeA10>(implementation))
 #endif
      )
   {
