@@ -2241,6 +2241,7 @@ OUTPUT_FILES="Makefile \
     xbmc/filesystem/Makefile \
     xbmc/windowing/Makefile \
     xbmc/windowing/egl/Makefile \
+    xbmc/windowing/hwlayer/Makefile \
     lib/addons/library.xbmc.addon/Makefile \
     lib/addons/library.kodi.adsp/Makefile \
     lib/addons/library.kodi.audioengine/Makefile \
