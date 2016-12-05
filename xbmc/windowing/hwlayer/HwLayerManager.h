@@ -30,20 +30,30 @@ class CHwLayerManager
 {
   public:
    typedef typename CHwLayer::HwLayerType HwLayerType;
-   
+   //typedef typename CHwLayer::RENDERBUFFER RENDERBUFFER;
+   typedef typename CHwLayer::CPropertyValue CPropertyValue;
+   typedef typename CHwLayer::CPropertyValue::Property PropertyKey;
+   typedef typename CHwLayer::CColorKey CColorKey;
+
    CHwLayerManager() {};
    virtual ~CHwLayerManager() {};
-   virtual bool initialize(CHwLayerManagerConfig &config) {};
-   virtual bool createLayer(HwLayerType type) {};
-   virtual bool showLayer(HwLayerType type) {};
-   virtual bool hideLayer(HwLayerType type) {};
-   virtual bool destroyLayer(HwLayerType type) {};
-   virtual bool sendTop(HwLayerType type) {};
-   virtual bool sendBack(HwLayerType type) {};
-   virtual bool configure(HwLayerType type, CRect srcRect, CRect dstRect) {};
+   virtual bool initialize(CHwLayerManagerConfig &config) { return false; };
+   virtual bool createLayer(HwLayerType type) { return false; };
+   virtual bool showLayer(HwLayerType type) { return false; };
+   virtual bool hideLayer(HwLayerType type) { return false; };
+   virtual bool destroyLayer(HwLayerType type) { return false; };
+   virtual bool sendTop(HwLayerType type) { return false; };
+   virtual bool sendBack(HwLayerType type) { return false; };
+   virtual bool configure(HwLayerType type, CRect srcRect, CRect dstRect) { return false; };
+#if 0
+   virtual bool displayFrame(HwLayerType type, CVideoDataProvider &frame, RENDERBUFFER *buffer, int top_field);
+   virtual bool syncFrame(HwLayerType type, RENDERBUFFER *pic);
 
+   virtual bool setProperty(HwLayerType type, CPropertyValue &prop);
+   virtual bool setProperty(HwLayerType type, CColorKey &prop);
+#endif
+   
   protected:
-   CHwLayer* getLayer(HwLayerType type) {};
    CHwLayerManagerConfig m_config;
    typedef std::map<HwLayerType, CHwLayer*> LayerStore;
    LayerStore m_layers;

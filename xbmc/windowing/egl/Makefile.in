@@ -14,6 +14,7 @@ SRCS+= EGLNativeTypeIMX.cpp
 endif
 SRCS+= EGLWrapper.cpp
 SRCS+= EGLNativeTypeA10.cpp
+SRCS+= EGLNativeTypeDisp2.cpp
 
 LIB = windowing_egl.a
 

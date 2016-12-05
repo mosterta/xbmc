@@ -21,14 +21,16 @@
 #pragma once
 
 #include "HwLayer.h"
-#include "HwLayerAdaptorVdpau.h"
-#include "HwLayerAllwinnerA10.h"
 #include "HwLayerCommonAllwinner.h"
+#include "HwLayerAdaptorVdpau.h"
 #include "xbmc/guilib/Geometry.h"
 #include "DVDCodecs/Video/VDPAU.h"
 #include "HwLayerAllwinnerDefs.h"
 
-class CHwLayerAllwinnerA10 : public CHwLayerAllwinnerBase
+typedef unsigned int  u32;
+#include "sunxi_display2.h"
+
+class CHwLayerAllwinnerDisp2 : public CHwLayerAllwinnerBase
 {
   public:
     typedef typename CHwLayerAllwinnerBase::HwLayerType HwLayerType;
@@ -38,8 +40,8 @@ class CHwLayerAllwinnerA10 : public CHwLayerAllwinnerBase
     typedef typename CHwLayerAllwinnerBase::CPropertyValue::ColorSpaceValues ColorSpace;
     typedef typename CHwLayerAllwinnerBase::CPropertyValue::InterlaceValues Interlace;
 
-   CHwLayerAllwinnerA10(CHwLayerConfigAllwinner &config);
-   virtual ~CHwLayerAllwinnerA10();
+   CHwLayerAllwinnerDisp2(CHwLayerConfigAllwinner &config);
+   virtual ~CHwLayerAllwinnerDisp2();
    virtual bool initialize(CHwLayerConfigAllwinner &config);
    virtual bool create(HwLayerType type);
    virtual bool destroy();
@@ -48,10 +50,10 @@ class CHwLayerAllwinnerA10 : public CHwLayerAllwinnerBase
    virtual bool show();
    virtual bool top();
    virtual bool back();
-   virtual bool displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field);
-   virtual bool getCurrentFrameId(int &frameId);
-   virtual bool syncFrame(VDPAU::CVdpauRenderPicture *pic);
-   virtual bool setProperty(CHwLayerAllwinnerBase::CPropertyValue &prop);
+   virtual bool displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, CHwLayer::RENDERPICTURE *buffer, int top_field);
+   virtual bool syncFrame(CHwLayer::RENDERPICTURE *pic);
+
+   virtual bool setProperty(CPropertyValue &prop);
 
   protected:
    bool setAlphaEnable(int alphaEnable);
@@ -61,7 +63,9 @@ class CHwLayerAllwinnerA10 : public CHwLayerAllwinnerBase
    
    CHwLayerConfigAllwinner m_config;
    HwLayerType m_layerType;
+   disp_layer_config m_layerConfig;
    int m_layerId;
+   int m_channelId;
    bool m_layerCreated;
    bool m_layerOpened;
    bool m_layerVideoStarted;
@@ -71,6 +75,7 @@ class CHwLayerAllwinnerA10 : public CHwLayerAllwinnerBase
    CPropertyValue m_scalerType;
    CPropertyValue m_colorSpace;
    CPropertyValue m_interlaceMode;
-   int m_frameId;
+   
+   void *m_fenceBuffer;
 };
 

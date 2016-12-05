@@ -67,7 +67,8 @@ class CHwLayer
                           unsigned char green_match_rule;
                           unsigned char blue_match_rule;
     };
-
+    typedef typename CVideoDataProvider::RENDERPICTURE RENDERPICTURE;
+    
    CHwLayer(CHwLayerConfig &config) {};
    virtual ~CHwLayer() {};
    virtual bool initialize(CHwLayerConfig &config) = 0;
@@ -78,6 +79,9 @@ class CHwLayer
    virtual bool show() = 0;
    virtual bool top() = 0;
    virtual bool back() = 0;
-   virtual bool displayFrame(CVideoDataProvider &frame, int frameId, int top_field) = 0;
+   virtual bool displayFrame(CVideoDataProvider &frame, RENDERPICTURE *buffer, int top_field) = 0;
+   virtual bool syncFrame(RENDERPICTURE *pic) = 0;
+   virtual bool setProperty(CPropertyValue &prop) = 0;
+
 };
 

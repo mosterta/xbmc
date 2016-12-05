@@ -19,6 +19,8 @@
  */
 
 #include "HwLayerManagerAllwinner.h"
+#include "HwLayerManagerAllwinnerDisp.h"
+#include "HwLayerManagerAllwinnerDisp2.h"
 
 #include "utils/log.h"
 #include "utils/CPUInfo.h"
@@ -33,372 +35,108 @@
 
 using namespace std;
 
-template<typename CHwLayer,typename CVideoDataProvider>
-CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::~CHwLayerManagerAllwinner()
+CHwLayerManagerAllwinner::~CHwLayerManagerAllwinner()
 {
-  for (auto& layerPair  : Base::m_layers)
-  {
-    if(layerPair.second != NULL)
-      delete layerPair.second;
-  };
-  Base::m_layers.clear();
-  
-  if(m_fbFd < 0)
-  {
-    close(m_fbFd);
-    m_fbFd = -1;
-  }
-  if(m_dispFd < 0)
-  {
-    close(m_dispFd);
-    m_dispFd = -1;
-  }
+   if(m_manager)
+     delete m_manager;
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::initialize(CHwLayerManagerConfigAllwinner & config)
+bool CHwLayerManagerAllwinner::initialize(CHwLayerManagerConfigAllwinner & config)
 {
-  Base:m_config = config;
-  string fbName = "/dev/fb" + std::to_string(Base::m_config.m_fbNum);
-  m_fbFd = open(fbName.c_str(), O_RDWR);
-  if(m_fbFd < 0)
-  {
-    CLog::Log(LOGERROR, "CHwLayerManagerAllwinner::%s Could not open %s, error=%s", 
-              fbName.c_str(), strerror(errno));
-    return false;
-  }
-  
-  string dispName = "/dev/disp";
-  m_dispFd = open(dispName.c_str(), O_RDWR);
-  if(m_dispFd < 0)
-  {
-    CLog::Log(LOGERROR, "CHwLayerManagerAllwinner::%s Could not open %s, error=%s", 
-              dispName.c_str(), strerror(errno));
-    return false;
-  }
-#if 0  
-  int ver = SUNXI_DISP_VERSION;
-  if (ioctl(m_dispFd, DISP_CMD_VERSION, &ver) < 0)
-  {
-    CLog::Log(LOGERROR, "CHwLayerManagerAllwinner: version failed. (%d)", errno);
-    return false;
-  }
-#endif
-  CHwLayerConfigAllwinner commonConfig;
-  commonConfig.m_screenId = m_config.m_screenId;
-  commonConfig.m_dispFd = m_dispFd;
-  commonConfig.m_fbFd = m_fbFd;
-
-  m_commonFunc = new CHwLayerCommonAllwinner(commonConfig);
-  if(! m_commonFunc )
-  {
-    CLog::Log(LOGERROR, "CHwLayerManagerAllwinner::%s Could not create common layer");
-    return false;
-  }
-};
-
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::setup()
-{
-  createLayer(HwLayerType::GUI);
-  
-  //Allwinner A10 needs to use 2 scaler layer, display backend does not work properly
-  if (std::string("sun4i") == g_cpuInfo.getCPUHardware())
-  {
-    CPropertyValue prop(PropertyKey::ScalerType, (int)ScalerType::Type_Scale);
-    setProperty(HwLayerType::GUI, prop);
-  }
+  std::string hardware = g_cpuInfo.getCPUHardware();
+  if(hardware == std::string("sun4i") || hardware == std::string("sun7i"))
+    m_manager = new CHwLayerManagerAllwinnerDispType;
   else
-  {
-    CPropertyValue prop(PropertyKey::ScalerType, (int)ScalerType::Type_Normal);
-    setProperty(HwLayerType::GUI, prop);
-  }
+    m_manager = new CHwLayerManagerAllwinnerDisp2Type;
 
-  m_commonFunc->destroyOrphanedLayers();
-
-  //Blue/Green screen fix
-  createLayer(HwLayerType::Video);
-  CPropertyValue prop(PropertyKey::ScalerType, (int)ScalerType::Type_Scale);
-  setProperty(HwLayerType::Video, prop);
-  destroyLayer(HwLayerType::Video);
-
-  createLayer(HwLayerType::Video);
-
-  CColorKey ck;
-  ck.min_red = 0x1;
-  ck.min_green = 0x1;
-  ck.min_blue = 0x1;
-  ck.min_alpha = 0x0;
-  ck.max_red = 0xff;
-  ck.max_green = 0xff;
-  ck.max_blue = 0xff;
-  ck.max_alpha = 0xff;
-  // 3 means alpha blending for color < min && > max
-  ck.red_match_rule = 3;
-  ck.green_match_rule = 3;
-  ck.blue_match_rule = 3;
-  m_commonFunc->setProperty(ck);
-
-  //bring Video layer behind GUI layer
-  sendTop(HwLayerType::Video);
-  sendTop(HwLayerType::GUI);
-
-  //if not a A10, but A20 and hopefully later hardware as well,
-  //alpha blending is switched off, since HW does alpha blending automatically
-  if(std::string("sun4i") != g_cpuInfo.getCPUHardware())
-  {
-    CPropertyValue prop(PropertyKey::AlphaEnable, 0);
-    setProperty(HwLayerType::GUI, prop);
-  }
-  else
-  { 
-    CPropertyValue prop(PropertyKey::AlphaEnable, 1);
-    setProperty(HwLayerType::GUI, prop);
-  }
-  //Enable alpha blending and value inside colorkey
-  {
-    CPropertyValue prop(PropertyKey::AlphaValue, 0xA8);
-    setProperty(HwLayerType::GUI, prop);
-  }
-  {
-    CPropertyValue prop(PropertyKey::AlphaValue, 0xff);
-    setProperty(HwLayerType::Video, prop);
-  }
-  {
-    CPropertyValue prop(PropertyKey::AlphaEnable, 1);
-    setProperty(HwLayerType::Video, prop);
-  }
-  {
-    CPropertyValue prop(PropertyKey::ColorKeyEnable, 1);
-    setProperty(HwLayerType::Video, prop);
-  }
-};
-
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::createLayer(HwLayerType type)
-{
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer;
-    CHwLayerConfigAllwinner config;
-    config.m_screenId = m_config.m_screenId;
-    config.m_dispFd = m_dispFd;
-    config.m_fbFd = m_fbFd;
-    
-    std::string hardware = g_cpuInfo.getCPUHardware();
-    if(hardware == std::string("sun4i") || hardware == std::string("sun7i"))
-      layer = new CHwLayerAllwinnerA10(config);
-    else
-      return false;
-    
-    Base::m_layers.insert(std::pair<HwLayerType, CHwLayer*>(type, layer));
-    return layer->create(type);
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+
+  bool init = m_manager->initialize(config);
+  return init;
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::showLayer(HwLayerType type)
+bool CHwLayerManagerAllwinner::setup()
 {
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-      return layer->show();
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+  return m_manager->setup();
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::hideLayer(HwLayerType type)
+bool CHwLayerManagerAllwinner::createLayer(HwLayerType type)
 {
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-      return layer->hide();
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+  return m_manager->createLayer(type);
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::destroyLayer(HwLayerType type)
+bool CHwLayerManagerAllwinner::showLayer(HwLayerType type)
 {
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-    {
-      bool status = layer->destroy();
-      delete layer;
-      Base::m_layers.erase(type);
-      return status;
-    }
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+  return m_manager->showLayer(type);
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::sendTop(HwLayerType type)
+bool CHwLayerManagerAllwinner::hideLayer(HwLayerType type)
 {
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-      return layer->top();
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+  return m_manager->hideLayer(type);
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::sendBack(HwLayerType type)
+bool CHwLayerManagerAllwinner::destroyLayer(HwLayerType type)
 {
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-      return layer->back();
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+  return m_manager->destroyLayer(type);
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-CHwLayer* CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::getLayer(HwLayerType type)
+bool CHwLayerManagerAllwinner::sendTop(HwLayerType type)
 {
-  CHwLayer* handle = NULL;
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    handle = Base::m_layers[type];
-  }
-  return handle;
-};
-
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::configure(HwLayerType type, CVideoDataProvider& frame, CRect &srcRect, CRect &dstRect)
-{
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-      return layer->configure(frame, srcRect, dstRect);
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+  return m_manager->sendTop(type);
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::displayFrame(HwLayerType type, CVideoDataProvider &frame, int frameId, int top_field)
+bool CHwLayerManagerAllwinner::sendBack(HwLayerType type)
 {
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-      return layer->displayFrame(frame, frameId, top_field);
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+  return m_manager->sendBack(type);
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::getCurrentFrameId(HwLayerType type, int &frameId)
+bool CHwLayerManagerAllwinner::configure(HwLayerType type, CHwLayerAdaptorVdpauAllwinner& frame, CRect &srcRect, CRect &dstRect)
 {
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-      return layer->getCurrentFrameId(frameId);
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+  return m_manager->configure(type, frame, srcRect, dstRect);
+};
+
+bool CHwLayerManagerAllwinner::displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field)
+{
+  if(!m_manager)
+    return false;
+  return m_manager->displayFrame(type, frame, buffer, top_field);
+};
+
+bool CHwLayerManagerAllwinner::syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+{
+  if(!m_manager)
+    return false;
+  return m_manager->syncFrame(type, pic);
 }
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerManagerAllwinner::setProperty(HwLayerType type, CPropertyValue &prop)
 {
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-      return layer->syncFrame(pic);
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
-}
-
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::setProperty(HwLayerType type, CPropertyValue &prop)
-{
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    CHwLayer *layer = Base::m_layers[type];
-    if(layer)
-      return layer->setProperty(prop);
-    else
-      return false;
-  }
-  else
-  {
-    return false;
-  }
+  return m_manager->setProperty(type, prop);
 };
 
-template<class CHwLayer,typename CVideoDataProvider>
-bool CHwLayerManagerAllwinner<CHwLayer,CVideoDataProvider>::setProperty(HwLayerType type, CColorKey &prop)
+bool CHwLayerManagerAllwinner::setProperty(HwLayerType type, CColorKey &prop)
 {
-  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
-  {
-    if(m_commonFunc)
-      return m_commonFunc->setProperty(prop);
-    else
-      return false;
-  }
-  else
-  {
+  if(!m_manager)
     return false;
-  }
+  return m_manager->setProperty(type, prop);
 };
 

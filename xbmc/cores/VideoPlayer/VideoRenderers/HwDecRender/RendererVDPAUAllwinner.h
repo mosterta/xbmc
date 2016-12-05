@@ -69,7 +69,6 @@ private:
   
   void *m_dlHandle;
   bool m_needReconfigure;
-  int m_frameId;
   CRect m_oldSrc;
   CRect m_oldDst;
   CHwLayerAdaptorVdpauAllwinner m_vdpauAdaptor;

@@ -38,7 +38,8 @@ CHwLayerAllwinnerA10::CHwLayerAllwinnerA10(CHwLayerConfigAllwinner &config) :
              m_colorKeyEnable(PropertyKey::ColorKeyEnable, 0), 
              m_scalerType(PropertyKey::ScalerType, (int)ScalerType::Type_Normal),
              m_colorSpace(PropertyKey::ColorSpace, (int)ColorSpace::BT709),
-             m_interlaceMode(PropertyKey::InterlaceMode, (int)Interlace::IlaceOff)
+             m_interlaceMode(PropertyKey::InterlaceMode, (int)Interlace::IlaceOff), 
+             m_frameId(0)
 {
 }
 
@@ -350,7 +351,7 @@ bool CHwLayerAllwinnerA10::back()
   return true;
 };
 
-bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int frameId, int top_field)
+bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field)
 {
   bool status = true;
   int ret;
@@ -364,7 +365,7 @@ bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, in
   __disp_video_fb_t fb_info;
   memset(&fb_info, 0, sizeof(fb_info));
 	
-  fb_info.id = frameId;
+  fb_info.id = buffer->frameId = m_frameId++;
   fb_info.addr[0] = (__u32)config.addrY;
   fb_info.addr[1] = (__u32)config.addrU;
   fb_info.addr[2] = (__u32)config.addrV;

@@ -56,6 +56,16 @@ public:
 
   virtual bool  ShowWindow(bool show);
 
+protected:
+  virtual int GetWidth();
+  virtual int GetHeight();
+  virtual int GetRefreshRate();
+  int     m_hfb;
+  int     m_hdisp;
+  int     m_screenid;
+  int     m_width;
+  int     m_height;
+
 private:
   bool VLInit(int &width, int &height, double &refreshRate);
   void VLExit();

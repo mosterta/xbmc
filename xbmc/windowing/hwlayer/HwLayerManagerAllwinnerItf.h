@@ -18,19 +18,18 @@
  *
  */
 
+#pragma once
+
 #include <string>
 
 #include "HwLayerManager.h"
 #include "HwLayer.h"
-#include "HwLayerManagerAllwinnerItf.h"
 #include "HwLayerAllwinnerDefs.h"
 #include "HwLayerAdaptorVdpau.h"
-#include "utils/GlobalsHandling.h"
-#include "guilib/Geometry.h"
 
 #include "DVDCodecs/Video/VDPAU.h"
 
-class CHwLayerManagerAllwinner
+class CHwLayerManagerAllwinnerItf : public CHwLayerManager<CHwLayerAllwinnerBase, CHwLayerManagerConfigAllwinner>
 {
   public:
    typedef typename CHwLayerAllwinnerBase::HwLayerType HwLayerType;
@@ -43,27 +42,21 @@ class CHwLayerManagerAllwinner
 
    typedef CHwLayerManager<CHwLayerAllwinnerBase, CHwLayerManagerConfigAllwinner> Base;
    
-   CHwLayerManagerAllwinner() : m_manager(NULL) {};
-   virtual ~CHwLayerManagerAllwinner();
-   virtual bool initialize(CHwLayerManagerConfigAllwinner & config);
-   virtual bool setup();
-   virtual bool createLayer(HwLayerType type);
-   virtual bool showLayer(HwLayerType type);
-   virtual bool hideLayer(HwLayerType type);
-   virtual bool destroyLayer(HwLayerType type);
-   virtual bool sendTop(HwLayerType type);
-   virtual bool sendBack(HwLayerType type);
-   virtual bool configure(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, CRect &srcRect, CRect &dstRect);
-   virtual bool displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field);
-   virtual bool syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic);
+   CHwLayerManagerAllwinnerItf() : CHwLayerManager() {};
+   virtual ~CHwLayerManagerAllwinnerItf() {};
+   virtual bool initialize(CHwLayerManagerConfigAllwinner & config) = 0;
+   virtual bool setup() = 0;
+   virtual bool createLayer(HwLayerType type) = 0;
+   virtual bool showLayer(HwLayerType type) = 0;
+   virtual bool hideLayer(HwLayerType type) = 0;
+   virtual bool destroyLayer(HwLayerType type) = 0;
+   virtual bool sendTop(HwLayerType type) = 0;
+   virtual bool sendBack(HwLayerType type) = 0;
+   virtual bool configure(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, CRect &srcRect, CRect &dstRect) = 0;
+   virtual bool displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field) = 0;
+   virtual bool syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic) = 0;
 
-   virtual bool setProperty(HwLayerType type, CPropertyValue &prop);
-   virtual bool setProperty(HwLayerType type, CColorKey &prop);
+   virtual bool setProperty(HwLayerType type, CPropertyValue &prop) = 0;
+   virtual bool setProperty(HwLayerType type, CColorKey &prop) = 0;
    
-  protected:
-   CHwLayerManagerAllwinnerItf *m_manager;
 };
-
-typedef CHwLayerManagerAllwinner CHwLayerManagerAW;
-XBMC_GLOBAL_REF(CHwLayerManagerAW,g_HwLayer);
-#define g_HwLayer XBMC_GLOBAL_USE(CHwLayerManagerAW)

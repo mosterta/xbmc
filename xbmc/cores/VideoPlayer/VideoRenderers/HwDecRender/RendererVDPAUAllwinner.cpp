@@ -35,7 +35,7 @@
 #define CS_MODE_BT601 0
 
 CRendererVDPAUAllwinner::CRendererVDPAUAllwinner():
-    m_dlHandle(NULL), m_needReconfigure(false), m_frameId(0), m_lastRenderTime(0)
+    m_dlHandle(NULL), m_needReconfigure(false), m_lastRenderTime(0)
 {
   bool status;
   CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
@@ -243,9 +243,7 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
       m_oldSrc = m_sourceRect;
       m_oldDst = m_destRect;
     }
-    buffer->frameId = m_frameId++;
-    
-    g_HwLayer.displayFrame(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, buffer->frameId,
+    g_HwLayer.displayFrame(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, buffer,
                           top_field);
 
     // This code reduces rendering fps of the video layer when playing videos in fullscreen mode

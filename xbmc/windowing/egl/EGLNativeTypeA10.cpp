@@ -43,29 +43,12 @@ static struct mali_native_window g_fbwin;
 static double       g_refreshRate;
 #endif
 
-static int             g_hfb = -1;
-static int             g_hdisp = -1;
-static int             m_screenid = 0;
-//static int             g_syslayer = 0x64;
-static int             g_width;
-static int             g_height;
-
-CEGLNativeTypeA10::CEGLNativeTypeA10()
+CEGLNativeTypeA10::CEGLNativeTypeA10() : m_hfb(-1), m_hdisp(-1), m_screenid(0)
 {
-#if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
-  int width, height;
-
-  VLInit(width, height, g_refreshRate);
-  g_fbwin.width  = width;
-  g_fbwin.height = height;
-#endif
 }
 
 CEGLNativeTypeA10::~CEGLNativeTypeA10()
 {
-#if defined(ALLWINNERA10) && !defined(TARGET_ANDROID) 
-  VLExit();
-#endif
 } 
 
 bool CEGLNativeTypeA10::CheckCompatibility()
@@ -78,10 +61,20 @@ bool CEGLNativeTypeA10::CheckCompatibility()
 
 void CEGLNativeTypeA10::Initialize()
 {
+#if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
+  int width, height;
+
+  VLInit(width, height, g_refreshRate);
+  g_fbwin.width  = width;
+  g_fbwin.height = height;
+#endif
   return;
 }
 void CEGLNativeTypeA10::Destroy()
 {
+#if defined(ALLWINNERA10) && !defined(TARGET_ANDROID) 
+  VLExit();
+#endif
   return;
 }
 
@@ -178,21 +171,74 @@ bool CEGLNativeTypeA10::ShowWindow(bool show)
   return false;
 }
 
-bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
+int CEGLNativeTypeA10::GetWidth()
 {
   unsigned long       args[4];
-  __disp_layer_info_t layera;
+  args[0] = m_screenid;
+  args[1] = 0;
+  args[2] = 0;
+  args[3] = 0;
+  return ioctl(m_hdisp, DISP_CMD_SCN_GET_WIDTH , args);
+}
+
+int CEGLNativeTypeA10::GetHeight()
+{
+  unsigned long       args[4];
+  args[0] = m_screenid;
+  args[1] = 0;
+  args[2] = 0;
+  args[3] = 0;
+
+  return ioctl(m_hdisp, DISP_CMD_SCN_GET_HEIGHT, args);
+}
+
+int CEGLNativeTypeA10::GetRefreshRate()
+{
+  unsigned long       args[4];
   unsigned int        i;
+  int _refreshRate;
+
+  args[0] = m_screenid;
+  args[1] = 0;
+  args[2] = 0;
+  args[3] = 0;
+  i = ioctl(m_hdisp, DISP_CMD_HDMI_GET_MODE, args);
+  switch(i)
+  {
+    case DISP_TV_MOD_720P_50HZ:
+    case DISP_TV_MOD_1080I_50HZ:
+    case DISP_TV_MOD_1080P_50HZ:
+      _refreshRate = 50.0;
+      break;
+    case DISP_TV_MOD_720P_60HZ:
+    case DISP_TV_MOD_1080I_60HZ:
+    case DISP_TV_MOD_1080P_60HZ:
+      _refreshRate = 60.0;
+      break;
+    case DISP_TV_MOD_1080P_24HZ:
+      _refreshRate = 24.0;
+      break;
+    default:
+      CLog::Log(LOGERROR, "A10: display mode %d is unknown. Assume refreh rate 60Hz\n", i);
+      _refreshRate = 60.0;
+      break;
+  }
+  return _refreshRate;
+}
+
+bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
+{
+  __disp_layer_info_t layera;
   int status;
 
-  g_hfb = open("/dev/fb0", O_RDWR);
+  m_hfb = open("/dev/fb0", O_RDWR);
 
-  g_hdisp = open("/dev/disp", O_RDWR);
-  if (g_hdisp == -1)
+  m_hdisp = open("/dev/disp", O_RDWR);
+  if (m_hdisp == -1)
   {
     CLog::Log(LOGERROR, "A10: open /dev/disp failed. (%d)", errno);
     return false;
-  }
+  } 
 
 #if 0
   int ver = SUNXI_DISP_VERSION;
@@ -203,51 +249,23 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   }
 #endif
 
-  args[0] = m_screenid;
-  args[1] = 0;
-  args[2] = 0;
-  args[3] = 0;
-  width  = g_width  = ioctl(g_hdisp, DISP_CMD_SCN_GET_WIDTH , args);
-  height = g_height = ioctl(g_hdisp, DISP_CMD_SCN_GET_HEIGHT, args);
-
-  i = ioctl(g_hdisp, DISP_CMD_HDMI_GET_MODE, args);
-
-  switch(i)
-  {
-  case DISP_TV_MOD_720P_50HZ:
-  case DISP_TV_MOD_1080I_50HZ:
-  case DISP_TV_MOD_1080P_50HZ:
-    refreshRate = 50.0;
-    break;
-  case DISP_TV_MOD_720P_60HZ:
-  case DISP_TV_MOD_1080I_60HZ:
-  case DISP_TV_MOD_1080P_60HZ:
-    refreshRate = 60.0;
-    break;
-  case DISP_TV_MOD_1080P_24HZ:
-    refreshRate = 24.0;
-    break;
-  default:
-    CLog::Log(LOGERROR, "A10: display mode %d is unknown. Assume refreh rate 60Hz\n", i);
-    refreshRate = 60.0;
-    break;
-  }
+  width = m_width  = GetWidth();
+  height = m_height = GetHeight();
+  refreshRate = GetRefreshRate();
 
   return true;
 }
 
 void CEGLNativeTypeA10::VLExit()
 {
-  unsigned long args[4];
-
-  if (g_hdisp != -1)
+  if (m_hdisp != -1)
   {
-    close(g_hdisp);
-    g_hdisp = -1;
+    close(m_hdisp);
+    m_hdisp = -1;
   }
-  if (g_hfb != -1)
+  if (m_hfb != -1)
   {
-    close(g_hfb);
-    g_hfb = -1;
+    close(m_hfb);
+    m_hfb = -1;
   }
 }

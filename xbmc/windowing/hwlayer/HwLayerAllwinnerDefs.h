@@ -19,9 +19,21 @@
  */
 
 #pragma once
+#include "HwLayer.h"
+#include "HwLayerAdaptorVdpau.h"
 
 struct CHwLayerManagerConfigAllwinner
 {
   int    m_screenId;
   int    m_fbNum;
 };
+
+class CHwLayerConfigAllwinner
+{
+  public:
+    int m_screenId;
+    int m_dispFd;
+    int m_fbFd;
+};
+
+typedef CHwLayer<CHwLayerAdaptorVdpauAllwinner, CHwLayerConfigAllwinner> CHwLayerAllwinnerBase;

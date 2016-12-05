@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "HwLayerAllwinnerA10.h"
 #include "HwLayer.h"
 #include "HwLayerAdaptorVdpau.h"
 #include "HwLayerAllwinnerDefs.h"

@@ -21,6 +21,7 @@
 #pragma once
 
 #include <vdpau/vdpau.h>
+#include "DVDCodecs/Video/VDPAU.h"
 
 typedef unsigned int vdpauSurfaceCedar;
 
@@ -29,6 +30,7 @@ typedef int (*PFGLVDPAUGETVIDEOFRAMECCONFIG)(vdpauSurfaceCedar surface, int *src
 class CHwLayerAdaptorVdpauAllwinner
 {
   public:
+    typedef typename VDPAU::CVdpauRenderPicture RENDERPICTURE;
     struct cFbSize {
       int  width;
       int height;

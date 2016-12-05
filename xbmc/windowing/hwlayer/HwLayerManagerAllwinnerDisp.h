@@ -1,4 +1,4 @@
-/*
+  /*
  *      Copyright (C) 2010-2016 Team XBMC
  *      http://xbmc.org
  *
@@ -20,17 +20,15 @@
 
 #include <string>
 
-#include "HwLayerManager.h"
-#include "HwLayer.h"
 #include "HwLayerManagerAllwinnerItf.h"
-#include "HwLayerAllwinnerDefs.h"
 #include "HwLayerAdaptorVdpau.h"
-#include "utils/GlobalsHandling.h"
-#include "guilib/Geometry.h"
+#include "HwLayerCommonAllwinner.h"
+#include "HwLayerAllwinnerDefs.h"
+
 
 #include "DVDCodecs/Video/VDPAU.h"
 
-class CHwLayerManagerAllwinner
+class CHwLayerManagerAllwinnerDisp : public CHwLayerManagerAllwinnerItf
 {
   public:
    typedef typename CHwLayerAllwinnerBase::HwLayerType HwLayerType;
@@ -43,8 +41,8 @@ class CHwLayerManagerAllwinner
 
    typedef CHwLayerManager<CHwLayerAllwinnerBase, CHwLayerManagerConfigAllwinner> Base;
    
-   CHwLayerManagerAllwinner() : m_manager(NULL) {};
-   virtual ~CHwLayerManagerAllwinner();
+   CHwLayerManagerAllwinnerDisp();
+   virtual ~CHwLayerManagerAllwinnerDisp();
    virtual bool initialize(CHwLayerManagerConfigAllwinner & config);
    virtual bool setup();
    virtual bool createLayer(HwLayerType type);
@@ -61,9 +59,11 @@ class CHwLayerManagerAllwinner
    virtual bool setProperty(HwLayerType type, CColorKey &prop);
    
   protected:
-   CHwLayerManagerAllwinnerItf *m_manager;
+   bool version();
+   //CHwLayerManagerConfigAllwinner m_config; 
+   int m_fbFd;
+   int m_dispFd;
+   CHwLayerCommonAllwinner *m_commonFunc;
 };
 
-typedef CHwLayerManagerAllwinner CHwLayerManagerAW;
-XBMC_GLOBAL_REF(CHwLayerManagerAW,g_HwLayer);
-#define g_HwLayer XBMC_GLOBAL_USE(CHwLayerManagerAW)
+typedef CHwLayerManagerAllwinnerDisp CHwLayerManagerAllwinnerDispType;
