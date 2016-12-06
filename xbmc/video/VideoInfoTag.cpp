@@ -68,11 +68,13 @@ void CVideoInfoTag::Reset()
   m_iTop250 = 0;
   m_iSeason = -1;
   m_iEpisode = -1;
+  m_iIdUniqueID = -1;
   m_uniqueIDs.clear();
   m_strDefaultUniqueID = "unknown";
   m_iSpecialSortSeason = -1;
   m_iSpecialSortEpisode = -1;
   m_strDefaultRating = "default";
+  m_iIdRating = -1;
   m_ratings.clear();
   m_iUserRating = 0;
   m_iDbId = -1;
@@ -126,6 +128,7 @@ bool CVideoInfoTag::Save(TiXmlNode *node, const std::string &tag, bool savePathI
       rating.SetAttribute("name", it.first.c_str());
       XMLUtils::SetFloat(&rating, "value", it.second.rating);
       XMLUtils::SetInt(&rating, "votes", it.second.votes);
+      rating.SetAttribute("max", 10);
       if (it.first == m_strDefaultRating)
         rating.SetAttribute("default", "true");
       ratings.InsertEndChild(rating);
@@ -717,11 +720,13 @@ const std::string& CVideoInfoTag::GetDefaultRating() const
 
 const bool CVideoInfoTag::HasYear() const
 {
-  return m_premiered.IsValid();
+  return m_firstAired.IsValid() || m_premiered.IsValid();
 }
 
 const int CVideoInfoTag::GetYear() const
 {
+  if (m_firstAired.IsValid())
+    return GetFirstAired().GetYear();
   if (m_premiered.IsValid())
     return GetPremiered().GetYear();
   return 0;
@@ -735,6 +740,11 @@ const bool CVideoInfoTag::HasPremiered() const
 const CDateTime& CVideoInfoTag::GetPremiered() const
 {
   return m_premiered;
+}
+
+const CDateTime& CVideoInfoTag::GetFirstAired() const
+{
+  return m_firstAired;
 }
 
 const std::string CVideoInfoTag::GetUniqueID(std::string type) const
@@ -806,7 +816,8 @@ void CVideoInfoTag::ParseNative(const TiXmlElement* movie, bool prioritise)
       if (child->QueryStringAttribute("name", &name) != TIXML_SUCCESS)
         name = "default";
       XMLUtils::GetFloat(child, "value", r.rating);
-      XMLUtils::GetInt(child, "votes", r.votes);
+      if (XMLUtils::GetString(child, "votes", value))
+        r.votes = StringUtils::ReturnDigits(value);
       int max_value = 10;
       if ((child->QueryIntAttribute("max", &max_value) == TIXML_SUCCESS) && max_value >= 1)
         r.rating = r.rating / max_value * 10; // Normalise the Movie Rating to between 1 and 10
@@ -889,20 +900,26 @@ void CVideoInfoTag::ParseNative(const TiXmlElement* movie, bool prioritise)
   if (XMLUtils::GetString(movie, "path", value))
     SetPath(value);
 
-  if (XMLUtils::GetString(movie, "id", value))
-    SetUniqueID(value);
-
-  for (const TiXmlElement* uniqueid = movie->FirstChildElement("uniqueid"); uniqueid != nullptr; uniqueid = uniqueid->NextSiblingElement("uniqueid"))
+  const TiXmlElement* uniqueid = movie->FirstChildElement("uniqueid");
+  if (uniqueid == nullptr)
   {
-    if (uniqueid->FirstChild())
+    if (XMLUtils::GetString(movie, "id", value))
+      SetUniqueID(value);
+  }
+  else
+  {
+    for (; uniqueid != nullptr; uniqueid = uniqueid->NextSiblingElement("uniqueid"))
     {
-    if (uniqueid->QueryStringAttribute("type", &value) == TIXML_SUCCESS)
-      SetUniqueID(uniqueid->FirstChild()->ValueStr(), value);
-    else
-      SetUniqueID(uniqueid->FirstChild()->ValueStr());
-    bool isDefault;
-    if ((uniqueid->QueryBoolAttribute("default", &isDefault) == TIXML_SUCCESS) && isDefault)
-      m_strDefaultUniqueID = value;
+      if (uniqueid->FirstChild())
+      {
+      if (uniqueid->QueryStringAttribute("type", &value) == TIXML_SUCCESS)
+        SetUniqueID(uniqueid->FirstChild()->ValueStr(), value);
+      else
+        SetUniqueID(uniqueid->FirstChild()->ValueStr());
+      bool isDefault;
+      if ((uniqueid->QueryBoolAttribute("default", &isDefault) == TIXML_SUCCESS) && isDefault)
+        m_strDefaultUniqueID = value;
+      }
     }
   }
 
@@ -985,11 +1002,14 @@ void CVideoInfoTag::ParseNative(const TiXmlElement* movie, bool prioritise)
   const TiXmlElement* namedSeason = movie->FirstChildElement("namedseason");
   while (namedSeason != nullptr)
   {
-    int seasonNumber;
-    std::string seasonName = namedSeason->ValueStr();
-    if (!seasonName.empty() &&
-        namedSeason->Attribute("number", &seasonNumber) != nullptr)
-      m_namedSeasons.insert(std::make_pair(seasonNumber, seasonName));
+    if (namedSeason->FirstChild() != nullptr)
+    {
+      int seasonNumber;
+      std::string seasonName = namedSeason->FirstChild()->ValueStr();
+      if (!seasonName.empty() &&
+          namedSeason->Attribute("number", &seasonNumber) != nullptr)
+        m_namedSeasons.insert(std::make_pair(seasonNumber, seasonName));
+    }
 
     namedSeason = namedSeason->NextSiblingElement("namedseason");
   }

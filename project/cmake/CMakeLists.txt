@@ -45,10 +45,9 @@ option(ENABLE_NONFREE     "Enable non-free components?" ON)
 option(ENABLE_AIRTUNES    "Enable AirTunes support?" ON)
 option(ENABLE_CEC         "Enable CEC support?" ON)
 option(ENABLE_OPTICAL     "Enable optical support?" ON)
+# use ffmpeg from depends or system
+option(ENABLE_INTERNAL_FFMPEG "Enable internal ffmpeg?" OFF)
 if(UNIX)
-  if(NOT APPLE)
-    option(ENABLE_INTERNAL_FFMPEG "Enable internal ffmpeg?" ON)
-  endif()
   option(FFMPEG_PATH        "Path to external ffmpeg?" "")
   option(ENABLE_INTERNAL_CROSSGUID "Enable internal crossguid?" ON)
   option(ENABLE_OPENSSL     "Enable OpenSSL?" ON)
@@ -64,19 +63,17 @@ if(NOT WIN32)
   option(WITH_CPU               "build with given cpu" OFF)
   option(ENABLE_CCACHE          "Enable Ccache support" ON)
 endif()
-if(CORE_SYSTEM_NAME STREQUAL linux)
+if(CORE_SYSTEM_NAME STREQUAL linux OR CORE_SYSTEM_NAME STREQUAL rbpi)
   option(ENABLE_LIRC            "Enable LIRC support?" ON)
   option(ENABLE_EVENTCLIENTS    "Enable event clients support?" OFF)
 endif()
 
 # Build static libraries per directory
 if(NOT CMAKE_GENERATOR MATCHES "Visual Studio" AND NOT CMAKE_GENERATOR STREQUAL Xcode)
-  set(STATIC_LIBS_DEFAULT ON)
+  set(ENABLE_STATIC_LIBS TRUE)
 else()
-  set(STATIC_LIBS_DEFAULT OFF)
+  set(ENABLE_STATIC_LIBS FALSE)
 endif()
-option(ENABLE_STATIC_LIBS "Build static libraries per directory" ${STATIC_LIBS_DEFAULT})
-unset(STATIC_LIBS_DEFAULT)
 
 core_find_git_rev(APP_SCMID FULL)
 core_find_versions()
@@ -327,16 +324,13 @@ endif()
 # main binary
 if(NOT CORE_SYSTEM_NAME STREQUAL android)
   add_executable(${APP_NAME_LC} ${CORE_MAIN_SOURCE} "${RESOURCES}" ${OTHER_FILES})
-  add_dependencies(${APP_NAME_LC} ${APP_NAME_LC}-libraries export-files pack-skins)
 else()
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
   add_library(${APP_NAME_LC} SHARED ${CORE_MAIN_SOURCE} "${RESOURCES}" ${OTHER_FILES})
-  # The libraries depend on the main shared library for wrapping. Because of this we cannot build
-  # the libraries as a dependency. This requires to build the all target on android (and not only kodi).
-  add_dependencies(${APP_NAME_LC} export-files pack-skins)
 endif()
+add_dependencies(${APP_NAME_LC} ${APP_NAME_LC}-libraries export-files pack-skins)
 whole_archive(_MAIN_LIBRARIES ${core_DEPENDS})
-target_link_libraries(${APP_NAME_LC} ${_MAIN_LIBRARIES} lib${APP_NAME_LC} ${SYSTEM_LDFLAGS} ${DEPLIBS} ${CMAKE_DL_LIBS})
+target_link_libraries(${APP_NAME_LC} ${_MAIN_LIBRARIES} lib${APP_NAME_LC} ${DEPLIBS})
 unset(_MAIN_LIBRARIES)
 
 if(WIN32)
@@ -360,8 +354,8 @@ if(WIN32)
   add_precompiled_header(${APP_NAME_LC}-test pch.h ${CORE_SOURCE_DIR}/xbmc/platform/win32/pch.cpp PCH_TARGET kodi)
 endif()
 
-# make test and make check (cannot be executed when cross compiling)
-if(NOT CMAKE_CROSSCOMPILING)
+# Enable unit-test related targets
+if(CORE_HOST_IS_TARGET)
   enable_testing()
   gtest_add_tests(${APP_NAME_LC}-test "" ${test_sources})
   add_custom_target(check ${CMAKE_CTEST_COMMAND} WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -381,14 +375,24 @@ if(NOT CMAKE_CROSSCOMPILING)
   add_custom_target(check-commits ${CMAKE_COMMAND} -P ${PROJECT_SOURCE_DIR}/scripts/common/CheckCommits.cmake
                                                    -DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR})
   set_target_properties(check-commits PROPERTIES FOLDER "Build Utilities")
-endif()
 
-# code coverage
-if(CMAKE_BUILD_TYPE STREQUAL Coverage)
-  if(EXISTS ${PROJECT_SOURCE_DIR}/scripts/${CORE_SYSTEM_NAME}/CodeCoverage.cmake)
-    include(${PROJECT_SOURCE_DIR}/scripts/${CORE_SYSTEM_NAME}/CodeCoverage.cmake)
-  else()
-    message(FATAL_ERROR "Code coverage not (yet) implemented for platform ${CORE_SYSTEM_NAME}")
+  # code coverage
+  if(CMAKE_BUILD_TYPE STREQUAL Coverage)
+    if(EXISTS ${PROJECT_SOURCE_DIR}/scripts/${CORE_SYSTEM_NAME}/CodeCoverage.cmake)
+      include(${PROJECT_SOURCE_DIR}/scripts/${CORE_SYSTEM_NAME}/CodeCoverage.cmake)
+    else()
+      message(FATAL_ERROR "Code coverage not (yet) implemented for platform ${CORE_SYSTEM_NAME}")
+    endif()
+  endif()
+
+  # Documentation
+  find_package(Doxygen)
+  if(DOXYGEN_FOUND)
+    add_custom_target(doc
+                      COMMAND ${DOXYGEN_EXECUTABLE} ${CORE_SOURCE_DIR}/doxygen_resources/Doxyfile.doxy
+                      COMMAND ${CMAKE_COMMAND} -E echo "Documentation built to: file://${CORE_SOURCE_DIR}/docs/html/index.html"
+                      WORKING_DIRECTORY ${CORE_SOURCE_DIR}/doxygen_resources
+                      COMMENT "Generating Doxygen documentation" VERBATIM)
   endif()
 endif()
 

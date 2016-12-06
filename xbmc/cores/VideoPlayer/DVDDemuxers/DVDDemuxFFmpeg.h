@@ -100,7 +100,7 @@ public:
 
   DemuxPacket* Read() override;
 
-  bool SeekTime(int time, bool backwords = false, double* startpts = NULL) override;
+  bool SeekTime(double time, bool backwards = false, double* startpts = NULL) override;
   bool SeekByte(int64_t pos);
   int GetStreamLength() override;
   CDemuxStream* GetStream(int iStreamId) const override;
@@ -132,11 +132,11 @@ protected:
   void ParsePacket(AVPacket *pkt);
   bool IsVideoReady();
   void ResetVideoStreams();
-
   AVDictionary *GetFFMpegOptionsFromInput();
   double ConvertTimestamp(int64_t pts, int den, int num);
   void UpdateCurrentPTS();
   bool IsProgramChange();
+  unsigned int HLSSelectProgram();
 
   std::string GetStereoModeFromMetadata(AVDictionary *pMetadata);
   std::string ConvertCodecToInternalStereoMode(const std::string &mode, const StereoModeConversionMap *conversionMap);

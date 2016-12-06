@@ -57,6 +57,22 @@ public:
     std::string limit;
   };
 
+  class ExistsSubQuery
+  {
+  public:
+    ExistsSubQuery(const std::string &table) : tablename(table) {};
+    ExistsSubQuery(const std::string &table, const std::string &parameter) : tablename(table), param(parameter) {};
+    void AppendJoin(const std::string &strJoin);
+    void AppendWhere(const std::string &strWhere, bool combineWithAnd = true);
+    bool BuildSQL(std::string &strSQL);
+    
+    std::string tablename;
+    std::string param;
+    std::string join;
+    std::string where;
+  };
+
+
   CDatabase(void);
   virtual ~CDatabase(void);
   bool IsOpen();
@@ -70,6 +86,8 @@ public:
   virtual bool CommitTransaction();
   void RollbackTransaction();
   bool InTransaction();
+  void CopyDB(const std::string& latestDb);
+  void DropAnalytics();
 
   std::string PrepareSQL(std::string strStmt, ...) const;
 
@@ -155,9 +173,10 @@ public:
   virtual bool BuildSQL(const std::string &strBaseDir, const std::string &strQuery, Filter &filter, std::string &strSQL, CDbUrl &dbUrl);
   virtual bool BuildSQL(const std::string &strBaseDir, const std::string &strQuery, Filter &filter, std::string &strSQL, CDbUrl &dbUrl, SortDescription &sorting);
 
+  bool Connect(const std::string &dbName, const DatabaseSettings &db, bool create);
+
 protected:
   friend class CDatabaseManager;
-  bool Update(const DatabaseSettings &db);
 
   void Split(const std::string& strFileNameAndPath, std::string& strPath, std::string& strFileName);
 
@@ -194,7 +213,6 @@ protected:
   virtual const char *GetBaseDBName() const=0;
 
   int GetDBVersion();
-  bool UpdateVersion(const std::string &dbName);
 
   bool BuildSQL(const std::string &strQuery, const Filter &filter, std::string &strSQL);
 
@@ -206,7 +224,6 @@ protected:
 
 private:
   void InitSettings(DatabaseSettings &dbSettings);
-  bool Connect(const std::string &dbName, const DatabaseSettings &db, bool create);
   void UpdateVersionNumber();
 
   bool m_bMultiWrite; /*!< True if there are any queries in the queue, false otherwise */

@@ -80,19 +80,11 @@ bool HasPeripherals(const std::string &condition, const std::string &value, cons
   return PERIPHERALS::g_peripherals.GetNumberOfPeripherals() > 0;
 }
 
-bool SupportsPeripheralControllers(const std::string &condition, const std::string &value, const CSetting *setting, void *data)
-{
-  using namespace PERIPHERALS;
-
-  PeripheralBusAddonPtr bus = std::static_pointer_cast<CPeripheralBusAddon>(g_peripherals.GetBusByType(PERIPHERAL_BUS_ADDON));
-  return bus != nullptr && bus->HasFeature(FEATURE_JOYSTICK);
-}
-
 bool HasRumbleFeature(const std::string &condition, const std::string &value, const CSetting *setting, void *data)
 {
   using namespace PERIPHERALS;
 
-  std::vector<CPeripheral*> results;
+  PeripheralVector results;
   g_peripherals.GetPeripheralsWithFeature(results, FEATURE_RUMBLE);
   return !results.empty();
 }
@@ -339,8 +331,12 @@ void CSettingConditions::Initialize()
   m_simpleConditions.insert("have_lcms2");
 #endif
 
+#ifdef TARGET_ANDROID
+  m_simpleConditions.insert("isstandalone");
+#else
   if (g_application.IsStandAlone())
     m_simpleConditions.insert("isstandalone");
+#endif
 
   if(CAEFactory::SupportsQualitySetting())
     m_simpleConditions.insert("has_ae_quality_levels");
@@ -350,7 +346,6 @@ void CSettingConditions::Initialize()
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("checkmasterlock",               CheckMasterLock));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("checkpvrparentalpin",           CheckPVRParentalPin));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("hasperipherals",                HasPeripherals));
-  m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("supportsperipheralcontrollers", SupportsPeripheralControllers));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("hasrumblefeature",              HasRumbleFeature));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("isfullscreen",                  IsFullscreen));
   m_complexConditions.insert(std::pair<std::string, SettingConditionCheck>("ismasteruser",                  IsMasterUser));

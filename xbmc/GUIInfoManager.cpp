@@ -620,6 +620,30 @@ const infomap player_param[] =   {{ "art",              PLAYER_ITEM_ART }};
 ///     used (xx) will return AM/PM. Also supported: (hh:mm)\, (mm:ss)\,
 ///     (hh:mm:ss)\, (hh:mm:ss).
 ///   }
+///   \table_row3{   <b>`Player.StartTime`</b>,
+///                  \anchor Player_StartTime
+///                  _string_,
+///     Time playing media began
+///   }
+///   \table_row3{   <b>`Player.StartTime(format)`</b>,
+///                  \anchor Player_StartTime_format
+///                  _string_,
+///     Shows hours (hh)\, minutes (mm) or seconds (ss). When 12 hour clock is
+///     used (xx) will return AM/PM. Also supported: (hh:mm)\, (mm:ss)\,
+///     (hh:mm:ss)\, (hh:mm:ss).
+///   }
+///   \table_row3{   <b>`Player.SeekNumeric`</b>,
+///                  \anchor Player_SeekNumeric
+///                  _string_,
+///     Time to which the user is seeking via numeric keys. 
+///   }
+///   \table_row3{   <b>`Player.SeekNumeric(format)`</b>,
+///                  \anchor Player_SeekNumeric_format
+///                  _string_,
+///     Shows hours (hh)\, minutes (mm) or seconds (ss). When 12 hour clock is used
+///     (xx) will return AM/PM. Also supported: (hh:mm)\, (mm:ss)\, (hh:mm:ss)\,
+///     (hh:mm:ss).
+///   }
 /// \table_end
 ///
 /// -----------------------------------------------------------------------------
@@ -632,7 +656,8 @@ const infomap player_times[] =   {{ "seektime",         PLAYER_SEEKTIME },
                                   { "time",             PLAYER_TIME },
                                   { "duration",         PLAYER_DURATION },
                                   { "finishtime",       PLAYER_FINISH_TIME },
-                                  { "starttime",        PLAYER_START_TIME}};
+                                  { "starttime",        PLAYER_START_TIME },
+                                  { "seeknumeric",      PLAYER_SEEKNUMERIC } };
 
 /// \page modules__General__List_of_gui_access
 /// \section modules__General__List_of_gui_access_Weather Weather
@@ -1130,6 +1155,11 @@ const infomap weather[] =        {{ "isfetched",        WEATHER_IS_FETCHED },
 ///                  _string_,
 ///     Returns the version of the addon with the given id
 ///   }
+///   \table_row3{   <b>`System.PrivacyPolicy`</b>,
+///                  \anchor System_PrivacyPolicy
+///                  _string_,
+///     Returns the official Kodi privacy policy
+///   }
 /// \table_end
 /// @}
 const infomap system_labels[] =  {{ "hasnetwork",       SYSTEM_ETHERNET_LINK_ACTIVE },
@@ -1197,6 +1227,7 @@ const infomap system_labels[] =  {{ "hasnetwork",       SYSTEM_ETHERNET_LINK_ACT
                                   { "stereoscopicmode", SYSTEM_STEREOSCOPIC_MODE },
                                   { "hasadsp",          SYSTEM_HAS_ADSP },
                                   { "hascms",           SYSTEM_HAS_CMS },
+                                  { "privacypolicy",    SYSTEM_PRIVACY_POLICY },
                                   { "haspvraddon",      SYSTEM_HAS_PVR_ADDON }};
 
 /// \page modules__General__List_of_gui_access
@@ -1689,7 +1720,8 @@ const infomap musicplayer[] =    {{ "title",            MUSICPLAYER_TITLE },
                                   { "channelnumber",    MUSICPLAYER_CHANNEL_NUMBER },
                                   { "subchannelnumber", MUSICPLAYER_SUB_CHANNEL_NUMBER },
                                   { "channelnumberlabel", MUSICPLAYER_CHANNEL_NUMBER_LBL },
-                                  { "channelgroup",     MUSICPLAYER_CHANNEL_GROUP }
+                                  { "channelgroup",     MUSICPLAYER_CHANNEL_GROUP },
+                                  { "dbid", MUSICPLAYER_DBID }
 };
 
 /// \page modules__General__List_of_gui_access
@@ -2120,7 +2152,8 @@ const infomap videoplayer[] =    {{ "title",            VIDEOPLAYER_TITLE },
                                   { "stereoscopicmode", VIDEOPLAYER_STEREOSCOPIC_MODE },
                                   { "canresumelivetv",  VIDEOPLAYER_CAN_RESUME_LIVE_TV },
                                   { "imdbnumber",       VIDEOPLAYER_IMDBNUMBER },
-                                  { "episodename",      VIDEOPLAYER_EPISODENAME }
+                                  { "episodename",      VIDEOPLAYER_EPISODENAME },
+                                  { "dbid", VIDEOPLAYER_DBID }
 };
 
 const infomap player_process[] =
@@ -3826,6 +3859,7 @@ const infomap listitem_labels[]= {{ "thumb",            LISTITEM_THUMB },
                                   { "dateadded",        LISTITEM_DATE_ADDED },
                                   { "dbtype",           LISTITEM_DBTYPE },
                                   { "dbid",             LISTITEM_DBID },
+                                  { "appearances",      LISTITEM_APPEARANCES },
                                   { "stereoscopicmode", LISTITEM_STEREOSCOPIC_MODE },
                                   { "isstereoscopic",   LISTITEM_IS_STEREOSCOPIC },
                                   { "imdbnumber",       LISTITEM_IMDBNUMBER },
@@ -6093,6 +6127,7 @@ std::string CGUIInfoManager::GetLabel(int info, int contextWindow, std::string *
   case MUSICPLAYER_CHANNEL_GROUP:
   case MUSICPLAYER_PLAYCOUNT:
   case MUSICPLAYER_LASTPLAYED:
+  case MUSICPLAYER_DBID:
     strLabel = GetMusicLabel(info);
   break;
   case VIDEOPLAYER_TITLE:
@@ -6140,6 +6175,7 @@ std::string CGUIInfoManager::GetLabel(int info, int contextWindow, std::string *
   case VIDEOPLAYER_PLAYCOUNT:
   case VIDEOPLAYER_LASTPLAYED:
   case VIDEOPLAYER_IMDBNUMBER:
+  case VIDEOPLAYER_DBID:
   case VIDEOPLAYER_EPISODENAME:
     strLabel = GetVideoLabel(info);
   break;
@@ -6307,6 +6343,11 @@ std::string CGUIInfoManager::GetLabel(int info, int contextWindow, std::string *
   case SYSTEM_TOTALUPTIME:
   case SYSTEM_BATTERY_LEVEL:
     return g_sysinfo.GetInfo(info);
+    break;
+
+
+  case SYSTEM_PRIVACY_POLICY:
+    return g_sysinfo.GetPrivacyPolicy();
     break;
 
   case SYSTEM_SCREEN_RESOLUTION:
@@ -7996,6 +8037,16 @@ std::string CGUIInfoManager::GetMultiInfoLabel(const GUIInfo &info, int contextW
     if (seekSize > 0)
       return "+" + strSeekSize;
   }
+  else if (info.m_info == PLAYER_SEEKNUMERIC)
+  {
+    if (!CSeekHandler::GetInstance().HasTimeCode())
+      return "";
+    int seekTimeCode = CSeekHandler::GetInstance().GetTimeCodeSeconds();
+    TIME_FORMAT format = (TIME_FORMAT)info.GetData1();
+    if (format == TIME_FORMAT_GUESS && seekTimeCode >= 3600)
+      format = TIME_FORMAT_HH_MM_SS;
+    return StringUtils::SecondsToTimeString(seekTimeCode, format);
+  }
   else if (info.m_info == PLAYER_ITEM_ART)
   {
     return m_currentFile->GetArt(m_stringParameters[info.GetData1()]);
@@ -8722,6 +8773,10 @@ std::string CGUIInfoManager::GetMusicTagLabel(int info, const CFileItem *item)
     return GetItemLabel(item, LISTITEM_PLAYCOUNT);
   case MUSICPLAYER_LASTPLAYED:
     return GetItemLabel(item, LISTITEM_LASTPLAYED);
+  case MUSICPLAYER_DBID:
+    if (m_currentFile->GetMusicInfoTag()->GetDatabaseId() > -1)
+      return StringUtils::Format("%i", m_currentFile->GetMusicInfoTag()->GetDatabaseId());
+    break;
   }
   return "";
 }
@@ -8817,10 +8872,10 @@ std::string CGUIInfoManager::GetVideoLabel(int item)
       return epgTag ? epgTag->PlotOutline() : "";
     case VIDEOPLAYER_NEXT_STARTTIME:
       epgTag = tag->GetEPGNext();
-      return epgTag ? epgTag->StartAsLocalTime().GetAsLocalizedTime("", false) : CDateTime::GetCurrentDateTime().GetAsLocalizedTime("", false);
+      return epgTag ? epgTag->StartAsLocalTime().GetAsLocalizedTime("", false) : "";
     case VIDEOPLAYER_NEXT_ENDTIME:
       epgTag = tag->GetEPGNext();
-      return epgTag ? epgTag->EndAsLocalTime().GetAsLocalizedTime("", false) : CDateTime::GetCurrentDateTime().GetAsLocalizedTime("", false);
+      return epgTag ? epgTag->EndAsLocalTime().GetAsLocalizedTime("", false) : "";
     case VIDEOPLAYER_NEXT_DURATION:
       {
         std::string duration;
@@ -8964,6 +9019,10 @@ std::string CGUIInfoManager::GetVideoLabel(int item)
       break;
     case VIDEOPLAYER_IMDBNUMBER:
       return m_currentFile->GetVideoInfoTag()->GetUniqueID();
+    case VIDEOPLAYER_DBID:
+      if (m_currentFile->GetVideoInfoTag()->m_iDbId > -1)
+        return StringUtils::Format("%i", m_currentFile->GetVideoInfoTag()->m_iDbId);
+      break;
     case VIDEOPLAYER_RATING:
       {
         std::string strRating;
@@ -9682,12 +9741,13 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
     break;
   case LISTITEM_PLAYCOUNT:
     {
-      std::string strPlayCount;
-      if (item->HasVideoInfoTag() && item->GetVideoInfoTag()->m_playCount > 0)
-        strPlayCount = StringUtils::Format("%i", item->GetVideoInfoTag()->m_playCount);
-      if (item->HasMusicInfoTag() && item->GetMusicInfoTag()->GetPlayCount() > 0)
-        strPlayCount = StringUtils::Format("%i", item->GetMusicInfoTag()->GetPlayCount());
-      return strPlayCount;
+      if (item->HasPVRRecordingInfoTag() && item->GetPVRRecordingInfoTag()->m_playCount > 0)
+        return StringUtils::Format("%i", item->GetPVRRecordingInfoTag()->m_playCount);
+      else if (item->HasVideoInfoTag() && item->GetVideoInfoTag()->m_playCount > 0)
+        return StringUtils::Format("%i", item->GetVideoInfoTag()->m_playCount);
+      else if (item->HasMusicInfoTag() && item->GetMusicInfoTag()->GetPlayCount() > 0)
+        return StringUtils::Format("%i", item->GetMusicInfoTag()->GetPlayCount());
+      break;
     }
   case LISTITEM_LASTPLAYED:
     {
@@ -10392,7 +10452,7 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
       if (tag)
         return tag->StartAsLocalTime().GetAsLocalizedTime("", false);
     }
-    return CDateTime::GetCurrentDateTime().GetAsLocalizedTime("", false);
+    return "";
   case LISTITEM_NEXT_ENDTIME:
     if (item->HasPVRChannelInfoTag())
     {
@@ -10400,7 +10460,7 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
       if (tag)
         return tag->EndAsLocalTime().GetAsLocalizedTime("", false);
     }
-    return CDateTime::GetCurrentDateTime().GetAsLocalizedTime("", false);
+    return "";
   case LISTITEM_NEXT_STARTDATE:
     if (item->HasPVRChannelInfoTag())
     {
@@ -10408,7 +10468,7 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
       if (tag)
         return tag->StartAsLocalTime().GetAsLocalizedDate(true);
     }
-    return CDateTime::GetCurrentDateTime().GetAsLocalizedDate(true);
+    return "";
   case LISTITEM_NEXT_ENDDATE:
     if (item->HasPVRChannelInfoTag())
     {
@@ -10416,7 +10476,7 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
       if (tag)
         return tag->EndAsLocalTime().GetAsLocalizedDate(true);
     }
-    return CDateTime::GetCurrentDateTime().GetAsLocalizedDate(true);
+    return "";
   case LISTITEM_NEXT_PLOT:
     if (item->HasPVRChannelInfoTag())
     {
@@ -10497,6 +10557,14 @@ std::string CGUIInfoManager::GetItemLabel(const CFileItem *item, int info, std::
         if (dbId > -1)
           return StringUtils::Format("%i", dbId);
       }
+    break;
+  case LISTITEM_APPEARANCES:
+    if (item->HasVideoInfoTag())
+    {
+      int appearances = item->GetVideoInfoTag()->m_relevance;
+      if (appearances > -1)
+        return StringUtils::Format("%i", appearances);
+    }
     break;
   case LISTITEM_STEREOSCOPIC_MODE:
     {
@@ -10651,7 +10719,7 @@ bool CGUIInfoManager::GetItemBool(const CGUIListItem *item, int condition) const
   {
     if (item->IsFileItem())
     {
-      const CFileItem *pItem = (const CFileItem *)item;
+      const CFileItem *pItem = static_cast<const CFileItem *>(item);
       return pItem->IsParentFolder();
     }
   }
@@ -10659,10 +10727,11 @@ bool CGUIInfoManager::GetItemBool(const CGUIListItem *item, int condition) const
   {
     if (item->IsFileItem())
     {
-      if (((const CFileItem *)item)->HasVideoInfoTag())
-        return ((const CFileItem *)item)->GetVideoInfoTag()->m_resumePoint.timeInSeconds > 0;
-      else if (((const CFileItem *)item)->HasPVRRecordingInfoTag())
-        return ((const CFileItem *)item)->GetPVRRecordingInfoTag()->m_resumePoint.timeInSeconds > 0;
+      const CFileItem *pItem = static_cast<const CFileItem *>(item);
+      if (pItem->HasPVRRecordingInfoTag())
+        return pItem->GetPVRRecordingInfoTag()->m_resumePoint.timeInSeconds > 0;
+      else if (pItem->HasVideoInfoTag())
+        return pItem->GetVideoInfoTag()->m_resumePoint.timeInSeconds > 0;
     }
   }
   else if (item->IsFileItem())
@@ -10689,6 +10758,10 @@ bool CGUIInfoManager::GetItemBool(const CGUIListItem *item, int condition) const
         if (timer)
           return timer->IsRecording();
       }
+      else if (pItem->HasPVRRecordingInfoTag())
+      {
+        return pItem->GetPVRRecordingInfoTag()->IsInProgress();
+      }
     }
     else if (condition == LISTITEM_INPROGRESS)
     {
@@ -10705,7 +10778,11 @@ bool CGUIInfoManager::GetItemBool(const CGUIListItem *item, int condition) const
     }
     else if (condition == LISTITEM_HASTIMERSCHEDULE)
     {
-      if (pItem->HasEPGInfoTag())
+      if (pItem->HasPVRTimerInfoTag())
+      {
+        return pItem->GetPVRTimerInfoTag()->GetTimerRuleId() != PVR_TIMER_NO_PARENT;
+      }
+      else if (pItem->HasEPGInfoTag())
       {
         CPVRTimerInfoTagPtr timer = pItem->GetEPGInfoTag()->Timer();
         if (timer)

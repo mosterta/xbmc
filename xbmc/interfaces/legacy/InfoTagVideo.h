@@ -76,7 +76,7 @@ namespace XBMCAddon
       ///
       ///
       ///-----------------------------------------------------------------------
-      ///
+      /// @python_v17 New function added.
       ///
       getDbId();
 #else
@@ -240,7 +240,7 @@ namespace XBMCAddon
       ///
       ///
       ///-----------------------------------------------------------------------
-      ///
+      /// @python_v17 New function added.
       ///
       getTVShowTitle();
 #else
@@ -268,7 +268,7 @@ namespace XBMCAddon
       /// | episode        | The type is used as a series episode
       ///
       ///-----------------------------------------------------------------------
-      ///
+      /// @python_v17 New function added.
       ///
       getMediaType();
 #else
@@ -377,7 +377,7 @@ namespace XBMCAddon
       ///
       ///
       ///-----------------------------------------------------------------------
-      ///
+      /// @python_v17 New function added.
       ///
       getSeason();
 #else
@@ -395,7 +395,7 @@ namespace XBMCAddon
       ///
       ///
       ///-----------------------------------------------------------------------
-      ///
+      /// @python_v17 New function added.
       ///
       getEpisode();
 #else
@@ -545,6 +545,24 @@ namespace XBMCAddon
       getFirstAired();
 #else
       String getFirstAired();
+#endif
+
+#ifdef DOXYGEN_SHOULD_USE_THIS
+      ///
+      /// \ingroup python_InfoTagVideo
+      /// @brief \python_func{ getTrailer() }
+      ///-----------------------------------------------------------------------
+      /// To get the path where the trailer is stored.
+      ///
+      /// @return [string] Trailer path
+      ///
+      ///
+      ///-----------------------------------------------------------------------
+      /// @python_v17 New function added.
+      ///
+      getTrailer();
+#else
+      String getTrailer();
 #endif
     };
   }

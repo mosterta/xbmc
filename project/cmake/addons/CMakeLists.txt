@@ -44,12 +44,12 @@ else()
 endif()
 get_filename_component(BUILD_DIR "${BUILD_DIR}" ABSOLUTE)
 
-if(NOT DEPENDS_PATH)
-  set(DEPENDS_PATH "${BUILD_DIR}/depends")
+if(NOT ADDON_DEPENDS_PATH)
+  set(ADDON_DEPENDS_PATH "${BUILD_DIR}/depends")
 else()
-  file(TO_CMAKE_PATH "${DEPENDS_PATH}" DEPENDS_PATH)
+  file(TO_CMAKE_PATH "${ADDON_DEPENDS_PATH}" ADDON_DEPENDS_PATH)
 endif()
-get_filename_component(DEPENDS_PATH "${DEPENDS_PATH}" ABSOLUTE)
+get_filename_component(ADDON_DEPENDS_PATH "${ADDON_DEPENDS_PATH}" ABSOLUTE)
 
 if(NOT PLATFORM_DIR)
   set(PLATFORM_DIR ${CORE_SOURCE_DIR}/project/cmake/platform/${CORE_SYSTEM_NAME})
@@ -58,15 +58,15 @@ endif()
 
 # make sure CMAKE_PREFIX_PATH is set
 if(NOT CMAKE_PREFIX_PATH)
-  set(CMAKE_PREFIX_PATH "${DEPENDS_PATH}")
+  set(CMAKE_PREFIX_PATH "${ADDON_DEPENDS_PATH}")
 else()
   file(TO_CMAKE_PATH "${CMAKE_PREFIX_PATH}" CMAKE_PREFIX_PATH)
-  list(APPEND CMAKE_PREFIX_PATH "${DEPENDS_PATH}")
+  list(APPEND CMAKE_PREFIX_PATH "${ADDON_DEPENDS_PATH}")
 endif()
 
 # check for autoconf stuff to pass on
 if(AUTOCONF_FILES)
-  separate_arguments(AUTOCONF_FILES)
+  string(REPLACE " " ";" AUTOCONF_FILES ${AUTOCONF_FILES})
   set(CROSS_AUTOCONF "yes")
 endif()
 
@@ -77,8 +77,8 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX})
 
 set(BUILD_ARGS -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
                -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-               -DPACKAGE_CONFIG_PATH=${DEPENDS_PATH}/lib/pkgconfig
-               -DDEPENDS_PATH=${DEPENDS_PATH}
+               -DPACKAGE_CONFIG_PATH=${ADDON_DEPENDS_PATH}/lib/pkgconfig
+               -DADDON_DEPENDS_PATH=${ADDON_DEPENDS_PATH}
                -DOVERRIDE_PATHS=${OVERRIDE_PATHS}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_USER_MAKE_RULES_OVERRIDE=${CMAKE_USER_MAKE_RULES_OVERRIDE}
@@ -120,7 +120,7 @@ if(NOT ADDONS_TO_BUILD)
 else()
   string(STRIP "${ADDONS_TO_BUILD}" ADDONS_TO_BUILD)
   message(STATUS "Building following addons: ${ADDONS_TO_BUILD}")
-  separate_arguments(ADDONS_TO_BUILD)
+  string(REPLACE " " ";" ADDONS_TO_BUILD ${ADDONS_TO_BUILD})
 endif()
 
 if(NOT ADDONS_DEFINITION_DIR)
@@ -138,7 +138,7 @@ if(ADDON_SRC_PREFIX)
 endif()
 
 if(NOT APP_LIB_DIR)
-  set(APP_LIB_DIR "${DEPENDS_PATH}/lib/kodi")
+  set(APP_LIB_DIR "${ADDON_DEPENDS_PATH}/lib/kodi")
 else()
   file(TO_CMAKE_PATH "${APP_LIB_DIR}" APP_LIB_DIR)
 endif()
@@ -165,7 +165,7 @@ if(NOT WIN32)
     set(NEED_SUDO TRUE)
     set(ADDON_INSTALL_DIR ${CMAKE_BINARY_DIR}/.install)
     list(APPEND BUILD_ARGS -DOVERRIDE_PATHS=ON)
-    message(STATUS "NEED_SUDO: ${NEED_SUDO}")
+    message(STATUS "NEED_SUDO: ${NEED_SUDO} (no write permission for ${CMAKE_INSTALL_PREFIX})")
   endif()
 endif()
 
@@ -206,6 +206,7 @@ if(NOT addons)
                                            -DCMAKE_INSTALL_PREFIX:PATH=${ADDONS_DEFINITION_DIR}
                                            -DBUILD_DIR:PATH=${BOOTSTRAP_BUILD_DIR}
                                            -DADDONS_TO_BUILD:STRING=${ADDONS_TO_BUILD_STR}
+                                           -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
                   WORKING_DIRECTORY ${BOOTSTRAP_BUILD_DIR})
 
   # execute the generated bootstrap buildsystem
@@ -227,7 +228,7 @@ set(SUPPORTED_ADDON_FOUND FALSE)
 foreach(addon ${addons})
   if(NOT (addon MATCHES platforms.txt))
     file(STRINGS ${addon} def)
-    separate_arguments(def)
+    string(REPLACE " " ";" def ${def})
     list(GET def 0 id)
 
     set(ADDON_FOUND FALSE)
@@ -245,7 +246,7 @@ foreach(addon ${addons})
       message(STATUS "\n-- ---- Configuring addon ${addon} ----")
       set(SUPPORTED_ADDON_FOUND TRUE)
 
-      get_filename_component(dir ${addon} PATH)
+      get_filename_component(dir ${addon} DIRECTORY)
 
       # check if the addon has a platforms.txt
       set(platform_found FALSE)
@@ -253,9 +254,7 @@ foreach(addon ${addons})
 
       if(${platform_found})
         # make sure the output directory is clean
-        if(EXISTS "${CMAKE_INSTALL_PREFIX}/${id}")
-          file(REMOVE_RECURSE "${CMAKE_INSTALL_PREFIX}/${id}/")
-        endif()
+        file(REMOVE_RECURSE "${CMAKE_INSTALL_PREFIX}/${id}/")
 
         # get the URL and revision of the addon
         list(LENGTH def deflength)
@@ -333,9 +332,7 @@ foreach(addon ${addons})
           endif()
 
           # remove any previously extracted version of the addon
-          if(EXISTS "${BUILD_DIR}/${id}")
-            file(REMOVE_RECURSE "${BUILD_DIR}/${id}")
-          endif()
+          file(REMOVE_RECURSE "${BUILD_DIR}/${id}")
 
           # extract the addon from the archive
           execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzvf ${BUILD_DIR}/download/${archive_name}.tar.gz

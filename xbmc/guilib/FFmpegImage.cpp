@@ -249,6 +249,12 @@ bool CFFmpegImage::Initialize(unsigned char* buffer, unsigned int bufSize)
     return false;
   }
 
+  if (m_fctx->nb_streams <= 0)
+  {
+    avformat_close_input(&m_fctx);
+    FreeIOCtx(&m_ioctx);
+    return false;
+  }
   AVCodecContext* codec_ctx = m_fctx->streams[0]->codec;
   AVCodec* codec = avcodec_find_decoder(codec_ctx->codec_id);
   if (avcodec_open2(codec_ctx, codec, NULL) < 0)
@@ -364,6 +370,12 @@ bool CFFmpegImage::Decode(unsigned char * const pixels, unsigned int width, unsi
   if (m_width == 0 || m_height == 0 || format != XB_FMT_A8R8G8B8)
     return false;
 
+  if (pixels == nullptr)
+  {
+    CLog::Log(LOGERROR, "%s - No valid buffer pointer (nullptr) passed", __FUNCTION__);
+    return false;
+  }
+
   if (!m_pFrame || !m_pFrame->data[0])
   {
     CLog::LogFunction(LOGERROR, __FUNCTION__, "AVFrame member not allocated");
@@ -375,6 +387,12 @@ bool CFFmpegImage::Decode(unsigned char * const pixels, unsigned int width, unsi
 
 bool CFFmpegImage::DecodeFrame(AVFrame* frame, unsigned int width, unsigned int height, unsigned int pitch, unsigned char * const pixels)
 {
+  if (pixels == nullptr)
+  {
+    CLog::Log(LOGERROR, "%s - No valid buffer pointer (nullptr) passed", __FUNCTION__);
+    return false;
+  }
+
   AVFrame* pictureRGB = av_frame_alloc();
   if (!pictureRGB)
   {
@@ -392,7 +410,7 @@ bool CFFmpegImage::DecodeFrame(AVFrame* frame, unsigned int width, unsigned int 
 
   bool needsCopy = false;
   int pixelsSize = pitch * height;
-  bool aligned = (((uintptr_t)(const void *)(pixels)) % (16) == 0);
+  bool aligned = (((uintptr_t)(const void *)(pixels)) % (32) == 0);
   if (!aligned)
     CLog::Log(LOGDEBUG, "Alignment of external buffer is not suitable for ffmpeg intrinsics - please fix your malloc");
 
@@ -667,6 +685,8 @@ bool CFFmpegImage::CreateThumbnailFromSurface(unsigned char* bufferin, unsigned 
 
   bufferoutSize = avpkt.size;
   bufferout = m_outputBuffer;
+
+  av_packet_unref(&avpkt);
 
   return true;
 }

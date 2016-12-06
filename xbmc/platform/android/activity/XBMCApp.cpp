@@ -18,6 +18,8 @@
  *
  */
 
+#include "XBMCApp.h"
+
 #include <sstream>
 
 #include <unistd.h>
@@ -50,6 +52,7 @@
 #include "platform/XbmcContext.h"
 #include <android/bitmap.h>
 #include "cores/AudioEngine/AEFactory.h"
+#include "cores/VideoPlayer/VideoRenderers/RenderManager.h"
 #include "platform/android/activity/IInputDeviceCallbacks.h"
 #include "platform/android/activity/IInputDeviceEventHandler.h"
 #include "platform/android/jni/JNIThreading.h"
@@ -80,6 +83,8 @@
 #include "platform/android/jni/Window.h"
 #include "platform/android/jni/WindowManager.h"
 #include "platform/android/jni/KeyEvent.h"
+#include "platform/android/jni/Display.h"
+#include "platform/android/jni/View.h"
 #include "AndroidKey.h"
 
 #include "CompileInfo.h"
@@ -390,6 +395,7 @@ void CXBMCApp::run()
 
   android_printf("%s Started with action: %s\n", CCompileInfo::GetAppName(), startIntent.getAction().c_str());
 
+  CAppParamParser appParamParser;
   std::string filenameToPlay = GetFilenameFromIntent(startIntent);
   if (!filenameToPlay.empty())
   {
@@ -400,7 +406,6 @@ void CXBMCApp::run()
     argv[0] = exe_name.c_str();
     argv[1] = filenameToPlay.c_str();
 
-    CAppParamParser appParamParser;
     appParamParser.Parse((const char **)argv, argc);
 
     free(argv);
@@ -410,7 +415,7 @@ void CXBMCApp::run()
   android_printf(" => running XBMC_Run...");
   try
   {
-    status = XBMC_Run(true);
+    status = XBMC_Run(true, appParamParser.m_playlist);
     android_printf(" => XBMC_Run finished with %d", status);
   }
   catch(...)
@@ -477,6 +482,23 @@ void CXBMCApp::SetRefreshRateCallback(CVariant* rateVariant)
   }
 }
 
+void CXBMCApp::SetDisplayModeCallback(CVariant* modeVariant)
+{
+  int mode = modeVariant->asFloat();
+  delete modeVariant;
+
+  CJNIWindow window = getWindow();
+  if (window)
+  {
+    CJNIWindowManagerLayoutParams params = window.getAttributes();
+    if (params.getpreferredDisplayModeId() != mode)
+    {
+      params.setpreferredDisplayModeId(mode);
+      window.setAttributes(params);
+    }
+  }
+}
+
 void CXBMCApp::SetRefreshRate(float rate)
 {
   if (rate < 1.0)
@@ -484,6 +506,15 @@ void CXBMCApp::SetRefreshRate(float rate)
 
   CVariant *variant = new CVariant(rate);
   runNativeOnUiThread(SetRefreshRateCallback, variant);
+}
+
+void CXBMCApp::SetDisplayMode(int mode)
+{
+  if (mode < 1.0)
+    return;
+
+  CVariant *variant = new CVariant(mode);
+  runNativeOnUiThread(SetDisplayModeCallback, variant);
 }
 
 int CXBMCApp::android_printf(const char *format, ...)
@@ -509,6 +540,19 @@ int CXBMCApp::GetDPI()
   AConfiguration_delete(config);
 
   return dpi;
+}
+
+CRect CXBMCApp::MapRenderToDroid(const CRect& srcRect)
+{
+  float scaleX = 1.0;
+  float scaleY = 1.0;
+
+  CJNIRect r = m_xbmcappinstance->getVideoViewSurfaceRect();
+  RESOLUTION_INFO renderRes = g_graphicsContext.GetResInfo(g_graphicsContext.GetVideoResolution());
+  scaleX = (double)r.width() / renderRes.iWidth;
+  scaleY = (double)r.height() / renderRes.iHeight;
+
+  return CRect(srcRect.x1 * scaleX, srcRect.y1 * scaleY, srcRect.x2 * scaleX, srcRect.y2 * scaleY);
 }
 
 void CXBMCApp::OnPlayBackStarted()
@@ -604,7 +648,7 @@ bool CXBMCApp::StartActivity(const std::string &package, const std::string &inte
     if (!jniURI)
       return false;
 
-    newIntent.setDataAndType(jniURI, dataType); 
+    newIntent.setDataAndType(jniURI, dataType);
   }
 
   newIntent.setPackage(package);
@@ -731,7 +775,7 @@ float CXBMCApp::GetSystemVolume()
   CJNIAudioManager audioManager(getSystemService("audio"));
   if (audioManager)
     return (float)audioManager.getStreamVolume() / GetMaxSystemVolume();
-  else 
+  else
   {
     android_printf("CXBMCApp::GetSystemVolume: Could not get Audio Manager");
     return 0;
@@ -815,7 +859,7 @@ void CXBMCApp::onNewIntent(CJNIIntent intent)
   if (action == "android.intent.action.VIEW")
   {
     CApplicationMessenger::GetInstance().SendMsg(TMSG_MEDIA_PLAY, 1, 0, static_cast<void*>(
-                                         new CFileItem(GetFilenameFromIntent(intent))));
+                                                 new CFileItem(GetFilenameFromIntent(intent), false)));
   }
 }
 

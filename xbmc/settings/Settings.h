@@ -236,7 +236,6 @@ public:
   static const std::string SETTING_MUSICPLAYER_REPLAYGAINTYPE;
   static const std::string SETTING_MUSICPLAYER_REPLAYGAINPREAMP;
   static const std::string SETTING_MUSICPLAYER_REPLAYGAINNOGAINPREAMP;
-  static const std::string SETTING_MUSICPLAYER_REPLAYGAINAVOIDCLIPPING;
   static const std::string SETTING_MUSICPLAYER_CROSSFADE;
   static const std::string SETTING_MUSICPLAYER_CROSSFADEALBUMTRACKS;
   static const std::string SETTING_MUSICPLAYER_VISUALISATION;
@@ -314,6 +313,7 @@ public:
   static const std::string SETTING_AUDIOOUTPUT_PROCESSQUALITY;
   static const std::string SETTING_AUDIOOUTPUT_ATEMPOTHRESHOLD;
   static const std::string SETTING_AUDIOOUTPUT_STREAMSILENCE;
+  static const std::string SETTING_AUDIOOUTPUT_STREAMNOISE;
   static const std::string SETTING_AUDIOOUTPUT_DSPADDONSENABLED;
   static const std::string SETTING_AUDIOOUTPUT_DSPSETTINGS;
   static const std::string SETTING_AUDIOOUTPUT_DSPRESETDB;
@@ -329,6 +329,7 @@ public:
   static const std::string SETTING_AUDIOOUTPUT_VOLUMESTEPS;
   static const std::string SETTING_INPUT_PERIPHERALS;
   static const std::string SETTING_INPUT_ENABLEMOUSE;
+  static const std::string SETTING_INPUT_ASKNEWCONTROLLERS;
   static const std::string SETTING_INPUT_CONTROLLERCONFIG;
   static const std::string SETTING_INPUT_TESTRUMBLE;
   static const std::string SETTING_INPUT_CONTROLLERPOWEROFF;

@@ -4,7 +4,8 @@ include(${CORE_SOURCE_DIR}/project/cmake/scripts/common/CheckTargetPlatform.cmak
 function(add_addon_depends addon searchpath)
   # input: string addon string searchpath
 
-  set(OUTPUT_DIR ${DEPENDS_PATH})
+  set(OUTPUT_DIR ${ADDON_DEPENDS_PATH})
+  # look for platform-specific dependencies
   file(GLOB_RECURSE cmake_input_files ${searchpath}/${CORE_SYSTEM_NAME}/*.txt)
   file(GLOB_RECURSE cmake_input_files2 ${searchpath}/common/*.txt)
   list(APPEND cmake_input_files ${cmake_input_files2})
@@ -19,9 +20,9 @@ function(add_addon_depends addon searchpath)
             file MATCHES platforms.txt))
       message(STATUS "Processing ${file}")
       file(STRINGS ${file} def)
-      separate_arguments(def)
+      string(REPLACE " " ";" def ${def})
       list(LENGTH def deflength)
-      get_filename_component(dir ${file} PATH)
+      get_filename_component(dir ${file} DIRECTORY)
 
       # get the id of the dependency
       if(NOT "${def}" STREQUAL "")
@@ -48,7 +49,7 @@ function(add_addon_depends addon searchpath)
         if(EXISTS ${dir}/flags.txt)
           set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${dir}/flags.txt)
           file(STRINGS ${dir}/flags.txt extraflags)
-          separate_arguments(extraflags)
+          string(REPLACE " " ";" extraflags ${extraflags})
           message(STATUS "${id} extraflags: ${extraflags}")
         endif()
 
@@ -76,8 +77,11 @@ function(add_addon_depends addon searchpath)
           message(${BUILD_ARGS})
         endif()
 
-        # if there's a CMakeLists.txt use it to prepare the build
+        # prepare patchfile. ensure we have a clean file after reconfiguring
         set(PATCH_FILE ${BUILD_DIR}/${id}/tmp/patch.cmake)
+        file(REMOVE ${PATCH_FILE})
+
+        # if there's a CMakeLists.txt use it to prepare the build
         if(EXISTS ${dir}/CMakeLists.txt)
           set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${dir}/CMakeLists.txt)
           file(APPEND ${PATCH_FILE}

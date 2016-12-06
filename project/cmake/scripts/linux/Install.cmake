@@ -61,7 +61,7 @@ install(PROGRAMS ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/scripts/${APP_NAME_LC}
 
 # Install libraries
 foreach(library ${LIBRARY_FILES})
-  get_filename_component(dir ${library} PATH)
+  get_filename_component(dir ${library} DIRECTORY)
   string(REPLACE "${CMAKE_BINARY_DIR}/" "" dir ${dir})
   install(PROGRAMS ${library}
           DESTINATION ${libdir}/${APP_NAME_LC}/${dir}
@@ -71,7 +71,7 @@ endforeach()
 # Install add-ons, fonts, icons, keyboard maps, keymaps, etc
 # (addons, media, system, userdata folders in share/kodi/)
 foreach(file ${install_data})
-  get_filename_component(dir ${file} PATH)
+  get_filename_component(dir ${file} DIRECTORY)
   install(FILES ${CMAKE_BINARY_DIR}/${file}
           DESTINATION ${datarootdir}/${APP_NAME_LC}/${dir}
           COMPONENT kodi)
@@ -132,10 +132,16 @@ install(FILES ${CORE_SOURCE_DIR}/copying.txt
         DESTINATION ${datarootdir}/doc/${APP_NAME_LC}
         COMPONENT kodi)
 
+install(FILES ${CORE_SOURCE_DIR}/privacy-policy.txt
+        DESTINATION ${datarootdir}/${APP_NAME_LC}
+        COMPONENT kodi)
+
 # Install kodi-tools-texturepacker
-install(PROGRAMS ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/texturepacker/TexturePacker
-        DESTINATION ${bindir}
-        COMPONENT kodi-tools-texturepacker)
+if(NOT WITH_TEXTUREPACKER)
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/texturepacker/TexturePacker
+          DESTINATION ${bindir}
+          COMPONENT kodi-tools-texturepacker)
+endif()
 
 # Install kodi-addon-dev headers
 install(FILES ${CORE_SOURCE_DIR}/xbmc/addons/kodi-addon-dev-kit/include/kodi/kodi_vfs_types.h
@@ -309,7 +315,7 @@ install(FILES ${CORE_SOURCE_DIR}/xbmc/addons/kodi-addon-dev-kit/include/kodi/kod
 # Install XBT skin files
 foreach(texture ${XBT_FILES})
   string(REPLACE "${CMAKE_BINARY_DIR}/" "" dir ${texture})
-  get_filename_component(dir ${dir} PATH)
+  get_filename_component(dir ${dir} DIRECTORY)
   install(FILES ${texture}
           DESTINATION ${datarootdir}/${APP_NAME_LC}/${dir}
           COMPONENT kodi)
@@ -321,7 +327,7 @@ if(EXISTS ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/extra-installs)
               foreach(dir \${dirs})
                 file(GLOB_RECURSE FILES RELATIVE ${CMAKE_BINARY_DIR} \${dir}/*)
                 foreach(file \${FILES})
-                  get_filename_component(dir \${file} PATH)
+                  get_filename_component(dir \${file} DIRECTORY)
                   file(INSTALL \${file} DESTINATION ${datarootdir}/${APP_NAME_LC}/\${dir})
                 endforeach()
               endforeach()")

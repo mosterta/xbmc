@@ -533,12 +533,19 @@ namespace ADDON
       }
     }
 
+    static void FreeStruct(JOYSTICK_DRIVER_PRIMITIVE& primitive)
+    {
+      (void)primitive;
+    }
+
   private:
     JOYSTICK_DRIVER_PRIMITIVE_TYPE     m_type;
     unsigned int                       m_driverIndex;
     JOYSTICK_DRIVER_HAT_DIRECTION      m_hatDirection;
     JOYSTICK_DRIVER_SEMIAXIS_DIRECTION m_semiAxisDirection;
   };
+
+  typedef PeripheralVector<DriverPrimitive, JOYSTICK_DRIVER_PRIMITIVE> DriverPrimitives;
 
   /*!
    * ADDON::JoystickFeature
@@ -559,7 +566,8 @@ namespace ADDON
   public:
     JoystickFeature(const std::string& name = "", JOYSTICK_FEATURE_TYPE type = JOYSTICK_FEATURE_TYPE_UNKNOWN) :
       m_name(name),
-      m_type(type)
+      m_type(type),
+      m_primitives()
     {
     }
 

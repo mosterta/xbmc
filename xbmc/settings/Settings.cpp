@@ -276,7 +276,6 @@ const std::string CSettings::SETTING_MUSICPLAYER_SEEKDELAY = "musicplayer.seekde
 const std::string CSettings::SETTING_MUSICPLAYER_REPLAYGAINTYPE = "musicplayer.replaygaintype";
 const std::string CSettings::SETTING_MUSICPLAYER_REPLAYGAINPREAMP = "musicplayer.replaygainpreamp";
 const std::string CSettings::SETTING_MUSICPLAYER_REPLAYGAINNOGAINPREAMP = "musicplayer.replaygainnogainpreamp";
-const std::string CSettings::SETTING_MUSICPLAYER_REPLAYGAINAVOIDCLIPPING = "musicplayer.replaygainavoidclipping";
 const std::string CSettings::SETTING_MUSICPLAYER_CROSSFADE = "musicplayer.crossfade";
 const std::string CSettings::SETTING_MUSICPLAYER_CROSSFADEALBUMTRACKS = "musicplayer.crossfadealbumtracks";
 const std::string CSettings::SETTING_MUSICPLAYER_VISUALISATION = "musicplayer.visualisation";
@@ -354,6 +353,7 @@ const std::string CSettings::SETTING_AUDIOOUTPUT_MAINTAINORIGINALVOLUME = "audio
 const std::string CSettings::SETTING_AUDIOOUTPUT_PROCESSQUALITY = "audiooutput.processquality";
 const std::string CSettings::SETTING_AUDIOOUTPUT_ATEMPOTHRESHOLD = "audiooutput.atempothreshold";
 const std::string CSettings::SETTING_AUDIOOUTPUT_STREAMSILENCE = "audiooutput.streamsilence";
+const std::string CSettings::SETTING_AUDIOOUTPUT_STREAMNOISE = "audiooutput.streamnoise";
 const std::string CSettings::SETTING_AUDIOOUTPUT_DSPADDONSENABLED = "audiooutput.dspaddonsenabled";
 const std::string CSettings::SETTING_AUDIOOUTPUT_DSPSETTINGS = "audiooutput.dspsettings";
 const std::string CSettings::SETTING_AUDIOOUTPUT_DSPRESETDB = "audiooutput.dspresetdb";
@@ -369,6 +369,7 @@ const std::string CSettings::SETTING_AUDIOOUTPUT_DTSHDPASSTHROUGH = "audiooutput
 const std::string CSettings::SETTING_AUDIOOUTPUT_VOLUMESTEPS = "audiooutput.volumesteps";
 const std::string CSettings::SETTING_INPUT_PERIPHERALS = "input.peripherals";
 const std::string CSettings::SETTING_INPUT_ENABLEMOUSE = "input.enablemouse";
+const std::string CSettings::SETTING_INPUT_ASKNEWCONTROLLERS = "input.asknewcontrollers";
 const std::string CSettings::SETTING_INPUT_CONTROLLERCONFIG = "input.controllerconfig";
 const std::string CSettings::SETTING_INPUT_TESTRUMBLE = "input.testrumble";
 const std::string CSettings::SETTING_INPUT_CONTROLLERPOWEROFF = "input.controllerpoweroff";
@@ -1077,6 +1078,7 @@ void CSettings::InitializeISettingCallbacks()
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_AUDIODEVICE);
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_PASSTHROUGHDEVICE);
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_STREAMSILENCE);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_STREAMNOISE);
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_MAINTAINORIGINALVOLUME);
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_DSPADDONSENABLED);
   settingSet.insert(CSettings::SETTING_LOOKANDFEEL_SKIN);
@@ -1088,7 +1090,6 @@ void CSettings::InitializeISettingCallbacks()
   settingSet.insert(CSettings::SETTING_MUSICPLAYER_REPLAYGAINPREAMP);
   settingSet.insert(CSettings::SETTING_MUSICPLAYER_REPLAYGAINNOGAINPREAMP);
   settingSet.insert(CSettings::SETTING_MUSICPLAYER_REPLAYGAINTYPE);
-  settingSet.insert(CSettings::SETTING_MUSICPLAYER_REPLAYGAINAVOIDCLIPPING);
   settingSet.insert(CSettings::SETTING_SCRAPERS_MUSICVIDEOSDEFAULT);
   settingSet.insert(CSettings::SETTING_SCREENSAVER_MODE);
   settingSet.insert(CSettings::SETTING_SCREENSAVER_PREVIEW);

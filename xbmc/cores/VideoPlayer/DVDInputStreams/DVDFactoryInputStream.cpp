@@ -154,6 +154,8 @@ CDVDInputStream* CDVDFactoryInputStream::CreateInputStream(IVideoPlayer* pPlayer
         {
           CURL finalUrl(curlFile.GetURL());
           finalUrl.SetProtocolOptions(origUrl.GetProtocolOptions());
+          finalUrl.SetUserName(origUrl.GetUserName());
+          finalUrl.SetPassword(origUrl.GetPassWord());
           finalFileitem.SetPath(finalUrl.Get());
         }
         curlFile.Close();
@@ -172,6 +174,9 @@ CDVDInputStream* CDVDFactoryInputStream::CreateInputStream(IVideoPlayer* pPlayer
       return new CDVDInputStreamFFmpeg(finalFileitem);
 
     if (finalFileitem.GetMimeType() == "application/vnd.apple.mpegurl")
+      return new CDVDInputStreamFFmpeg(finalFileitem);
+
+    if (URIUtils::IsProtocol(finalFileitem.GetPath(), "udp"))
       return new CDVDInputStreamFFmpeg(finalFileitem);
   }
 

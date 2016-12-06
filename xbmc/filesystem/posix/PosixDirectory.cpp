@@ -111,12 +111,27 @@ bool CPosixDirectory::GetDirectory(const CURL& url, CFileItemList &items)
 
 bool CPosixDirectory::Create(const CURL& url)
 {
-  if (mkdir(url.Get().c_str(), 0755) != 0)
+  if (!Create(url.Get()))
+    return Exists(url);
+  
+  return true;
+}
+
+bool CPosixDirectory::Create(std::string path)
+{
+  if (mkdir(path.c_str(), 0755) != 0)
   {
-    if (errno == EEXIST)
-      return Exists(url);
-    else
-      return false;
+    if (errno == ENOENT)
+    {
+      auto sep = path.rfind('/');
+      if (sep == std::string::npos)
+        return false;
+
+      if (Create(path.substr(0, sep)))
+        return Create(path);
+    }
+
+    return false;
   }
   return true;
 }
@@ -128,8 +143,9 @@ bool CPosixDirectory::Remove(const CURL& url)
 
   return !Exists(url);
 }
- bool CPosixDirectory::RemoveRecursive(const CURL& url)
- {
+
+bool CPosixDirectory::RemoveRecursive(const CURL& url)
+{
   std::string root = url.Get();
 
   if (IsAliasShortcut(root, true))
@@ -139,6 +155,7 @@ bool CPosixDirectory::Remove(const CURL& url)
   if (!dir)
     return false;
 
+  bool success(true);
   struct dirent* entry;
   while ((entry = readdir(dir)) != NULL)
   {
@@ -165,19 +182,31 @@ bool CPosixDirectory::Remove(const CURL& url)
     if (entry->d_type == DT_DIR || (bStat && S_ISDIR(buffer.st_mode)))
     {
       if (!RemoveRecursive(CURL{ itemPath }))
-        return false;
-      if (rmdir(itemPath.c_str()) != 0)
-        return false;
+      {
+        success = false;
+        break;
+      }
     }
     else
     {
       if (unlink(itemPath.c_str()) != 0)
-        return false;
+      {
+        success = false;
+        break;
+      }
     }
   }
+
   closedir(dir);
-  return true;
- }
+
+  if (success)
+  {
+    if (rmdir(root.c_str()) != 0)
+      success = false;
+  }
+
+  return success;
+}
 
 bool CPosixDirectory::Exists(const CURL& url)
 {

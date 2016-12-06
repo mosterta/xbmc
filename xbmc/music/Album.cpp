@@ -531,7 +531,6 @@ bool CAlbum::Save(TiXmlNode *node, const std::string &tag, const std::string& st
   XMLUtils::SetString(album,        "type", strType);
   XMLUtils::SetString(album, "releasedate", m_strDateOfRelease);
   XMLUtils::SetString(album,       "label", strLabel);
-  XMLUtils::SetString(album,        "type", strType);
   if (!thumbURL.m_xml.empty())
   {
     CXBMCTinyXML doc;
@@ -545,8 +544,14 @@ bool CAlbum::Save(TiXmlNode *node, const std::string &tag, const std::string& st
   }
   XMLUtils::SetString(album,        "path", strPath);
 
-  XMLUtils::SetFloat(album,         "rating", fRating);
-  XMLUtils::SetInt(album,           "userrating", iUserrating);
+  auto* rating = XMLUtils::SetFloat(album, "rating", fRating);
+  if (rating)
+    rating->ToElement()->SetAttribute("max", 10);
+
+  auto* userrating = XMLUtils::SetInt(album, "userrating", iUserrating);
+  if (userrating)
+    userrating->ToElement()->SetAttribute("max", 10);
+
   XMLUtils::SetInt(album,           "votes", iVotes);
   XMLUtils::SetInt(album,           "year", iYear);
 

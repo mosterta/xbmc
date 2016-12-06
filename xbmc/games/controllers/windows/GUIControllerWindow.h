@@ -35,6 +35,7 @@ namespace GAME
     virtual ~CGUIControllerWindow(void);
 
     // implementation of CGUIControl via CGUIDialog
+    virtual void DoProcess(unsigned int currentTime, CDirtyRegionList &dirtyregions) override;
     virtual bool OnMessage(CGUIMessage& message) override;
 
   protected:
@@ -54,6 +55,7 @@ namespace GAME
     void GetMoreControllers(void);
     void ResetController(void);
     void ShowHelp(void);
+    void ShowButtonCaptureDialog(void);
 
     IControllerList* m_controllerList;
     IFeatureList*    m_featureList;

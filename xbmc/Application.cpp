@@ -25,6 +25,7 @@
 #include "events/EventLog.h"
 #include "events/NotificationEvent.h"
 #include "interfaces/builtins/Builtins.h"
+#include "utils/JobManager.h"
 #include "utils/Variant.h"
 #include "utils/Splash.h"
 #include "LangInfo.h"
@@ -143,6 +144,7 @@
 
 // Dialog includes
 #include "video/dialogs/GUIDialogVideoBookmarks.h"
+#include "video/dialogs/GUIDialogSubtitles.h"
 #include "dialogs/GUIDialogOK.h"
 #include "dialogs/GUIDialogKaiToast.h"
 #include "dialogs/GUIDialogSubMenu.h"
@@ -254,60 +256,55 @@ using KODI::MESSAGING::HELPERS::DialogResponse;
 //extern IDirectSoundRenderer* m_pAudioDecoder;
 CApplication::CApplication(void)
   : m_pPlayer(new CApplicationPlayer)
+  , m_iScreenSaveLock(0)
+  , m_bPlaybackStarting(false)
+  , m_ePlayState(PLAY_STATE_NONE)
+  , m_confirmSkinChange(true)
+  , m_ignoreSkinSettingChanges(false)
   , m_saveSkinOnUnloading(true)
   , m_autoExecScriptExecuted(false)
+  , m_bScreenSave(false)
+  , m_bInhibitIdleShutdown(false)
+  , m_dpms(nullptr)
+  , m_dpmsIsActive(false)
+  , m_dpmsIsManual(false)
   , m_itemCurrentFile(new CFileItem)
   , m_stackFileItemToUpdate(new CFileItem)
+  , m_threadID(0)
+  , m_bInitializing(true)
+  , m_bPlatformDirectories(true)
   , m_progressTrackingVideoResumeBookmark(*new CBookmark)
   , m_progressTrackingItem(new CFileItem)
+  , m_progressTrackingPlayCountUpdate(false)
+  , m_currentStackPosition(0)
+  , m_nextPlaylistItem(-1)
+  , m_lastRenderTime(0)
+  , m_skipGuiRender(false)
+  , m_bStandalone(false)
+  , m_bEnableLegacyRes(false)
+  , m_bTestMode(false)
+  , m_bSystemScreenSaverEnable(false)
   , m_musicInfoScanner(new CMusicInfoScanner)
+  , m_muted(false)
+  , m_volumeLevel(VOLUME_MAXIMUM)
+  , m_pInertialScrollingHandler(new CInertialScrollingHandler())
+  , m_network(nullptr)
   , m_fallbackLanguageLoaded(false)
   , m_WaitingExternalCalls(0)
   , m_ProcessedExternalCalls(0)
-  , m_ignoreSkinSettingChanges(false)
 {
-  m_network = NULL;
   TiXmlBase::SetCondenseWhiteSpace(false);
-  m_bInhibitIdleShutdown = false;
-  m_bScreenSave = false;
-  m_dpms = NULL;
-  m_dpmsIsActive = false;
-  m_dpmsIsManual = false;
-  m_iScreenSaveLock = 0;
-  m_bInitializing = true;
-  m_strPlayListFile = "";
-  m_nextPlaylistItem = -1;
-  m_bPlaybackStarting = false;
-  m_ePlayState = PLAY_STATE_NONE;
-  m_confirmSkinChange = true;
 
 #ifdef HAS_GLX
   XInitThreads();
 #endif
 
-
   /* for now always keep this around */
   m_currentStack = new CFileItemList;
 
-  m_bPlatformDirectories = true;
-
-  m_bStandalone = false;
-  m_bEnableLegacyRes = false;
-  m_bSystemScreenSaverEnable = false;
-  m_pInertialScrollingHandler = new CInertialScrollingHandler();
 #ifdef HAS_DVD_DRIVE
   m_Autorun = new CAutorun();
 #endif
-
-  m_threadID = 0;
-  m_progressTrackingPlayCountUpdate = false;
-  m_currentStackPosition = 0;
-  m_lastRenderTime = 0;
-  m_skipGuiRender = false;
-  m_bTestMode = false;
-
-  m_muted = false;
-  m_volumeLevel = VOLUME_MAXIMUM;
 }
 
 CApplication::~CApplication(void)
@@ -471,11 +468,6 @@ bool CApplication::Create()
 #ifndef TARGET_POSIX
   //floating point precision to 24 bits (faster performance)
   _controlfp(_PC_24, _MCW_PC);
-
-  /* install win32 exception translator, win32 exceptions
-   * can now be caught using c++ try catch */
-  win32_exception::install_handler();
-
 #endif
 
   //! @todo - move to CPlatformXXX
@@ -678,7 +670,6 @@ bool CApplication::Create()
   m_replayGainSettings.iType = CSettings::GetInstance().GetInt(CSettings::SETTING_MUSICPLAYER_REPLAYGAINTYPE);
   m_replayGainSettings.iPreAmp = CSettings::GetInstance().GetInt(CSettings::SETTING_MUSICPLAYER_REPLAYGAINPREAMP);
   m_replayGainSettings.iNoGainPreAmp = CSettings::GetInstance().GetInt(CSettings::SETTING_MUSICPLAYER_REPLAYGAINNOGAINPREAMP);
-  m_replayGainSettings.bAvoidClipping = CSettings::GetInstance().GetBool(CSettings::SETTING_MUSICPLAYER_REPLAYGAINAVOIDCLIPPING);
 
   // Create the Mouse, Keyboard, Remote, and Joystick devices
   // Initialize after loading settings to get joystick deadzone setting
@@ -1139,8 +1130,22 @@ bool CApplication::Initialize()
   g_curlInterface.Unload();
 
   // initialize (and update as needed) our databases
-  CSplash::GetInstance().Show(g_localizeStrings.Get(24150));
-  CDatabaseManager::GetInstance().Initialize();
+  CEvent event(true);
+  CJobManager::GetInstance().Submit([&event]() {
+    CDatabaseManager::GetInstance().Initialize();
+    event.Set();
+  });
+  std::string localizedStr = g_localizeStrings.Get(24150);
+  int iDots = 1;
+  while (!event.WaitMSec(1000))
+  {
+    if (CDatabaseManager::GetInstance().m_bIsUpgrading)
+      CSplash::GetInstance().Show(std::string(iDots, ' ') + localizedStr + std::string(iDots, '.'));
+    if (iDots == 3)
+      iDots = 1;
+    else
+      ++iDots;
+  }
   CSplash::GetInstance().Show();
 
   StartServices();
@@ -1155,11 +1160,30 @@ bool CApplication::Initialize()
     g_windowManager.CreateWindows();
 
     m_confirmSkinChange = false;
-    m_incompatibleAddons = CAddonSystemSettings::GetInstance().MigrateAddons([](){
-      CSplash::GetInstance().Show(g_localizeStrings.Get(24151));
-    });
-    m_confirmSkinChange = true;
+
+    std::vector<std::string> incompatibleAddons;
+    event.Reset();
+    std::atomic<bool> isMigratingAddons(false);
+    CJobManager::GetInstance().Submit([&event, &incompatibleAddons, &isMigratingAddons]() {
+        incompatibleAddons = CAddonSystemSettings::GetInstance().MigrateAddons([&isMigratingAddons]() {
+          isMigratingAddons = true;
+        });
+        event.Set();
+      }, CJob::PRIORITY_DEDICATED);
+    localizedStr = g_localizeStrings.Get(24151);
+    iDots = 1;
+    while (!event.WaitMSec(1000))
+    {
+      if (isMigratingAddons)
+        CSplash::GetInstance().Show(std::string(iDots, ' ') + localizedStr + std::string(iDots, '.'));
+      if (iDots == 3)
+        iDots = 1;
+      else
+        ++iDots;
+    }
     CSplash::GetInstance().Show();
+    m_incompatibleAddons = incompatibleAddons;
+    m_confirmSkinChange = true;
 
     std::string defaultSkin = ((const CSettingString*)CSettings::GetInstance().GetSetting(CSettings::SETTING_LOOKANDFEEL_SKIN))->GetDefault();
     if (!LoadSkin(CSettings::GetInstance().GetString(CSettings::SETTING_LOOKANDFEEL_SKIN)))
@@ -1468,8 +1492,6 @@ void CApplication::OnSettingChanged(const CSetting *setting)
     m_replayGainSettings.iPreAmp = ((CSettingInt*)setting)->GetValue();
   else if (StringUtils::EqualsNoCase(settingId, CSettings::SETTING_MUSICPLAYER_REPLAYGAINNOGAINPREAMP))
     m_replayGainSettings.iNoGainPreAmp = ((CSettingInt*)setting)->GetValue();
-  else if (StringUtils::EqualsNoCase(settingId, CSettings::SETTING_MUSICPLAYER_REPLAYGAINAVOIDCLIPPING))
-    m_replayGainSettings.bAvoidClipping = ((CSettingBool*)setting)->GetValue();
 }
 
 void CApplication::OnSettingAction(const CSetting *setting)
@@ -1641,19 +1663,6 @@ bool CApplication::LoadSkin(const std::string& skinID)
     skin = std::static_pointer_cast<ADDON::CSkinInfo>(addon);
   }
 
-  // start/prepare the skin
-  skin->Start();
-
-  // migrate any skin-specific settings that are still stored in guisettings.xml
-  CSkinSettings::GetInstance().MigrateSettings(skin);
-
-  // check if the skin has been properly loaded and if it has a Home.xml
-  if (!skin->HasSkinFile("Home.xml"))
-  {
-    CLog::Log(LOGERROR, "failed to load requested skin '%s'", skin->ID().c_str());
-    return false;
-  }
-
   bool bPreviousPlayingState=false;
   bool bPreviousRenderingState=false;
   if (m_pPlayer->IsPlayingVideo())
@@ -1681,6 +1690,18 @@ bool CApplication::LoadSkin(const std::string& skinID)
   g_windowManager.GetActiveModelessWindows(currentModelessWindows);
 
   UnloadSkin();
+
+  skin->Start();
+
+  // migrate any skin-specific settings that are still stored in guisettings.xml
+  CSkinSettings::GetInstance().MigrateSettings(skin);
+
+  // check if the skin has been properly loaded and if it has a Home.xml
+  if (!skin->HasSkinFile("Home.xml"))
+  {
+    CLog::Log(LOGERROR, "failed to load requested skin '%s'", skin->ID().c_str());
+    return false;
+  }
 
   CLog::Log(LOGINFO, "  load skin from: %s (version: %s)", skin->Path().c_str(), skin->Version().asString().c_str());
   g_SkinInfo = skin;
@@ -2744,7 +2765,7 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
     if (processGUI && m_renderGUI)
     {
       m_pInertialScrollingHandler->ProcessInertialScroll(frameTime);
-      CSeekHandler::GetInstance().Process();
+      CSeekHandler::GetInstance().FrameMove();
     }
 
     // Open the door for external calls e.g python exactly here.
@@ -3849,6 +3870,12 @@ void CApplication::StopPlaying()
   {
     m_pPlayer->CloseFile();
 
+    // When playback stops we must clear the saved subtitle search from the SubtitleDialog since the dialog is preserved in memory
+    // Otherwise the next time the dialogs open any previous search from a previous movie will be shown
+    CGUIDialogSubtitles *dialog = (CGUIDialogSubtitles*)g_windowManager.GetWindow(WINDOW_DIALOG_SUBTITLES);
+    CGUIMessage msg(GUI_MSG_WINDOW_RESET, dialog->GetID(), 0);
+    dialog->OnMessage(msg);
+
     // turn off visualisation window when stopping
     if ((iWin == WINDOW_VISUALISATION
     ||  iWin == WINDOW_FULLSCREEN_VIDEO)
@@ -4937,16 +4964,16 @@ void CApplication::SeekPercentage(float percent)
 // SwitchToFullScreen() returns true if a switch is made, else returns false
 bool CApplication::SwitchToFullScreen(bool force /* = false */)
 {
+  // don't switch if the slideshow is active
+  if (g_windowManager.GetFocusedWindow() == WINDOW_SLIDESHOW)
+    return false;
+
   // if playing from the video info window, close it first!
   if (g_windowManager.HasModalDialog() && g_windowManager.GetTopMostModalDialogID() == WINDOW_DIALOG_VIDEO_INFO)
   {
     CGUIDialogVideoInfo* pDialog = (CGUIDialogVideoInfo*)g_windowManager.GetWindow(WINDOW_DIALOG_VIDEO_INFO);
     if (pDialog) pDialog->Close(true);
   }
-
-  // don't switch if the slideshow is active
-  if (g_windowManager.GetActiveWindow() == WINDOW_SLIDESHOW)
-    return false;
 
   int windowID = WINDOW_INVALID;
   // See if we're playing a video, and are in GUI mode

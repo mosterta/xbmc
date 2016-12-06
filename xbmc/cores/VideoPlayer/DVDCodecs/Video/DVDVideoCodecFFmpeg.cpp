@@ -195,8 +195,7 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
     }
 #endif
 #ifdef HAS_DX
-  if(DXVA::CDecoder::Supports(*cur) && CSettings::GetInstance().GetBool(CSettings::SETTING_VIDEOPLAYER_USEDXVA2) &&
-     !ctx->m_hints.dvd && !ctx->m_hints.stills)
+  if(DXVA::CDecoder::Supports(*cur) && CSettings::GetInstance().GetBool(CSettings::SETTING_VIDEOPLAYER_USEDXVA2))
   {
     CLog::Log(LOGNOTICE, "CDVDVideoCodecFFmpeg::GetFormat - Creating DXVA(%ix%i)", avctx->width, avctx->height);
     DXVA::CDecoder* dec = new DXVA::CDecoder(ctx->m_processInfo);
@@ -244,7 +243,7 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
 #ifdef HAS_MMAL
     if (*cur == AV_PIX_FMT_YUV420P)
     {
-      MMAL::CDecoder* dec = new MMAL::CDecoder(ctx->m_processInfo);
+      MMAL::CDecoder* dec = new MMAL::CDecoder(ctx->m_processInfo, ctx->m_hints);
       if(dec->Open(avctx, ctx->m_pCodecContext, *cur, ctx->m_uSurfacesCount))
       {
         ctx->m_processInfo.SetVideoPixelFormat(pixFmtName ? pixFmtName : "");
@@ -727,7 +726,7 @@ int CDVDVideoCodecFFmpeg::Decode(uint8_t* pData, int iSize, double dts, double p
                                , m_formats.end()
                                , m_pCodecContext->pix_fmt) == m_formats.end();
 
-    bool need_reopen  = false;
+    bool need_reopen = false;
     if (m_filters != m_filters_next)
       need_reopen = true;
 
@@ -953,6 +952,14 @@ bool CDVDVideoCodecFFmpeg::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pix_fmt = (AVPixelFormat)m_pFrame->format;
 
   pDvdVideoPicture->format = CDVDCodecUtils::EFormatFromPixfmt(pix_fmt);
+
+  if (CMediaSettings::GetInstance().GetCurrentVideoSettings().m_PostProcess)
+  {
+    m_postProc.SetType(g_advancedSettings.m_videoPPFFmpegPostProc, false);
+    if (m_postProc.Process(pDvdVideoPicture))
+      m_postProc.GetPicture(pDvdVideoPicture);
+  }
+
   return true;
 }
 
@@ -1022,14 +1029,15 @@ int CDVDVideoCodecFFmpeg::FilterOpen(const std::string& filters, bool scale)
     inputs->pad_idx = 0;
     inputs->next = nullptr;
 
-    if ((result = avfilter_graph_parse_ptr(m_pFilterGraph, (const char*)m_filters.c_str(), &inputs, &outputs, NULL)) < 0)
+    result = avfilter_graph_parse_ptr(m_pFilterGraph, (const char*)m_filters.c_str(), &inputs, &outputs, NULL);
+    avfilter_inout_free(&outputs);
+    avfilter_inout_free(&inputs);
+
+    if (result < 0)
     {
       CLog::Log(LOGERROR, "CDVDVideoCodecFFmpeg::FilterOpen - avfilter_graph_parse");
       return result;
     }
-
-    avfilter_inout_free(&outputs);
-    avfilter_inout_free(&inputs);
 
     if (filters.compare(0,5,"yadif") == 0)
     {

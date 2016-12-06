@@ -25,6 +25,7 @@
 #include "input/joysticks/IButtonMap.h"
 #include "input/joysticks/JoystickTypes.h"
 #include "peripherals/PeripheralTypes.h"
+#include "threads/CriticalSection.h"
 
 namespace PERIPHERALS
 {
@@ -40,9 +41,13 @@ namespace PERIPHERALS
     // Implementation of IButtonMap
     virtual std::string ControllerID(void) const override { return m_strControllerId; }
 
+    virtual std::string DeviceName(void) const override;
+
     virtual bool Load(void) override;
 
     virtual void Reset(void) override;
+
+    virtual bool IsEmpty(void) const override;
 
     virtual bool GetFeature(
       const JOYSTICK::CDriverPrimitive& primitive,
@@ -89,10 +94,17 @@ namespace PERIPHERALS
       const JOYSTICK::CDriverPrimitive& positiveZ
     ) override;
 
+    virtual void SetIgnoredPrimitives(const std::vector<JOYSTICK::CDriverPrimitive>& primitives) override;
+
+    virtual bool IsIgnored(const JOYSTICK::CDriverPrimitive& primitive) override;
+
     virtual void SaveButtonMap() override;
+
+    virtual void RevertButtonMap() override;
 
   private:
     typedef std::map<JOYSTICK::CDriverPrimitive, JOYSTICK::FeatureName> DriverMap;
+    typedef std::vector<JOYSTICK::CDriverPrimitive> JoystickPrimitiveVector;
 
     // Utility functions
     static DriverMap CreateLookupTable(const FeatureMap& features);
@@ -104,5 +116,7 @@ namespace PERIPHERALS
     const std::string   m_strControllerId;
     FeatureMap          m_features;
     DriverMap           m_driverMap;
+    JoystickPrimitiveVector m_ignoredPrimitives;
+    CCriticalSection    m_mutex;
   };
 }

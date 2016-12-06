@@ -31,6 +31,7 @@
 #endif
 #include "guiinfo/GUIInfoLabels.h"
 #include "filesystem/CurlFile.h"
+#include "filesystem/File.h"
 #include "network/Network.h"
 #include "Application.h"
 #include "windowing/WindowingFactory.h"
@@ -79,6 +80,8 @@
 /* Expand macro before stringify */
 #define STR_MACRO(x) #x
 #define XSTR_MACRO(x) STR_MACRO(x)
+
+using namespace XFILE;
 
 #ifdef TARGET_WINDOWS
 static bool sysGetVersionExWByRef(OSVERSIONINFOEXW& osVerInfo)
@@ -1017,16 +1020,7 @@ const std::string& CSysInfo::GetKernelCpuFamily(void)
 
 int CSysInfo::GetXbmcBitness(void)
 {
-#if defined (__aarch64__) || defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || \
-  defined(_M_AMD64) || defined(__ppc64__) || defined(__mips64) || defined(__s390x__)
-  return 64;
-#elif defined(__thumb__) || defined(_M_ARMT) || defined(__arm__) || defined(_M_ARM) || defined(__mips__) || defined(mips) || defined(__mips) || defined(i386) || \
-  defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(_X86_) || defined(__powerpc) || \
-  defined(__powerpc__) || defined(__ppc__) || defined(_M_PPC)
-  return 32;
-#else
-  return 0; // Unknown
-#endif
+  return static_cast<int>(sizeof(void*) * 8);
 }
 
 bool CSysInfo::HasInternet()
@@ -1416,6 +1410,22 @@ std::string CSysInfo::GetUsedCompilerNameAndVer(void)
 #endif
 }
 
+std::string CSysInfo::GetPrivacyPolicy()
+{
+  if (m_privacyPolicy.empty())
+  {
+    CFile file;
+    XFILE::auto_buffer buf;
+    if (file.LoadFile("special://xbmc/privacy-policy.txt", buf) > 0)
+    {
+      std::string strBuf(buf.get(), buf.length());
+      m_privacyPolicy = strBuf;
+    }
+    else
+      m_privacyPolicy = g_localizeStrings.Get(19055);
+  }
+  return m_privacyPolicy;
+}
 
 CJob *CSysInfo::GetJob() const
 {

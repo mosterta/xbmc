@@ -756,6 +756,25 @@ std::vector<std::string> StringUtils::Split(const std::string& input, const char
   return results;
 }
 
+std::vector<std::string> StringUtils::Split(const std::string& input, const std::vector<std::string> &delimiters)
+{
+  std::vector<std::string> results;
+  if (input.empty())
+    return results;
+
+  if (delimiters.empty())
+  {
+    results.push_back(input);
+    return results;
+  }
+  std::string str = input;
+  for (size_t di = 1; di < delimiters.size(); di++)
+    StringUtils::Replace(str, delimiters[di], delimiters[0]);
+  results = Split(str, delimiters[0]);
+
+  return results;
+}
+
 std::vector<std::string> StringUtils::SplitMulti(const std::vector<std::string> &input, const std::vector<std::string> &delimiters, unsigned int iMaxStrings /* = 0 */)
 {
   if (input.empty())
@@ -1306,7 +1325,7 @@ std::string StringUtils::FormatFileSize(uint64_t bytes)
 
   int i = 0;
   double value = static_cast<double>(bytes);
-  while (i < units.size() - 1 && value >= 999.5)
+  while (i < static_cast<int>(units.size()) - 1 && value >= 999.5)
   {
     ++i;
     value /= 1024.0;

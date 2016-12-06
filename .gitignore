@@ -15,6 +15,7 @@ testMain
 *~
 # CLion
 /.idea
+.vscode/
 
 # generated files etc
 config.cache
@@ -54,6 +55,7 @@ config.log
 *.idb
 *ReSharper*
 *.idb
+*.diagsession
 
 # osx specifics
 /build/
@@ -69,6 +71,7 @@ config.log
 *xcuserdata
 .libs/
 .deps/
+__.SYMDEF*
 
 # CMake project files
 CMakeCache.txt
@@ -121,7 +124,6 @@ cmake_install.cmake
 /addons/skin.estouchy/media/Makefile
 /addons/skin.estouchy/media/Textures.xbt
 /addons/skin.pm3-hd/media/Textures.xbt
-/addons/visualization.itunes/iTunes.mvis
 /addons/script.module.pil/
 /addons/audioencoder.*
 /addons/pvr.*
@@ -131,6 +133,9 @@ cmake_install.cmake
 /addons/xbmc.json/addon.xml
 /addons/kodi.guilib/addon.xml
 /addons/audiodecoder.*
+/addons/visualization.*
+/addons/screensaver.*
+/addons/inputstream.*
 
 # /lib/
 /lib/Makefile
@@ -378,6 +383,10 @@ lib/cpluff/stamp-h1
 /tools/TexturePacker/Makefile
 /tools/TexturePacker/*.dll
 
+# /tools/buildsteps/win32
+/tools/buildsteps/win32/1
+/tools/buildsteps/win32/4
+
 # /userdata/
 /userdata/Database
 /userdata/playlists
@@ -553,3 +562,6 @@ tools/depends/native/TexturePacker/src/Win32/Debug/
 tools/depends/native/TexturePacker/src/Win32/Release/
 tools/depends/native/TexturePacker/src/Win32/TexturePacker.VC.db
 exclude_dll.txt
+
+#certificates
+/system/certs/

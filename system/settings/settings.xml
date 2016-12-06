@@ -471,14 +471,6 @@
             <dependency type="enable" setting="musicplayer.replaygaintype" operator="!is">0</dependency>
           </dependencies>
         </setting>
-        <setting id="musicplayer.replaygainavoidclipping" type="boolean" parent="musicplayer.replaygaintype" label="643" help="36270">
-          <level>3</level>
-          <default>false</default>
-          <control type="toggle" />
-          <dependencies>
-            <dependency type="enable" setting="musicplayer.replaygaintype" operator="!is">0</dependency>
-          </dependencies>
-        </setting>
       </group>
     </category>
     <category id="discs" label="14087" help="36193">
@@ -2410,6 +2402,11 @@
           </constraints>
           <control type="list" format="string" />
         </setting>
+        <setting id="audiooutput.streamnoise" type="boolean" label="34112" help="34113">
+          <level>2</level>
+          <default>true</default>
+          <control type="toggle" />
+        </setting>
       </group>
       <group id="2" label="15108">
         <setting id="audiooutput.guisoundmode" type="integer" label="34120" help="36373">
@@ -2426,7 +2423,7 @@
         </setting>
         <setting id="lookandfeel.soundskin" type="addon" label="24006" help="36110">
           <level>0</level>
-          <default>resource.uisounds.confluence</default>
+          <default>resource.uisounds.kodi</default>
           <constraints>
             <addontype>kodi.resource.uisounds</addontype>
             <allowempty>true</allowempty>
@@ -2516,7 +2513,12 @@
           <level>2</level>
           <default>false</default>
           <dependencies>
-            <dependency type="visible" on="property" name="aesettingvisible" setting="audiooutput.config">audiooutput.passthrough</dependency>
+            <dependency type="visible">
+              <and>
+                <condition on="property" name="aesettingvisible" setting="audiooutput.config">audiooutput.dtspassthrough</condition>
+                <condition on="property" name="aesettingvisible" setting="audiooutput.passthroughdevice">audiooutput.dtspassthrough</condition>
+              </and>
+            </dependency>
             <dependency type="enable" setting="audiooutput.passthrough" operator="is">true</dependency>
           </dependencies>
           <control type="toggle" />
@@ -2604,11 +2606,14 @@
           <control type="toggle" />
           <default>true</default>
         </setting>
+        <setting id="input.asknewcontrollers" type="boolean">
+          <level>0</level>
+          <control type="toggle" />
+          <default>true</default>
+          <visible>false</visible>
+        </setting>
         <setting id="input.controllerconfig" type="action" label="35063" help="35064">
           <level>0</level>
-          <dependencies>
-            <dependency type="enable" on="property" name="SupportsPeripheralControllers" />
-          </dependencies>
           <control type="button" format="action" />
         </setting>
         <setting id="input.testrumble" type="action" label="35051" help="35052">
@@ -2621,9 +2626,6 @@
         <setting id="input.controllerpoweroff" type="boolean" label="35088" help="35089">
           <level>0</level>
           <default>false</default>
-          <dependencies>
-            <dependency type="enable" on="property" name="SupportsPeripheralControllers" />
-          </dependencies>
           <control type="toggle" />
         </setting>
       </group>

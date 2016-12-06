@@ -28,7 +28,6 @@
 #include "VideoPlayerVideo.h"
 #include "DVDCodecs/DVDFactoryCodec.h"
 #include "DVDCodecs/DVDCodecUtils.h"
-#include "DVDCodecs/Video/DVDVideoPPFFmpeg.h"
 #include "DVDCodecs/Video/DVDVideoCodecFFmpeg.h"
 #include "DVDDemuxers/DVDDemux.h"
 #include "DVDDemuxers/DVDDemuxPacket.h"
@@ -513,10 +512,6 @@ void CVideoPlayerVideo::Process()
 
 bool CVideoPlayerVideo::ProcessDecoderOutput(int &decoderState, double &frametime, double &pts)
 {
-  std::string sPostProcessType;
-  bool bPostProcessDeint = false;
-  CDVDVideoPPFFmpeg mPostProcess("");
-
   // if decoder was flushed, we need to seek back again to resume rendering
   if (decoderState & VC_FLUSHED)
   {
@@ -568,8 +563,6 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(int &decoderState, double &frametim
     {
       bool hasTimestamp = true;
 
-      sPostProcessType.clear();
-
       if (m_picture.iDuration == 0.0)
         m_picture.iDuration = frametime;
 
@@ -588,21 +581,6 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(int &decoderState, double &frametim
       if( m_fForcedAspectRatio != 0.0f )
         m_picture.iDisplayWidth = (int) (m_picture.iDisplayHeight * m_fForcedAspectRatio);
 
-      if (CMediaSettings::GetInstance().GetCurrentVideoSettings().m_PostProcess)
-      {
-        if (!sPostProcessType.empty())
-          sPostProcessType += ",";
-        // This is what mplayer uses for its "high-quality filter combination"
-        sPostProcessType += g_advancedSettings.m_videoPPFFmpegPostProc;
-      }
-
-      if (!sPostProcessType.empty())
-      {
-        mPostProcess.SetType(sPostProcessType, bPostProcessDeint);
-        if (mPostProcess.Process(&m_picture))
-          mPostProcess.GetPicture(&m_picture);
-      }
-
       /* if frame has a pts (usually originiating from demux packet), use that */
       if (m_picture.pts != DVD_NOPTS_VALUE)
       {
@@ -620,7 +598,9 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(int &decoderState, double &frametim
 
       frametime = (double)DVD_TIME_BASE / m_fFrameRate;
 
-      if (m_syncState == IDVDStreamPlayer::SYNC_STARTING && !(m_picture.iFlags & DVP_FLAG_DROPPED))
+      if (m_syncState == IDVDStreamPlayer::SYNC_STARTING &&
+          !(iResult & EOS_DROPPED) &&
+          !(m_picture.iFlags & DVP_FLAG_DROPPED))
       {
         m_syncState = IDVDStreamPlayer::SYNC_WAITSYNC;
         SStartMsg msg;
@@ -799,14 +779,8 @@ int CVideoPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
 
   int result = 0;
 
-  //correct any pattern in the timestamps
-  if (picture.format != RENDER_FMT_BYPASS)
-  {
-    m_pullupCorrection.Add(pts);
-    pts += m_pullupCorrection.GetCorrection();
-  }
-
   //try to calculate the framerate
+  m_pullupCorrection.Add(pts);
   if (!m_stalled)
     CalcFrameRate();
 
@@ -872,15 +846,15 @@ int CVideoPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
   if (pPicture->iFlags & DVP_FLAG_INTERLACED)
   {
     deintMethod = CMediaSettings::GetInstance().GetCurrentVideoSettings().m_InterlaceMethod;
-    if (m_processInfo.Supports(deintMethod))
+    if (!m_processInfo.Supports(deintMethod))
+      deintMethod = m_processInfo.GetDeinterlacingMethodDefault();
+    if (deintMethod != EINTERLACEMETHOD::VS_INTERLACEMETHOD_NONE)
     {
       if (pPicture->iFlags & DVP_FLAG_TOP_FIELD_FIRST)
         mDisplayField = FS_TOP;
       else
         mDisplayField = FS_BOT;
     }
-    else
-      deintMethod = EINTERLACEMETHOD::VS_INTERLACEMETHOD_NONE;
   }
 
   int timeToDisplay = DVD_TIME_TO_MSEC(pts - iPlayingClock);
@@ -914,7 +888,7 @@ int CVideoPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
     return EOS_DROPPED;
   }
 
-  m_renderManager.FlipPage(m_bAbortOutput, pts, deintMethod, mDisplayField);
+  m_renderManager.FlipPage(m_bAbortOutput, pts, deintMethod, mDisplayField, (m_syncState == ESyncState::SYNC_STARTING));
 
   return result;
 }

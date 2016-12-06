@@ -516,6 +516,9 @@ bool CGUIWindowPVRGuide::RefreshTimelineItems()
     if (epgGridContainer)
     {
       const CPVRChannelGroupPtr group(GetChannelGroup());
+      if (!group)
+        return false;
+
       std::unique_ptr<CFileItemList> timeline(new CFileItemList);
 
       // can be very expensive. never call with lock acquired.
@@ -553,26 +556,38 @@ bool CGUIWindowPVRGuide::RefreshTimelineItems()
 
 void CGUIWindowPVRGuide::GetViewTimelineItems(CFileItemList &items)
 {
-  CSingleLock lock(m_critSection);
+  bool bRefresh = false;
 
-  // group change detected reset grid coordinates and refresh grid items
-  if (!m_bRefreshTimelineItems && *m_cachedChannelGroup != *GetChannelGroup())
   {
-    CGUIEPGGridContainer* epgGridContainer = GetGridControl();
-    if (!epgGridContainer)
-      return;
+    CSingleLock lock(m_critSection);
 
-    epgGridContainer->ResetCoordinates();
-    m_bRefreshTimelineItems = true;
-    RefreshTimelineItems();
+    // group change detected reset grid coordinates and refresh grid items
+    if (!m_bRefreshTimelineItems && *m_cachedChannelGroup != *GetChannelGroup())
+    {
+      CGUIEPGGridContainer* epgGridContainer = GetGridControl();
+      if (!epgGridContainer)
+        return;
+
+      epgGridContainer->ResetCoordinates();
+      m_bRefreshTimelineItems = true;
+      bRefresh = true;
+    }
   }
 
-  // Note: no need to do anything if no new data available. items always contains previous data.
-  if (m_newTimeline)
+  // never call RefreshTimelineItems with locked mutex!
+  if (bRefresh)
+    RefreshTimelineItems();
+
   {
-    items.RemoveDiscCache(GetID());
-    items.Assign(*m_newTimeline, false);
-    m_newTimeline.reset();
+    CSingleLock lock(m_critSection);
+
+    // Note: no need to do anything if no new data available. items always contains previous data.
+    if (m_newTimeline)
+    {
+      items.RemoveDiscCache(GetID());
+      items.Assign(*m_newTimeline, false);
+      m_newTimeline.reset();
+    }
   }
 }
 
@@ -696,6 +711,11 @@ CPVRRefreshTimelineItemsThread::CPVRRefreshTimelineItemsThread(CGUIWindowPVRGuid
 
 void CPVRRefreshTimelineItemsThread::Process()
 {
+  static const int BOOSTED_SLEEPS_THRESHOLD = 4;
+
+  int iLastEpgItemsCount = 0;
+  int iUpdatesWithoutChange = 0;
+
   while (!m_bStop)
   {
     if (m_pGuideWindow->RefreshTimelineItems() && !m_bStop)
@@ -703,6 +723,25 @@ void CPVRRefreshTimelineItemsThread::Process()
       CGUIMessage m(GUI_MSG_REFRESH_LIST, m_pGuideWindow->GetID(), 0, ObservableMessageEpg);
       KODI::MESSAGING::CApplicationMessenger::GetInstance().SendGUIMessage(m);
     }
-    Sleep(5000);
+
+    // in order to fill the guide window asap, use a short update interval until we the
+    // same amount of epg events for BOOSTED_SLEEPS_THRESHOLD + 1 times in a row .
+    if (iUpdatesWithoutChange < BOOSTED_SLEEPS_THRESHOLD)
+    {
+      int iCurrentEpgItemsCount = m_pGuideWindow->CurrentDirectory().Size();
+
+      if (iCurrentEpgItemsCount == iLastEpgItemsCount)
+        iUpdatesWithoutChange++;
+      else
+        iUpdatesWithoutChange = 0; // reset
+
+      iLastEpgItemsCount = iCurrentEpgItemsCount;
+
+      Sleep(1000); // boosted update cycle
+    }
+    else
+    {
+      Sleep(5000); // normal update cycle
+    }
   }
 }

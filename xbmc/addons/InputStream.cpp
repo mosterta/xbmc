@@ -38,7 +38,8 @@ std::unique_ptr<CInputStream> CInputStream::FromExtension(AddonProps props, cons
   std::string name(ext->plugin->identifier);
   std::unique_ptr<CInputStream> istr(new CInputStream(props, name, listitemprops,
                                                       extensions, protocols));
-  istr->CheckConfig();
+  if (!CAddonMgr::GetInstance().IsAddonDisabled(props.id))
+    istr->CheckConfig();
   return istr;
 }
 
@@ -493,7 +494,7 @@ DemuxPacket* CInputStream::ReadDemux()
   return pPacket;
 }
 
-bool CInputStream::SeekTime(int time, bool backward, double* startpts)
+bool CInputStream::SeekTime(double time, bool backward, double* startpts)
 {
   bool ret = false;
   try
