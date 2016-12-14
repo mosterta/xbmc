@@ -218,7 +218,7 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
   int ret = ioctl(m_config.m_dispFd, DISP_LAYER_SET_CONFIG, args);
   if(ret < 0)
   {
-    CLog::Log(LOGERROR, "CHwLayerAllwinnerA10: set layer config failed\n");
+    CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: set layer config failed\n");
     status = false;
   }
   return status;
@@ -283,6 +283,8 @@ bool CHwLayerAllwinnerDisp2::top()
   unsigned long args[4] = { 0, (unsigned long)(&m_layerConfig), 1, 0 };
 
   m_layerConfig.info.zorder += 2;
+  if (m_layerConfig.info.zorder > 2)
+     m_layerConfig.info.zorder = 2;
 
   if (ioctl(m_config.m_dispFd, DISP_LAYER_SET_CONFIG, args))
   {
@@ -302,7 +304,9 @@ bool CHwLayerAllwinnerDisp2::back()
 
   unsigned long args[4] = { 0, (unsigned long)(&m_layerConfig), 1, 0 };
 
-  m_layerConfig.info.zorder -= 2;
+  m_layerConfig.info.zorder -= 1;
+  if (m_layerConfig.info.zorder < 1)
+     m_layerConfig.info.zorder = 1;
 
   if (ioctl(m_config.m_dispFd, DISP_LAYER_SET_CONFIG, args))
   {
@@ -374,7 +378,7 @@ bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, 
   int error = ioctl(m_config.m_dispFd, DISP_HWC_COMMIT, args);
   if(error < 0)
   {
-    CLog::Log(LOGERROR, "CHwLayerAllwinnerA10: set video framebuffer failed\n");
+    CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: set video framebuffer failed\n");
     ret = false;
   }
   buffer->frameId = dispFenceFd[0];

@@ -93,8 +93,8 @@ bool CHwLayerManagerAllwinnerDisp2::setup()
   createLayer(HwLayerType::Video);
 
   //bring Video layer behind GUI layer
-  sendTop(HwLayerType::Video);
-  sendTop(HwLayerType::GUI);
+  //sendTop(HwLayerType::Video);
+  //sendTop(HwLayerType::GUI);
 
   {
     CPropertyValue prop(PropertyKey::AlphaEnable, 1);
