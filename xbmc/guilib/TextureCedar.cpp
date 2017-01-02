@@ -35,6 +35,7 @@
 #include "Application.h"
 #include "threads/SingleLock.h"
 #include "utils/URIUtils.h"
+#include "utils/CPUInfo.h"
 
 #include "cedarJpegLib.h"
 #include <EGL/egl.h>
@@ -49,16 +50,22 @@ CCriticalSection CCedarTexture::m_critSection;
 PFNGLEGLIMAGETARGETTEXTURE2DOESPROC CCedarTexture::pglEGLImageTargetTexture2DOES = NULL;
 
 CCedarTexture::CCedarTexture(unsigned int width, unsigned int height, unsigned int format)
-   : CGLTexture(width, height, format), m_egl_image(NULL), m_fallback_gl(true)
+   : CGLTexture(width, height, format), m_egl_image(NULL), m_fallback_gl(true), m_hwSupportAvail(false)
 {
   //creating an EGL Image requires the EGL display
   EGLDisplay eglD = g_Windowing.GetEGLDisplay();
-  m_jpgHandle = cedarInitJpeg(eglD);
-  if(m_jpgHandle == NULL)
+
+  std::string hardware = g_cpuInfo.getCPUHardware();
+  if(hardware == std::string("sun4i") || hardware == std::string("sun7i"))
   {
-     CLog::Log(LOGERROR, "CCedarTexture: cedarInitJpeg failed!");
+    m_jpgHandle = cedarInitJpeg(eglD);
+    if(m_jpgHandle == NULL)
+    {
+      CLog::Log(LOGERROR, "CCedarTexture: cedarInitJpeg failed!");
+    }
+    else
+      m_hwSupportAvail = true;
   }
-  
   if(pglEGLImageTargetTexture2DOES == NULL)
   {
      pglEGLImageTargetTexture2DOES =
@@ -72,7 +79,8 @@ CCedarTexture::CCedarTexture(unsigned int width, unsigned int height, unsigned i
 
 CCedarTexture::~CCedarTexture()
 {
-  cedarDestroyJpeg(m_jpgHandle);
+  if( m_jpgHandle)
+    cedarDestroyJpeg(m_jpgHandle);
   m_egl_image = NULL;
 }
 
@@ -83,7 +91,7 @@ void CCedarTexture::Allocate(unsigned int width, unsigned int height, unsigned i
     m_imageWidth = m_originalWidth = width;
     m_imageHeight = m_originalHeight = height;
     m_format = format;
-    m_orientation = 0;
+    m_orientation =  0;
 
     m_textureWidth = m_imageWidth;
     m_textureHeight = m_imageHeight;
@@ -112,6 +120,13 @@ void CCedarTexture::LoadToGPU()
     {
        // Bind the texture object
        glBindTexture(GL_TEXTURE_2D, m_texture);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  
+       cedarGetEglImage(m_jpgHandle, &m_egl_image);
+       pglEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)m_egl_image);
       
        m_loadedToGPU = true;
     }
@@ -126,22 +141,29 @@ void CCedarTexture::CreateTextureObject()
       if(!m_texture)
       {
          glGenTextures(1, (GLuint*) &m_texture);
-  
-        // Bind the texture object
-         glBindTexture(GL_TEXTURE_2D, m_texture);
-  
-        // Set the texture's stretching properties
-         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-         cedarGetEglImage(m_jpgHandle, &m_egl_image);
-         pglEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)m_egl_image);
       }
    }
    else
       CGLTexture::CreateTextureObject();
+}
+void CCedarTexture::BindToUnit(unsigned int unit)
+{
+  glActiveTexture(GL_TEXTURE0 + unit);
+  GLenum error = glGetError();
+  if( error != GL_NO_ERROR)
+    CLog::Log(LOGERROR, "CCedarTexture glActiveTexture error %d unit %d", error, unit);
+  
+  glBindTexture(GL_TEXTURE_2D, m_texture);
+   error = glGetError();
+  if( error != GL_NO_ERROR)
+    CLog::Log(LOGERROR, "CCedarTexture glBindTexture error %d, texture %d", error, m_texture);
+  
+  glEnable(GL_TEXTURE_2D);
+   error = glGetError();
+  if( error != GL_NO_ERROR)
+    CLog::Log(LOGERROR, "CCedarTexture error %d", error);
+
+  //CheckForError();
 }
 
 void CCedarTexture::Update(unsigned int width, unsigned int height, unsigned int pitch, unsigned int format, const unsigned char *pixels, bool loadToGPU)
@@ -157,7 +179,7 @@ void CCedarTexture::Update(unsigned int width, unsigned int height, unsigned int
 
 bool CCedarTexture::LoadFromFileInternal(const std::string& texturePath, unsigned int maxWidth, unsigned int maxHeight, bool requirePixels, const std::string& strMimeType)
 {
-   if (URIUtils::HasExtension(texturePath, ".jpg|.tbn"))
+   if (URIUtils::HasExtension(texturePath, ".jpg|.tbn") && m_hwSupportAvail)
    {
       XFILE::CFile file;
       XFILE::auto_buffer buf;
@@ -194,7 +216,7 @@ bool CCedarTexture::LoadFromFileInternal(const std::string& texturePath, unsigne
           {
             if (cedarDecodeJpeg(m_jpgHandle, maxWidth, maxHeight))
             {
-                Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
+              Allocate(maxWidth, maxHeight, XB_FMT_A8R8G8B8);
                 okay = true;
             }
           }
@@ -207,7 +229,10 @@ bool CCedarTexture::LoadFromFileInternal(const std::string& texturePath, unsigne
          return true;
       }
       else
-         m_fallback_gl = true;
+      {
+        CLog::Log(LOGERROR, "CCedarTexture::cedarDecodeJpeg failed, fallback!");
+        m_fallback_gl = true;
+      }
    }
   return CGLTexture::LoadFromFileInternal(texturePath, maxWidth, maxHeight, requirePixels, strMimeType);
 }

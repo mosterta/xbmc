@@ -41,7 +41,8 @@ public:
   void Allocate(unsigned int width, unsigned int height, unsigned int format);
   bool LoadFromFileInternal(const std::string& texturePath, unsigned int maxWidth, unsigned int maxHeight, bool requirePixels, const std::string& strMimeType = "");
   void CreateTextureObject();
-  
+  void BindToUnit(unsigned int unit);
+
 protected:
   bool ClampLimits(unsigned int &width, unsigned int &height, unsigned int m_width, unsigned int m_height, bool transposed);
 
@@ -51,6 +52,6 @@ private:
   static CCriticalSection m_critSection;
   bool m_fallback_gl;
   static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC pglEGLImageTargetTexture2DOES;
-
+  bool m_hwSupportAvail;
 };
 
