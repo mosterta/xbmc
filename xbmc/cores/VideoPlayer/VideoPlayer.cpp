@@ -1610,9 +1610,9 @@ void CVideoPlayer::Process()
       if (CDVDInputStream::IMenus* menu = dynamic_cast<CDVDInputStream::IMenus*>(m_pInputStream))
       {
         double correction = menu->GetTimeStampCorrection();
-        if (pPacket->dts > correction)
+        if (pPacket->dts != DVD_NOPTS_VALUE && pPacket->dts > correction)
           pPacket->dts -= correction;
-        if (pPacket->pts > correction)
+        if (pPacket->pts != DVD_NOPTS_VALUE && pPacket->pts > correction)
           pPacket->pts -= correction;
       }
       if (m_dvd.syncClock)
@@ -5004,7 +5004,7 @@ void CVideoPlayer::UpdatePlayState(double timeout)
       if (state.dts != DVD_NOPTS_VALUE)
       {
         int dispTime = 0;
-        if (m_CurrentVideo.dispTime)
+        if (m_CurrentVideo.id >= 0 && m_CurrentVideo.dispTime)
           dispTime = m_CurrentVideo.dispTime;
         else if (m_CurrentAudio.dispTime)
           dispTime = m_CurrentAudio.dispTime;

@@ -129,7 +129,7 @@ install(FILES ${CORE_SOURCE_DIR}/copying.txt
               ${CORE_SOURCE_DIR}/LICENSE.GPL
               ${CORE_SOURCE_DIR}/version.txt
               ${CORE_SOURCE_DIR}/docs/README.linux
-        DESTINATION ${datarootdir}/doc/${APP_NAME_LC}
+        DESTINATION ${docdir}
         COMPONENT kodi)
 
 install(FILES ${CORE_SOURCE_DIR}/privacy-policy.txt
@@ -138,7 +138,7 @@ install(FILES ${CORE_SOURCE_DIR}/privacy-policy.txt
 
 # Install kodi-tools-texturepacker
 if(NOT WITH_TEXTUREPACKER)
-  install(PROGRAMS ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/texturepacker/TexturePacker
+  install(PROGRAMS $<TARGET_FILE:TexturePacker::TexturePacker>
           DESTINATION ${bindir}
           COMPONENT kodi-tools-texturepacker)
 endif()
