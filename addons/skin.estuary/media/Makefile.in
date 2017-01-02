@@ -6,14 +6,23 @@ all: $(TARGET) $(TARGET_CURIAL) $(TARGET_FLAT)
 
 .PHONY: force
 
+compress_texture=
+ifeq (@USE_ALLWINNER_GLES@, 1) 
+compress_texture=-use_none
+endif
+
+ifeq (@USE_ALLWINNER_DISP@, 1)
+compress_texture=-use_none
+endif
+
 $(TARGET):
-	@TEXTUREPACKER@ -dupecheck -input . -output $(TARGET)
+	@TEXTUREPACKER@ -dupecheck $(compress_texture) -input . -output $(TARGET)
 
 $(TARGET_CURIAL):
-	@TEXTUREPACKER@ -dupecheck -input ../themes/curial -output $(TARGET_CURIAL)
+	@TEXTUREPACKER@ -dupecheck $(compress_texture) -use_none -input ../themes/curial -output $(TARGET_CURIAL)
 
 $(TARGET_FLAT):
-	@TEXTUREPACKER@ -dupecheck -input ../themes/flat -output $(TARGET_FLAT)
+	@TEXTUREPACKER@ -dupecheck $(compress_texture) -use_none -input ../themes/flat -output $(TARGET_FLAT)
 
 clean:
 	rm -f $(TARGET)
