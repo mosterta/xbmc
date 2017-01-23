@@ -30,7 +30,13 @@
 #endif
 
 #if defined(HAS_GL) || defined(HAS_GLES)
-
+ 
+static void CheckForError()
+{
+  GLenum error = glGetError();
+  if( error != GL_NO_ERROR)
+    CLog::Log(LOGERROR, "GLTexture error %d", error);
+}
 /************************************************************************/
 /*    CGLTexture                                                       */
 /************************************************************************/
@@ -47,12 +53,14 @@ CGLTexture::~CGLTexture()
 void CGLTexture::CreateTextureObject()
 {
   glGenTextures(1, (GLuint*) &m_texture);
+  CheckForError();
 }
 
 void CGLTexture::DestroyTextureObject()
 {
-  if (m_texture)
+  if (m_texture) {
     g_TextureManager.ReleaseHwTexture(m_texture);
+  }
 }
 
 void CGLTexture::LoadToGPU()
@@ -71,7 +79,8 @@ void CGLTexture::LoadToGPU()
 
   // Bind the texture object
   glBindTexture(GL_TEXTURE_2D, m_texture);
-
+  CheckForError();
+  
   // Set the texture's stretching properties
   if (IsMipmapped())
   {
@@ -133,6 +142,7 @@ void CGLTexture::LoadToGPU()
   {
     glTexImage2D(GL_TEXTURE_2D, 0, numcomponents, m_textureWidth, m_textureHeight, 0,
       format, GL_UNSIGNED_BYTE, m_pixels);
+    CheckForError();
   }
   else
   {
@@ -188,7 +198,8 @@ void CGLTexture::LoadToGPU()
   }
   glTexImage2D(GL_TEXTURE_2D, 0, internalformat, m_textureWidth, m_textureHeight, 0,
     pixelformat, GL_UNSIGNED_BYTE, m_pixels);
-
+  CheckForError();
+  
   if (IsMipmapped())
   {
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -210,6 +221,7 @@ void CGLTexture::BindToUnit(unsigned int unit)
 #ifndef HAS_GLES
   glEnable(GL_TEXTURE_2D);
 #endif
+  CheckForError();
 }
 
 #endif // HAS_GL
