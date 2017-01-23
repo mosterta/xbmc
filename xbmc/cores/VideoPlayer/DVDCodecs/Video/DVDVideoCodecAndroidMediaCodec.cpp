@@ -338,6 +338,8 @@ void CDVDMediaCodecInfo::RenderUpdate(const CRect &SrcRect, const CRect &DestRec
 
 /*****************************************************************************/
 /*****************************************************************************/
+int CDVDVideoCodecAndroidMediaCodec::s_instances = 0;
+
 CDVDVideoCodecAndroidMediaCodec::CDVDVideoCodecAndroidMediaCodec(CProcessInfo &processInfo, bool surface_render)
 : CDVDVideoCodec(processInfo)
 , m_formatname("mediacodec")
@@ -359,6 +361,10 @@ CDVDVideoCodecAndroidMediaCodec::~CDVDVideoCodecAndroidMediaCodec()
 
 bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
 {
+
+  if (s_instances > 0)
+    return false;
+
   // mediacodec crashes with null size. Trap this...
   if (!hints.width || !hints.height)
   {
@@ -368,6 +374,11 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
   else if (hints.stills || hints.dvd)
   {
     // Won't work reliably
+    return false;
+  }
+  else if (hints.orientation && m_render_surface && CJNIMediaFormat::GetSDKVersion() < 23)
+  {
+    CLog::Log(LOGERROR, "CDVDVideoCodecAndroidMediaCodec::Open - %s\n", "Surface does not support orientation before API 23");
     return false;
   }
   else if (!CSettings::GetInstance().GetBool(CSettings::SETTING_VIDEOPLAYER_USEMEDIACODEC) &&
@@ -433,6 +444,11 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
           SAFE_DELETE(m_bitstream);
         }
       }
+      else
+      {
+        CLog::Log(LOGWARNING, "CDVDVideoCodecAndroidMediaCodec::Open - No extradata found");
+        return false;
+      }
       break;
     case AV_CODEC_ID_HEVC:
       m_mime = "video/hevc";
@@ -445,6 +461,11 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
         {
           SAFE_DELETE(m_bitstream);
         }
+      }
+      else
+      {
+        CLog::Log(LOGWARNING, "CDVDVideoCodecAndroidMediaCodec::Open - No extradata found");
+        return false;
       }
       break;
     case AV_CODEC_ID_WMV3:
@@ -616,6 +637,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
   CLog::Log(LOGINFO, "CDVDVideoCodecAndroidMediaCodec:: "
     "Open Android MediaCodec %s", m_codecname.c_str());
 
+  s_instances++;
   m_opened = true;
   memset(&m_demux_pkt, 0, sizeof(m_demux_pkt));
 
@@ -664,10 +686,9 @@ void CDVDVideoCodecAndroidMediaCodec::Dispose()
       xbmc_jnienv()->ExceptionClear();
   }
   ReleaseSurfaceTexture();
-  if (m_render_surface)
-    CXBMCApp::get()->clearVideoView();
 
   SAFE_DELETE(m_bitstream);
+  s_instances--;
 }
 
 int CDVDVideoCodecAndroidMediaCodec::Decode(uint8_t *pData, int iSize, double dts, double pts)
@@ -969,6 +990,13 @@ bool CDVDVideoCodecAndroidMediaCodec::ConfigureMediaCodec(void)
     // Handle rotation
     mediaformat.setInteger(CJNIMediaFormat::KEY_ROTATION, m_hints.orientation);
   }
+
+  if (CJNIBase::GetSDKVersion() >= 23 && m_render_surface)
+  {
+    // Handle rotation
+    mediaformat.setInteger(CJNIMediaFormat::KEY_ROTATION, m_hints.orientation);
+  }
+
 
   // handle codec extradata
   if (m_hints.extrasize)

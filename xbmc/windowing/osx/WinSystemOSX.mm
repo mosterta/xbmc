@@ -516,7 +516,7 @@ static void DisplayReconfigured(CGDirectDisplayID display,
     if (flags & kCGDisplaySetModeFlag || flags == 0)
     {
       winsys->StopLostDeviceTimer(); // no need to timeout - we've got the callback
-      winsys->AnnounceOnResetDevice();
+      winsys->HandleOnResetDevice();
     }
   }
   
@@ -540,6 +540,7 @@ CWinSystemOSX::CWinSystemOSX() : CWinSystemBase(), m_lostDeviceTimer(this)
   m_lastDisplayNr = -1;
   m_movedToOtherScreen = false;
   m_refreshRate = 0.0;
+  m_delayDispReset = false;
 }
 
 CWinSystemOSX::~CWinSystemOSX()
@@ -561,7 +562,7 @@ void CWinSystemOSX::StopLostDeviceTimer()
 
 void CWinSystemOSX::OnTimeout()
 {
-  AnnounceOnResetDevice();
+  HandleOnResetDevice();
 }
 
 bool CWinSystemOSX::InitWindowSystem()
@@ -1011,7 +1012,11 @@ bool CWinSystemOSX::SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool bl
   ShowHideNSWindow([last_view window], needtoshowme);
   // need to make sure SDL tracks any window size changes
   ResizeWindowInternal(m_nWidth, m_nHeight, -1, -1, last_view);
-  [[last_view window] setFrameOrigin:last_window_origin];
+  // restore origin once again when going to windowed mode
+  if (!fullScreen)
+  {
+    [[last_view window] setFrameOrigin:last_window_origin];
+  }
   HandlePossibleRefreshrateChange();
 
   return true;
@@ -1733,16 +1738,41 @@ void CWinSystemOSX::AnnounceOnLostDevice()
   CSingleLock lock(m_resourceSection);
   // tell any shared resources
   CLog::Log(LOGDEBUG, "CWinSystemOSX::AnnounceOnLostDevice");
-  for (std::vector<IDispResource *>::iterator i = m_resources.begin(); i != m_resources.end(); i++)
+  for (std::vector<IDispResource *>::iterator i = m_resources.begin(); i != m_resources.end(); ++i)
     (*i)->OnLostDisplay();
+}
+
+void CWinSystemOSX::HandleOnResetDevice()
+{
+  
+  int delay = CSettings::GetInstance().GetInt("videoscreen.delayrefreshchange");
+  if (delay > 0)
+  {
+    m_delayDispReset = true;
+    m_dispResetTimer.Set(delay * 100);
+  }
+  else
+  {
+    AnnounceOnResetDevice();
+  }
 }
 
 void CWinSystemOSX::AnnounceOnResetDevice()
 {
+  double currentFps = m_refreshRate;
+  int w = 0;
+  int h = 0;
+  int currentScreenIdx = GetCurrentScreen();
+  // ensure that graphics context knows about the current refreshrate before
+  // doing the callbacks
+  GetScreenResolution(&w, &h, &currentFps, currentScreenIdx);
+
+  g_graphicsContext.SetFPS(currentFps);
+
   CSingleLock lock(m_resourceSection);
   // tell any shared resources
   CLog::Log(LOGDEBUG, "CWinSystemOSX::AnnounceOnResetDevice");
-  for (std::vector<IDispResource *>::iterator i = m_resources.begin(); i != m_resources.end(); i++)
+  for (std::vector<IDispResource *>::iterator i = m_resources.begin(); i != m_resources.end(); ++i)
     (*i)->OnResetDisplay();
 }
 

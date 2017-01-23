@@ -43,7 +43,6 @@ option(ENABLE_DVDCSS      "Enable libdvdcss support?" ON)
 option(ENABLE_UPNP        "Enable UPnP support?" ON)
 option(ENABLE_NONFREE     "Enable non-free components?" ON)
 option(ENABLE_AIRTUNES    "Enable AirTunes support?" ON)
-option(ENABLE_CEC         "Enable CEC support?" ON)
 option(ENABLE_OPTICAL     "Enable optical support?" ON)
 # use ffmpeg from depends or system
 option(ENABLE_INTERNAL_FFMPEG "Enable internal ffmpeg?" OFF)
@@ -55,13 +54,13 @@ if(UNIX)
   if(CORE_SYSTEM_NAME STREQUAL linux OR CORE_SYSTEM_NAME STREQUAL freebsd)
     option(ENABLE_X11         "Enable X11 support?" ON)
     option(ENABLE_AML         "Enable AML?" OFF)
+    option(ENABLE_IMX         "Enable IMX?" OFF)
   endif()
 endif()
 # System options
 if(NOT WIN32)
   option(WITH_ARCH              "build with given arch" OFF)
   option(WITH_CPU               "build with given cpu" OFF)
-  option(ENABLE_CCACHE          "Enable Ccache support" ON)
 endif()
 if(CORE_SYSTEM_NAME STREQUAL linux OR CORE_SYSTEM_NAME STREQUAL rbpi)
   option(ENABLE_LIRC            "Enable LIRC support?" ON)
@@ -93,7 +92,7 @@ set(INCLUDES ${CORE_SOURCE_DIR}
              ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR})
 
 find_package(PkgConfig)
-if(CMAKE_CROSSCOMPILING)
+if(KODI_DEPENDSBUILD)
   if(PKG_CONFIG_EXECUTABLE)
     set(PKG_CONFIG_FOUND TRUE)
   endif()
@@ -117,7 +116,7 @@ endif()
 
 # Optional dependencies
 set(optional_deps MicroHttpd MySqlClient SSH XSLT
-                  Alsa UDEV DBus Avahi SmbClient
+                  Alsa UDEV DBus Avahi SmbClient CCache
                   PulseAudio VDPAU VAAPI Bluetooth CAP)
 
 # Required, dyloaded deps
@@ -213,13 +212,11 @@ endif()
 
 if(CORE_SYSTEM_NAME STREQUAL android OR CORE_SYSTEM_NAME STREQUAL linux)
   core_optional_dep(AML)
+  core_optional_dep(IMX)
 elseif(CORE_SYSTEM_NAME STREQUAL rbpi)
   core_require_dep(MMAL)
 endif()
 
-if(ENABLE_CCACHE)
-  core_optional_dep(CCache)
-endif()
 
 # Compile Info
 add_custom_command(OUTPUT ${CORE_BUILD_DIR}/xbmc/CompileInfo.cpp
