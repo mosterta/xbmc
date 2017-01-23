@@ -129,6 +129,7 @@ bool CHwLayerManagerAllwinnerDisp2::createLayer(HwLayerType type)
     layer = new CHwLayerAllwinnerDisp2(config);
     if(! layer )
       return false;
+    layer->initialize(config);
     
     Base::m_layers.insert(std::pair<HwLayerType, CHwLayerAllwinnerDisp2*>(type, layer));
     return layer->create(type);
