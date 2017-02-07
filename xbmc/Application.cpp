@@ -971,6 +971,10 @@ bool CApplication::InitDirectoriesOSX()
   else
     userHome = "/root";
 
+  std::string binaddonAltDir;
+  if (getenv("KODI_BINADDON_PATH"))
+    binaddonAltDir = getenv("KODI_BINADDON_PATH");
+
   std::string appPath = CUtil::GetHomePath();
   setenv("KODI_HOME", appPath.c_str(), 0);
 
@@ -989,6 +993,7 @@ bool CApplication::InitDirectoriesOSX()
   {
     // map our special drives
     CSpecialProtocol::SetXBMCBinPath(appPath);
+    CSpecialProtocol::SetXBMCAltBinAddonPath(binaddonAltDir);
     CSpecialProtocol::SetXBMCPath(appPath);
     #if defined(TARGET_DARWIN_IOS)
       std::string appName = CCompileInfo::GetAppName();
@@ -1026,6 +1031,7 @@ bool CApplication::InitDirectoriesOSX()
     URIUtils::AddSlashAtEnd(appPath);
 
     CSpecialProtocol::SetXBMCBinPath(appPath);
+    CSpecialProtocol::SetXBMCAltBinAddonPath(binaddonAltDir);
     CSpecialProtocol::SetXBMCPath(appPath);
     CSpecialProtocol::SetHomePath(URIUtils::AddFileToFolder(appPath, "portable_data"));
     CSpecialProtocol::SetMasterProfilePath(URIUtils::AddFileToFolder(appPath, "portable_data/userdata"));
@@ -4658,6 +4664,11 @@ void CApplication::Restart(bool bSamePosition)
 const std::string& CApplication::CurrentFile()
 {
   return m_itemCurrentFile->GetPath();
+}
+
+std::shared_ptr<CFileItem> CApplication::CurrentFileItemPtr()
+{
+  return m_itemCurrentFile;
 }
 
 CFileItem& CApplication::CurrentFileItem()
