@@ -381,6 +381,11 @@ bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, 
     CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: set video framebuffer failed\n");
     ret = false;
   }
+  if(buffer->frameId >= 0) 
+  {
+    CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: fence: %d already set, closing\n", buffer->frameId);
+    close(buffer->frameId);
+  }
   buffer->frameId = dispFenceFd[0];
   return status;
 }
