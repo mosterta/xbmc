@@ -6,7 +6,7 @@
 ; -> sqlite-3.7.12.1-win32\system\sqlite3.dll
 ; -> ...
 ;PLEASE KEEP THIS LIST IN ALPHABETICAL ORDER!
-cpluff-2b8e20-win32-vc140.7z
+cpluff-ed7874fc-win32-vc140.7z
 crossguid-8f399e-win32-vc140-v3.7z
 curl-7.48-win32-vc140.7z
 dnssd-541-win32.zip
@@ -19,7 +19,7 @@ jsonschemabuilder-1.0.0-win32-3.7z
 libass-542975a-win32-vc140.7z
 libbluray-0.9.3-win32-vc140.7z
 libcdio-0.9.3-win32-vc140.7z
-libcec-4.0.0-win32-vc140-2.7z
+libcec-4.0.1-win32-vc140-2.7z
 libfribidi-0.19.2-win32.7z
 libiconv-1.14-win32-vc140-v2.7z
 libjpeg-turbo-1.4.90-win32-vc140.7z
@@ -41,7 +41,7 @@ python-2.7.11-win32-vc140-v2.7z
 shairplay-0.9.0-win32-vc140-v2.7z
 sqlite-3.10.2-win32-vc140.7z
 swig-3.0.10-win32.7z
-taglib-1.11-win32-vc140-v2.7z
+taglib-1.11.1_80df30-win32-vc140.7z
 texturepacker-1.1.1-win32.7z
 tinyxmlstl-2.6.2-win32-vc140-v2.7z
 zlib-1.2.8-win32-vc140-v3.7z

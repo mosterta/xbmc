@@ -34,7 +34,7 @@
 	<constant name="list_y_offset">0</constant>
 	<constant name="list_item_height">80</constant>
 	<expression name="infodialog_active">Window.IsActive(musicinformation) | Window.IsActive(songinformation) | Window.IsActive(movieinformation) | Window.IsActive(addoninformation) | Window.IsActive(pvrguideinfo) | Window.IsActive(pvrrecordinginfo) | Window.IsActive(pictureinfo) | Window.IsVisible(script-script.extendedinfo-DialogVideoInfo.xml) | Window.IsVisible(script-script.extendedinfo-DialogInfo.xml) | Window.IsVisible(script-script.extendedinfo-VideoList.xml)</expression>
-	<expression name="sidebar_focused">ControlGroup(9000).HasFocus | Control.HasFocus(6130)</expression>
+	<expression name="sidebar_visible">ControlGroup(9000).HasFocus | Control.HasFocus(6130) | Window.IsActive(MyPlaylist.xml)</expression>
 	<include name="CommonScrollbars">
 		<control type="group">
 			<animation effect="fade" start="100" end="0" time="150">WindowClose</animation>
@@ -320,6 +320,7 @@
 					<font>$PARAM[font]</font>
 					<aligny>center</aligny>
 					<label>$INFO[ListItem.Label]</label>
+					<scroll>true</scroll>
 				</control>
 			</focusedlayout>
 		</definition>
@@ -464,12 +465,19 @@
 						<texture colordiffuse="button_focus">lists/focus.png</texture>
 						<animation effect="fade" start="100" end="0" time="0" condition="!Control.HasFocus($PARAM[list_id])">Conditional</animation>
 					</control>
+					<control type="image">
+						<left>15</left>
+						<top>0</top>
+						<width>32</width>
+						<bottom>0</bottom>
+						<aspectratio aligny="center">keep</aspectratio>
+						<texture>$VAR[ListWatchedIconVar]</texture>
+					</control>
 					<control type="label">
-						<left>20</left>
-						<textoffsetx>15</textoffsetx>
+						<left>65</left>
 						<top>0</top>
 						<bottom>0</bottom>
-						<right>0</right>
+						<right>20</right>
 						<aligny>center</aligny>
 						<scroll>true</scroll>
 						<label>$INFO[ListItem.Label]</label>
@@ -488,12 +496,19 @@
 					</control>
 				</focusedlayout>
 				<itemlayout height="list_item_height" width="$PARAM[width]">
+					<control type="image">
+						<left>15</left>
+						<top>0</top>
+						<width>32</width>
+						<bottom>0</bottom>
+						<aspectratio aligny="center">keep</aspectratio>
+						<texture>$VAR[ListWatchedIconVar]</texture>
+					</control>
 					<control type="label">
-						<left>20</left>
-						<textoffsetx>15</textoffsetx>
+						<left>65</left>
 						<top>0</top>
 						<bottom>0</bottom>
-						<right>0</right>
+						<right>20</right>
 						<aligny>center</aligny>
 						<label>$INFO[ListItem.Label]</label>
 						<shadowcolor>text_shadow</shadowcolor>
@@ -763,11 +778,12 @@
 		</control>
 		<control type="group">
 			<width>$PARAM[width]</width>
+			<height>$PARAM[height]</height>
 			<control type="image">
 				<left>0</left>
 				<top>0</top>
 				<right>0</right>
-				<height>$PARAM[height]</height>
+				<bottom>0</bottom>
 				<texture colordiffuse="dialog_tint">colors/white.png</texture>
 			</control>
 			<control type="image">
@@ -792,7 +808,7 @@
 				<left>0</left>
 				<top>0</top>
 				<right>0</right>
-				<height>$PARAM[height]</height>
+				<bottom>0</bottom>
 				<texturefocus />
 				<texturenofocus />
 				<onclick>noop</onclick>

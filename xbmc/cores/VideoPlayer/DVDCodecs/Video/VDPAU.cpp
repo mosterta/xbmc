@@ -1584,6 +1584,12 @@ void CVdpauRenderPicture::Sync()
      }
      fence = eglCreateSyncKHR(g_Windowing.GetEGLDisplay(), EGL_SYNC_TYPE_KHR, NULL);
   }
+#elif ALLWINNER_FRAME_sync
+  CSingleLock lock(renderPicSection);
+  if (usefence)
+  {
+     frameId = -1;
+  }
 #endif
 }
 

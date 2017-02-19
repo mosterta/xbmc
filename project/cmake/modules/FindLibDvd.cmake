@@ -1,5 +1,5 @@
 if(NOT WIN32)
-  if(CMAKE_CROSSCOMPILING)
+  if(KODI_DEPENDSBUILD)
     set(_dvdlibs dvdread dvdnav)
     set(_handlevars LIBDVD_INCLUDE_DIRS DVDREAD_LIBRARY DVDNAV_LIBRARY)
     if(ENABLE_DVDCSS)
@@ -76,7 +76,7 @@ if(NOT WIN32)
     endforeach()
 
     set(DVDREAD_CFLAGS "${DVDREAD_CFLAGS} -I${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/libdvd/include")
-    if(CMAKE_CROSSCOMPILING)
+    if(KODI_DEPENDSBUILD)
       set(EXTRA_FLAGS "CC=${CMAKE_C_COMPILER}")
     endif()
 
@@ -123,9 +123,9 @@ if(NOT WIN32)
       set_target_properties(dvdcss PROPERTIES FOLDER "External Projects")
     endif()
 
-    set(DVDREAD_CFLAGS "-D_XBMC")
+    set(DVDREAD_CFLAGS "-D_XBMC -I${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/libdvd/include")
     if(ENABLE_DVDCSS)
-      set(DVDREAD_CFLAGS "${DVDREAD_CFLAGS} -DHAVE_DVDCSS_DVDCSS_H -I${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/libdvd/include")
+      set(DVDREAD_CFLAGS "${DVDREAD_CFLAGS} -DHAVE_DVDCSS_DVDCSS_H")
     endif()
 
     set(DVDREAD_LIBRARY ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/libdvd/lib/libdvdread.a)

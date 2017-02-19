@@ -272,11 +272,13 @@ CFileItemPtr CGUIWindowLoginScreen::GetCurrentListItem(int offset)
 
 void CGUIWindowLoginScreen::LoadProfile(unsigned int profile)
 {
+  CServiceBroker::GetContextMenuManager().Deinit();
+
   // stop service addons and give it some time before we start it again
   ADDON::CAddonMgr::GetInstance().StopServices(true);
 
   // stop PVR related services
-  g_application.StopPVRManager();
+  CServiceBroker::GetPVRManager().Unload();
 
   // stop audio DSP services with a blocking message
   CServiceBroker::GetADSP().Deactivate();
@@ -322,8 +324,11 @@ void CGUIWindowLoginScreen::LoadProfile(unsigned int profile)
   JSONRPC::CJSONRPC::Initialize();
 #endif
 
+  // Restart context menu manager
+  CServiceBroker::GetContextMenuManager().Init();
+
   // restart PVR services
-  g_application.ReinitPVRManager();
+  CServiceBroker::GetPVRManager().Reinit();
 
   // start services which should run on login
   ADDON::CAddonMgr::GetInstance().StartServices(false);
