@@ -91,13 +91,14 @@ bool CHwLayerManagerAllwinnerDisp2::setup()
 {
   createLayer(HwLayerType::GUI);
   createLayer(HwLayerType::Video);
-
+  //showLayer(HwLayerType::GUI);
+  //showLayer(HwLayerType::Video);
   //bring Video layer behind GUI layer
   //sendTop(HwLayerType::Video);
   //sendTop(HwLayerType::GUI);
 
   {
-    CPropertyValue prop(PropertyKey::AlphaEnable, 1);
+    CPropertyValue prop(PropertyKey::AlphaEnable, 2);
     setProperty(HwLayerType::GUI, prop);
   }
   //Enable alpha blending and value inside colorkey
@@ -256,13 +257,45 @@ bool CHwLayerManagerAllwinnerDisp2::displayFrame(HwLayerType type, CHwLayerAdapt
   }
 };
 
-bool CHwLayerManagerAllwinnerDisp2::syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerManagerAllwinnerDisp2::getSyncFenceValue(HwLayerType type, VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value)
 {
   if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
   {
     CHwLayerAllwinnerBase *layer = Base::m_layers[type];
     if(layer)
-      return layer->syncFrame(pic);
+      return layer->getSyncFenceValue(pic, value);
+    else
+      return false;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool CHwLayerManagerAllwinnerDisp2::initSyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+{
+  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
+  {
+    CHwLayerAllwinnerBase *layer = Base::m_layers[type];
+    if(layer)
+      return layer->initSyncFence(pic);
+    else
+      return false;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool CHwLayerManagerAllwinnerDisp2::destroySyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+{
+  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
+  {
+    CHwLayerAllwinnerBase *layer = Base::m_layers[type];
+    if(layer)
+      return layer->destroySyncFence(pic);
     else
       return false;
   }

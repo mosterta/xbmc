@@ -119,11 +119,24 @@ bool CHwLayerManagerAllwinner::displayFrame(HwLayerType type, CHwLayerAdaptorVdp
   return m_manager->displayFrame(type, frame, buffer, top_field);
 };
 
-bool CHwLayerManagerAllwinner::syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerManagerAllwinner::getSyncFenceValue(HwLayerType type, VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value)
 {
   if(!m_manager)
     return false;
-  return m_manager->syncFrame(type, pic);
+  return m_manager->getSyncFenceValue(type, pic, value);
+}
+
+bool CHwLayerManagerAllwinner::initSyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+{
+  if(!m_manager)
+    return false;
+  return m_manager->initSyncFence(type, pic);
+}
+bool CHwLayerManagerAllwinner::destroySyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+{
+  if(!m_manager)
+    return false;
+  return m_manager->destroySyncFence(type, pic);
 }
 
 bool CHwLayerManagerAllwinner::setProperty(HwLayerType type, CPropertyValue &prop)

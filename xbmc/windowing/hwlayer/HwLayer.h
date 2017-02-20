@@ -30,6 +30,10 @@ class CHwLayer
       Video,
       GUI
     };
+    enum class HwLayerSyncValue {
+      HWLayerFenceSignaled,
+      HWLayerFenceUnsignaled
+    };
     class CPropertyValue 
     {
       public:
@@ -80,7 +84,9 @@ class CHwLayer
    virtual bool top() = 0;
    virtual bool back() = 0;
    virtual bool displayFrame(CVideoDataProvider &frame, RENDERPICTURE *buffer, int top_field) = 0;
-   virtual bool syncFrame(RENDERPICTURE *pic) = 0;
+   virtual bool getSyncFenceValue(RENDERPICTURE *pic, HwLayerSyncValue &value) = 0;
+   virtual bool initSyncFence(RENDERPICTURE *pic) = 0;
+   virtual bool destroySyncFence(RENDERPICTURE *pic) = 0;
    virtual bool setProperty(CPropertyValue &prop) = 0;
 
 };

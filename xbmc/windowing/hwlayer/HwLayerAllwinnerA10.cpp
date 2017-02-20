@@ -391,19 +391,21 @@ bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, VD
   return status;
 }
 
-bool CHwLayerAllwinnerA10::syncFrame(VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerAllwinnerA10::getSyncFenceValue(VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value)
 {
-  bool busy = false;
   int curDisplayedFrameId;
   bool status = getCurrentFrameId(curDisplayedFrameId);
   if(! status )
     CLog::Log(LOGERROR, "CHwLayerAllwinnerA10:%s error calling getCurrentFrameId", __FUNCTION__);
 
-  if(status && curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId))
+  value = HwLayerSyncValue::HWLayerFenceSignaled;
+
+  if((status && curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId)) ||
+    (pic->frameId == -1))
   {
-    busy = true;
+    value = HwLayerSyncValue::HWLayerFenceUnsignaled;
   }
-  return busy;
+  return true;
 }
 
 bool CHwLayerAllwinnerA10::getCurrentFrameId(int &frameId)

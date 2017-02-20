@@ -320,13 +320,13 @@ bool CHwLayerManagerAllwinnerDisp::displayFrame(HwLayerType type, CHwLayerAdapto
   }
 };
 
-bool CHwLayerManagerAllwinnerDisp::syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerManagerAllwinnerDisp::getSyncFenceValue(HwLayerType type, VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value)
 {
   if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
   {
     CHwLayerAllwinnerBase *layer = Base::m_layers[type];
     if(layer)
-      return layer->syncFrame(pic);
+      return layer->getSyncFenceValue(pic, value);
     else
       return false;
   }
@@ -335,6 +335,39 @@ bool CHwLayerManagerAllwinnerDisp::syncFrame(HwLayerType type, VDPAU::CVdpauRend
     return false;
   }
 }
+
+bool CHwLayerManagerAllwinnerDisp::initSyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+{
+  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
+  {
+    CHwLayerAllwinnerBase *layer = Base::m_layers[type];
+    if(layer)
+      return layer->initSyncFence(pic);
+    else
+      return false;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool CHwLayerManagerAllwinnerDisp::destroySyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+{
+  if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
+  {
+    CHwLayerAllwinnerBase *layer = Base::m_layers[type];
+    if(layer)
+      return layer->destroySyncFence(pic);
+    else
+      return false;
+  }
+  else
+  {
+    return false;
+  }
+}
+
 
 bool CHwLayerManagerAllwinnerDisp::setProperty(HwLayerType type, CPropertyValue &prop)
 {

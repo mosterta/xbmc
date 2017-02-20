@@ -44,6 +44,8 @@ CHwLayerAllwinnerDisp2::~CHwLayerAllwinnerDisp2()
 {
   hide();
   destroy();
+  if(m_fenceBuffer)
+    free(m_fenceBuffer);
 };
 
 bool CHwLayerAllwinnerDisp2::initialize(CHwLayerConfigAllwinner &config)
@@ -381,30 +383,53 @@ bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, 
     CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: set video framebuffer failed\n");
     ret = false;
   }
+
+  if(buffer->frameId >= 0)
+  {
+    close(buffer->frameId);
+  }
+
   buffer->frameId = dispFenceFd[0];
+  CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2:displayFrame buffer:%X fence0:%d\n", buffer, dispFenceFd[0]);
+
   return status;
 }
 
-bool CHwLayerAllwinnerDisp2::syncFrame(VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerAllwinnerDisp2::getSyncFenceValue(VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value)
 {
-  bool busy = false;
+  bool retval = false;
   struct sync_fence_info_data *fenceInfo = (struct sync_fence_info_data *)m_fenceBuffer;
   fenceInfo->len = 512;
-  
-  int status = ioctl(pic->frameId, SYNC_IOC_FENCE_INFO, m_fenceBuffer);
+ 
+  value = HwLayerSyncValue::HWLayerFenceUnsignaled;
+ 
+  if (pic->frameId < 0)
+     return false;
+
+  CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: syncFrame: cmd:%X buffer:%X fence:%d\n", SYNC_IOC_FENCE_INFO, pic, pic->frameId);
+
+  int status = ioctl(pic->frameId, SYNC_IOC_FENCE_INFO, fenceInfo);
   if(status >= 0)
   {
     if(fenceInfo->status == 0) //fence still active
     {
-      busy = true;
-    }
-    else
-    {
-      close (pic->frameId);
-      pic->frameId = -1;
+      value = HwLayerSyncValue::HWLayerFenceSignaled;
+      retval = true;
     }
   }
-  return busy;
+  else
+  {
+     CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: syncFrame: returned error:%d errno:%d fence:%d\n", status, errno, pic->frameId);
+  }
+  return retval;
+}
+bool CHwLayerAllwinnerDisp2::destroySyncFence(VDPAU::CVdpauRenderPicture *pic)
+{
+  CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: destroySyncFence: fence:%d\n", pic->frameId);
+  if(pic->frameId != -1)
+    close(pic->frameId);
+  pic->frameId = -1;
+  return true;
 }
 
 bool CHwLayerAllwinnerDisp2::setProperty(CPropertyValue &prop)

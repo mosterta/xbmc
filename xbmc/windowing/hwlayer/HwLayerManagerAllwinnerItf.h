@@ -39,6 +39,7 @@ class CHwLayerManagerAllwinnerItf : public CHwLayerManager<CHwLayerAllwinnerBase
    typedef typename CHwLayerAllwinnerBase::CPropertyValue::ColorSpaceValues ColorSpace;
    typedef typename CHwLayerAllwinnerBase::CPropertyValue::InterlaceValues Interlace;
    typedef typename CHwLayerAllwinnerBase::CColorKey CColorKey;
+   typedef typename CHwLayerAllwinnerBase::HwLayerSyncValue HwLayerSyncValue;
 
    typedef CHwLayerManager<CHwLayerAllwinnerBase, CHwLayerManagerConfigAllwinner> Base;
    
@@ -54,8 +55,9 @@ class CHwLayerManagerAllwinnerItf : public CHwLayerManager<CHwLayerAllwinnerBase
    virtual bool sendBack(HwLayerType type) = 0;
    virtual bool configure(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, CRect &srcRect, CRect &dstRect) = 0;
    virtual bool displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field) = 0;
-   virtual bool syncFrame(HwLayerType type, VDPAU::CVdpauRenderPicture *pic) = 0;
-
+   virtual bool getSyncFenceValue(HwLayerType type, VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value) = 0;
+   virtual bool initSyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic) = 0;
+   virtual bool destroySyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic) = 0;
    virtual bool setProperty(HwLayerType type, CPropertyValue &prop) = 0;
    virtual bool setProperty(HwLayerType type, CColorKey &prop) = 0;
    

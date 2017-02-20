@@ -87,6 +87,7 @@ void CRendererVDPAUAllwinner::AddVideoPictureHW(DVDVideoPicture &picture, int in
   VDPAU::CVdpauRenderPicture *pic = vdpau->Acquire();
   if (buf.hwDec)
     ((VDPAU::CVdpauRenderPicture*)buf.hwDec)->Release();
+  g_HwLayer.initSyncFence(CHwLayerManagerAW::HwLayerType::Video, pic);
   buf.hwDec = pic;
 }
 
