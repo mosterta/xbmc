@@ -50,7 +50,7 @@ CCriticalSection CCedarTexture::m_critSection;
 PFNGLEGLIMAGETARGETTEXTURE2DOESPROC CCedarTexture::pglEGLImageTargetTexture2DOES = NULL;
 
 CCedarTexture::CCedarTexture(unsigned int width, unsigned int height, unsigned int format)
-   : CGLTexture(width, height, format), m_egl_image(NULL), m_fallback_gl(true), m_hwSupportAvail(false)
+   : CGLTexture(width, height, format), m_egl_image(NULL), m_jpgHandle(NULL), m_fallback_gl(true), m_hwSupportAvail(false)
 {
   //creating an EGL Image requires the EGL display
   EGLDisplay eglD = g_Windowing.GetEGLDisplay();
