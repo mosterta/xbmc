@@ -35,7 +35,7 @@ static void CheckForError()
 {
   GLenum error = glGetError();
   if( error != GL_NO_ERROR)
-    CLog::Log(LOGERROR, "GLTexture error %d", error);
+    CLog::Log(LOGDEBUG, "GLTexture error %d", error);
 }
 /************************************************************************/
 /*    CGLTexture                                                       */
