@@ -56,8 +56,23 @@ public:
     virtual bool CanSkipDeint() {return false; }
     virtual const std::string Name() = 0;
     virtual void SetCodecControl(int flags) {};
+    bool isCapabilitySupported(enum IHardwareCapabilities cap) { return m_hwCapabilities & cap; };
+    
+    protected:
+      enum IHardwareCapabilities m_hwCapabilities;
   };
 
+  class IHwRenderManager : public IDVDResourceCounted<IHwRenderManager>
+  {
+    public:
+      IHwRenderManager() {};
+      virtual ~IHwRenderManager() {};
+      virtual bool Create(AVCodecContext* avctx, AVCodecContext* mainctx, const enum AVPixelFormat) {};
+      virtual void Destroy() {};
+      virtual AVFrame* GetBuffer() {};
+      virtual bool FreeBuffer() {};
+      virtual bool GetPicture(AVCodecContext* avctx, AVFrame* frame, DVDVideoPicture* picture) = 0;
+  };
   CDVDVideoCodecFFmpeg(CProcessInfo &processInfo);
   virtual ~CDVDVideoCodecFFmpeg();
   virtual bool Open(CDVDStreamInfo &hints, CDVDCodecOptions &options) override;
@@ -76,6 +91,9 @@ public:
   IHardwareDecoder * GetHardware() { return m_pHardware; };
   void SetHardware(IHardwareDecoder* hardware);
 
+  IHwRenderManager* GetHwRenderManager() { return m_hwRenderManager; };
+  void SetHwRenderManager(IHwRenderManager *renderManager);
+  
 protected:
   void Dispose();
   static enum AVPixelFormat GetFormat(struct AVCodecContext * avctx, const AVPixelFormat * fmt);
@@ -112,6 +130,7 @@ protected:
   std::string m_name;
   int m_decoderState;
   IHardwareDecoder *m_pHardware;
+  IHwRenderManager *m_hwRenderManager;
   int m_iLastKeyframe;
   double m_dts;
   bool   m_started;

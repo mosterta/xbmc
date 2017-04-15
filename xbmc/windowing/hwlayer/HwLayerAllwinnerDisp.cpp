@@ -24,6 +24,7 @@
 
 #include <sys/ioctl.h>
 #include <string.h>
+#include <linux/fb.h>
 
 #include "sync.h"
 
@@ -38,6 +39,7 @@ CHwLayerAllwinnerDisp2::CHwLayerAllwinnerDisp2(CHwLayerConfigAllwinner &config) 
              m_interlaceMode(PropertyKey::InterlaceMode, (int)Interlace::IlaceOff),
              m_fenceBuffer(NULL)
 {
+  memset(&m_layerConfig, 0, sizeof(m_layerConfig));
 }
 
 CHwLayerAllwinnerDisp2::~CHwLayerAllwinnerDisp2()
@@ -78,7 +80,7 @@ bool CHwLayerAllwinnerDisp2::create(HwLayerType type)
       m_layerConfig.channel = m_channelId;
       m_layerConfig.layer_id = m_layerId;
       
-      if (ioctl(m_config.m_dispFd, DISP_LAYER_GET_CONFIG, args))
+      if (ioctl(m_config.m_dispFd, DISP_LAYER_GET_CONFIG, args) < 0)
       {
         m_layerId = -1;
         CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: DISP_LAYER_GET_CONFIG failed.\n");
@@ -88,8 +90,8 @@ bool CHwLayerAllwinnerDisp2::create(HwLayerType type)
     }
     else
     {
-      m_layerId = 1;
-      m_channelId = 1;
+      m_layerId = 0;
+      m_channelId = 0;
       zOrder = 1;
       m_layerConfig.info.mode = LAYER_MODE_BUFFER;
       m_layerConfig.enable = 0;
@@ -149,6 +151,7 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
 {
   bool status = true;
   unsigned long args[4];
+  __u32 addr0, addr1, addr2;
 
   if(!m_layerCreated)
     return false;
@@ -158,6 +161,10 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
   args[2] = 1;
   args[3] = 0;
   struct CHwLayerAdaptorVdpauAllwinner::cFrameConfig config;
+
+  addr0 = (__u32)config.addrY;
+  addr1 = (__u32)config.addrU;
+  addr2 = (__u32)config.addrV;
 
   frame.getFrameConfig(config);
   
@@ -172,17 +179,17 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
       m_layerConfig.info.fb.format = DISP_FORMAT_YUV420_SP_UVUV;
       break;
     case CHwLayerAdaptorVdpauAllwinner::YCBCR_FORMAT_YV12:
-      m_layerConfig.info.fb.format = DISP_FORMAT_YUV422_P;
+      m_layerConfig.info.fb.format = DISP_FORMAT_YUV420_P;
       break;
     default:
     case CHwLayerAdaptorVdpauAllwinner::YCBCR_FORMAT_INTERNAL:
-      m_layerConfig.info.fb.format = DISP_FORMAT_YUV420_P;
+      m_layerConfig.info.fb.format = DISP_FORMAT_YUV420_SP_VUVU;
       break;
   }
-	
-  m_layerConfig.info.fb.addr[0] = (__u32)config.addrY;
-  m_layerConfig.info.fb.addr[1] = (__u32)config.addrU;
-  m_layerConfig.info.fb.addr[2] = (__u32)config.addrV;
+
+  m_layerConfig.info.fb.addr[0] = addr0 ;
+  m_layerConfig.info.fb.addr[1] = addr1 ;
+  m_layerConfig.info.fb.addr[2] = addr2 ;
 
   switch(m_colorSpace.value)
   {
@@ -204,16 +211,16 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
   m_layerConfig.info.fb.size[2].width = config.fbSize.width/2;
   m_layerConfig.info.fb.size[2].height = config.fbSize.height/2;
   m_layerConfig.info.fb.align[0] = 32;
-  m_layerConfig.info.fb.align[1] = 16;  
+  m_layerConfig.info.fb.align[1] = 16;
   m_layerConfig.info.fb.align[2] = 16;
-  m_layerConfig.info.fb.crop.x = (long long)srcRect.x1 << 32;
-  m_layerConfig.info.fb.crop.y = (long long)srcRect.y1 << 32;
-  m_layerConfig.info.fb.crop.width = (long long)(srcRect.x2 - srcRect.x1) << 32;
-  m_layerConfig.info.fb.crop.height = (long long)(srcRect.y2 - srcRect.y1) << 32;
-  m_layerConfig.info.screen_win.x = srcRect.x1;
-  m_layerConfig.info.screen_win.y = srcRect.y1;
-  m_layerConfig.info.screen_win.width = (srcRect.x2 - srcRect.x1);
-  m_layerConfig.info.screen_win.height = (srcRect.y2 - srcRect.y1);
+  m_layerConfig.info.fb.crop.x = ((long long)(srcRect.x1)) << 32;
+  m_layerConfig.info.fb.crop.y = ((long long)(srcRect.y1)) << 32;
+  m_layerConfig.info.fb.crop.width = ((long long)(srcRect.x2 - srcRect.x1)) << 32;
+  m_layerConfig.info.fb.crop.height = ((long long)(srcRect.y2 - srcRect.y1)) << 32;
+  m_layerConfig.info.screen_win.x = dstRect.x1;
+  m_layerConfig.info.screen_win.y = dstRect.y1;
+  m_layerConfig.info.screen_win.width = (dstRect.x2 - dstRect.x1);
+  m_layerConfig.info.screen_win.height = (dstRect.y2 - dstRect.y1);
   m_layerConfig.info.fb.flags = DISP_BF_NORMAL;
   m_layerConfig.info.b_trd_out = 0;
   

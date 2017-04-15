@@ -116,6 +116,7 @@ static std::string GetRenderFormatName(ERenderFormat format)
     case RENDER_FMT_IMXMAP:    return "IMXMAP";
     case RENDER_FMT_MMAL:      return "MMAL";
     case RENDER_FMT_AML:       return "AMLCODEC";
+    case REMDER_FMT_ALLWINNER_HWBUF: return "AWCEDARHWBUF";
     case RENDER_FMT_NONE:      return "NONE";
   }
   return "UNKNOWN";
@@ -541,6 +542,12 @@ void CRenderManager::CreateRenderer()
       m_pRenderer = new CRendererVDPAUAllwinner;
 #elif defined(HAVE_LIBVDPAU) && HAS_GLES == 2
       m_pRenderer = new CRendererVDPAU_GLES;
+#endif
+    }
+    else if (m_format == REMDER_FMT_ALLWINNER_HWBUF)
+    {
+#if defined (ALLWINNERA10)
+      m_pRenderer = new CRendererVDPAUAllwinner;
 #endif
     }
     else if (m_format == RENDER_FMT_CVBREF)
@@ -1157,6 +1164,7 @@ int CRenderManager::AddVideoPicture(DVDVideoPicture& pic)
   || pic.format == RENDER_FMT_AML
   || pic.format == RENDER_FMT_IMXMAP
   || pic.format == RENDER_FMT_MMAL
+  || pic.format == REMDER_FMT_ALLWINNER_HWBUF
   || m_pRenderer->IsPictureHW(pic))
   {
     m_pRenderer->AddVideoPictureHW(pic, index);

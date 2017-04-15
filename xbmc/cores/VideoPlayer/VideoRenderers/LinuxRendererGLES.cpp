@@ -645,13 +645,7 @@ void CLinuxRendererGLES::LoadShaders(int field)
     CLog::Log(LOGDEBUG, "GL: Requested render method: %d", requestedMethod);
 
     ReleaseShaders();
-  if(m_format == RENDER_FMT_VDPAU /* ||
-     m_format == RENDER_FMT_VDPAU_420*/ )
-  {
-    CLog::Log(LOGNOTICE, "GL: Using VDPAU render method");
-    m_renderMethod = RENDER_VDPAU;
-  }
-  else
+    
     switch(requestedMethod)
     {
       case RENDER_METHOD_AUTO:

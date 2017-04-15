@@ -27,6 +27,7 @@
 
 extern "C" {
 #include "libavcodec/avcodec.h"
+#include <libavutil/buffer.h>
 }
 
 #include <vector>
@@ -70,6 +71,9 @@ struct DVDVideoPicture
     };
     struct {
       VDPAU::CVdpauRenderPicture* vdpau;
+    };
+    struct {
+      AVFrame* cedarRender;
     };
     struct {
       VAAPI::CVaapiRenderPicture* vaapi;

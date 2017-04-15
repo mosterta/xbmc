@@ -48,6 +48,7 @@
 
 #ifdef HAVE_LIBVDPAU
 #include "VDPAU.h"
+#include "HwBufferAllwinner.h"
 #endif
 #ifdef HAS_DX
 #include "DXVA.h"
@@ -158,6 +159,15 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
   if(ctx->m_decoderState != STATE_HW_SINGLE ||
      (avctx->codec_id == AV_CODEC_ID_VC1 && avctx->profile == FF_PROFILE_UNKNOWN))
   {
+    if (!ctx->GetHardware())
+    {
+      CLog::Log(LOGNOTICE,"CDVDVideoCodecFFmpeg::GetFormat - Creating VDPAU(%ix%i)", avctx->width, avctx->height);
+      VDPAUAllwinner::CCedarRender* cedar = new VDPAUAllwinner::CCedarRender();
+      if(cedar->Create(avctx, ctx->m_pCodecContext, (AVPixelFormat)0))
+      {
+        ctx->SetHwRenderManager(cedar);
+      }
+    }
     AVPixelFormat defaultFmt = avcodec_default_get_format(avctx, fmt);
     pixFmtName = av_get_pix_fmt_name(defaultFmt);
     ctx->m_processInfo.SetVideoPixelFormat(pixFmtName ? pixFmtName : "");
@@ -173,7 +183,13 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
     avctx->slice_flags = 0;
     avctx->hwaccel_context = 0;
   }
-
+  else if(ctx->GetHwRenderManager())
+  {
+    ctx->SetHwRenderManager(NULL);
+    avctx->get_buffer2 = avcodec_default_get_buffer2;
+    avctx->slice_flags = 0;
+  }
+  
   const AVPixelFormat * cur = fmt;
   while(*cur != AV_PIX_FMT_NONE)
   {
@@ -256,7 +272,16 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
 #endif
     cur++;
   }
-
+  if (!ctx->GetHardware())
+  {
+    CLog::Log(LOGNOTICE,"CDVDVideoCodecFFmpeg::GetFormat - Creating VDPAU(%ix%i)", avctx->width, avctx->height);
+    VDPAUAllwinner::CCedarRender* cedar = new VDPAUAllwinner::CCedarRender();
+    if(cedar->Create(avctx, ctx->m_pCodecContext, *cur))
+    {
+      ctx->SetHwRenderManager(cedar);
+    }
+  }
+  
   ctx->m_processInfo.SetVideoPixelFormat(pixFmtName ? pixFmtName : "");
   ctx->m_processInfo.SetSwDeinterlacingMethods();
   ctx->m_decoderState = STATE_HW_FAILED;
@@ -283,6 +308,7 @@ CDVDVideoCodecFFmpeg::CDVDVideoCodecFFmpeg(CProcessInfo &processInfo) : CDVDVide
   m_iOrientation = 0;
   m_decoderState = STATE_NONE;
   m_pHardware = nullptr;
+  m_hwRenderManager = nullptr;
   m_iLastKeyframe = 0;
   m_dts = DVD_NOPTS_VALUE;
   m_started = false;
@@ -468,6 +494,11 @@ void CDVDVideoCodecFFmpeg::Dispose()
   av_frame_free(&m_pFilterFrame);
   avcodec_free_context(&m_pCodecContext);
   SAFE_RELEASE(m_pHardware);
+  if(m_hwRenderManager)
+  {
+    delete m_hwRenderManager;
+    m_hwRenderManager = nullptr;
+  }
 
   FilterClose();
 }
@@ -940,6 +971,8 @@ bool CDVDVideoCodecFFmpeg::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 {
   if (m_pHardware)
     return m_pHardware->GetPicture(m_pCodecContext, m_pFrame, pDvdVideoPicture);
+  else if (m_hwRenderManager)
+    return m_hwRenderManager->GetPicture(m_pCodecContext, m_pFrame, pDvdVideoPicture);
 
   if (!GetPictureCommon(pDvdVideoPicture))
     return false;
@@ -1166,3 +1199,12 @@ void CDVDVideoCodecFFmpeg::SetHardware(IHardwareDecoder* hardware)
   m_pHardware = hardware;
   UpdateName();
 }
+void CDVDVideoCodecFFmpeg::SetHwRenderManager(IHwRenderManager *renderManager)
+{
+  if(m_hwRenderManager)
+    delete m_hwRenderManager;
+
+  m_hwRenderManager = renderManager;
+}
+
+

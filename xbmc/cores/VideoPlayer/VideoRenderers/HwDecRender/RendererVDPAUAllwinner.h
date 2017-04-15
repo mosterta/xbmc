@@ -27,6 +27,7 @@
 #include "cores/VideoPlayer/VideoRenderers/LinuxRendererGLES.h"
 #include "cores/VideoPlayer/DVDCodecs/Video/VDPAU.h"
 #include "windowing/hwlayer/HwLayerFactory.h"
+#include "cores/VideoPlayer/DVDCodecs/Video/HwBufferAllwinner.h"
 
 class CRendererVDPAUAllwinner : public CLinuxRendererGLES
 {
@@ -46,7 +47,8 @@ public:
   virtual bool Supports(EINTERLACEMETHOD method);
   virtual bool Supports(ESCALINGMETHOD method);
   virtual bool Supports(ERENDERFEATURE feature);
-  
+  virtual bool NeedBuffer(int idx);
+
 
   virtual EINTERLACEMETHOD AutoInterlaceMethod();
   virtual CRenderInfo GetRenderInfo();

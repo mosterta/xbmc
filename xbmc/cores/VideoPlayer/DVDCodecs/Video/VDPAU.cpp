@@ -636,6 +636,12 @@ bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum A
         return false;
       }
 
+      if(!is_supported)
+      {
+        CLog::Log(LOGWARNING,"VDPAU::Open: profile(%d) not supported.",
+                  profile);
+        return false;
+      }
       if (max_width < (uint32_t) avctx->coded_width || max_height < (uint32_t) avctx->coded_height)
       {
         CLog::Log(LOGWARNING,"VDPAU::Open: requested picture dimensions (%i, %i) exceed hardware capabilities ( %i, %i).",
@@ -1115,7 +1121,7 @@ int CDecoder::FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int flags)
 #endif
 
   pic->linesize[0] = pic->linesize[1] =  pic->linesize[2] = 0;
-  AVBufferRef *buffer = av_buffer_create(pic->data[3], 0, FFReleaseBuffer, ctx, 0);
+  AVBufferRef *buffer = av_buffer_create((uint8_t*)pic->data[3], 0, FFReleaseBuffer, ctx, 0);
   if (!buffer)
   {
     CLog::Log(LOGERROR, "CVDPAU::%s - error creating buffer", __FUNCTION__);
@@ -1508,11 +1514,11 @@ bool CDecoder::CheckStatus(VdpStatus vdp_st, int line)
         m_DisplayEvent.Reset();
         m_DisplayState = VDPAU_LOST;
       }
-     // else if (m_ErrorCount > 2)
-     //   m_DisplayState = VDPAU_ERROR;
+     else if (m_ErrorCount > 2)
+       m_DisplayState = VDPAU_ERROR;
     }
 
-    //return true;
+    return true;
   }
   m_ErrorCount = 0;
   return false;

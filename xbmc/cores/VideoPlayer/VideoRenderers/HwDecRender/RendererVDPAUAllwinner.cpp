@@ -34,23 +34,14 @@
 #define CS_MODE_BT709 1
 #define CS_MODE_BT601 0
 
+using namespace VDPAUAllwinner;
+
 CRendererVDPAUAllwinner::CRendererVDPAUAllwinner():
     m_dlHandle(NULL), m_needReconfigure(false), m_lastRenderTime(0)
-{
-  bool status;
-  CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
-                                         CHwLayerManagerAW::ScalerType::Type_Scale);
-  status = g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, prop);
-  if(! status )
-    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error setting property scaler", __FUNCTION__);
-
-  status = g_HwLayer.showLayer(CHwLayerManagerAW::HwLayerType::Video);
-  if(! status )
-    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error calling showlayer", __FUNCTION__);
-  status = m_vdpauAdaptor.initialize();
+{  
+  bool status = m_vdpauAdaptor.initialize();
   if(! status )
     CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error initializing vdpauAdaptor", __FUNCTION__);
-  
 }
 
 CRendererVDPAUAllwinner::~CRendererVDPAUAllwinner()
@@ -73,6 +64,17 @@ bool CRendererVDPAUAllwinner::RenderCapture(CRenderCapture* capture)
 }
 bool CRendererVDPAUAllwinner::Configure(unsigned int width, unsigned int height, unsigned int d_width, unsigned int d_height, float fps, unsigned flags, ERenderFormat format, unsigned extended_formatunsigned, unsigned int orientation)
 {
+  bool status;
+  CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
+                                         CHwLayerManagerAW::ScalerType::Type_Scale);
+  status = g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, prop);
+  if(! status )
+    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error setting property scaler", __FUNCTION__);
+
+  status = g_HwLayer.showLayer(CHwLayerManagerAW::HwLayerType::Video);
+  if(! status )
+    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error calling showlayer", __FUNCTION__);
+
   bool result = CLinuxRendererGLES::Configure(width, height, d_width, d_height, fps, 
                                               flags, format, extended_formatunsigned, orientation);
   m_needReconfigure = true;
@@ -82,21 +84,51 @@ bool CRendererVDPAUAllwinner::Configure(unsigned int width, unsigned int height,
 
 void CRendererVDPAUAllwinner::AddVideoPictureHW(DVDVideoPicture &picture, int index)
 {
-  VDPAU::CVdpauRenderPicture *vdpau = picture.vdpau;
-  YUVBUFFER &buf = m_buffers[index];
-  VDPAU::CVdpauRenderPicture *pic = vdpau->Acquire();
-  if (buf.hwDec)
-    ((VDPAU::CVdpauRenderPicture*)buf.hwDec)->Release();
-  g_HwLayer.initSyncFence(CHwLayerManagerAW::HwLayerType::Video, pic);
-  buf.hwDec = pic;
+  if(m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420)
+  {
+    VDPAU::CVdpauRenderPicture *vdpau = picture.vdpau;
+    YUVBUFFER &buf = m_buffers[index];
+    VDPAU::CVdpauRenderPicture *pic = vdpau->Acquire();
+    if (buf.hwDec)
+      ((VDPAU::CVdpauRenderPicture*)buf.hwDec)->Release();
+    pic->Sync();
+    buf.hwDec = pic;
+    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner::AddVideoPictureHW: vdpau:%X pic:%X index:%d", vdpau, pic, index);
+  }
+  else
+  {
+    YUVBUFFER &buf = m_buffers[index];
+    if (buf.hwDec)
+      ReleaseBuffer(index);
+    CHwRenderPicture *pic = (CHwRenderPicture *)picture.cedarRender->opaque;
+    pic->vdp->AcquireBuffer(picture.cedarRender);
+    pic->Sync();
+    buf.hwDec = (void*)picture.cedarRender;
+    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner::AddVideoPictureHW non VDPAU: pic:%X index:%d", pic, index);
+  }
 }
 
 void CRendererVDPAUAllwinner::ReleaseBuffer(int idx)
 {
-  YUVBUFFER &buf = m_buffers[idx];
-  if (buf.hwDec) {
-    ((VDPAU::CVdpauRenderPicture*)buf.hwDec)->Release();
-    buf.hwDec = NULL;
+  if(m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420)
+  {
+    YUVBUFFER &buf = m_buffers[idx];
+    if (buf.hwDec) {
+      VDPAU::CVdpauRenderPicture* pic = (VDPAU::CVdpauRenderPicture*)buf.hwDec;
+      pic->Release();
+      buf.hwDec = NULL;
+    }
+  }
+  else
+  {
+    YUVBUFFER &buf = m_buffers[idx];
+
+    if (buf.hwDec && buf.fields[0].id != 0) {
+      CHwRenderPicture *pic = (CHwRenderPicture *)((AVFrame*)buf.hwDec)->opaque;
+      bool status = g_HwLayer.destroySyncFence(CHwLayerManagerAW::HwLayerType::Video, pic->GetFence());
+      pic->vdp->ReleaseBuffer(buf.hwDec);
+      buf.hwDec = NULL;
+    }
   }
 }
 
@@ -156,7 +188,7 @@ bool CRendererVDPAUAllwinner::Supports(ERENDERFEATURE feature)
   return false;
 }
 
-EINTERLACEMETHOD CRendererVDPAUAllwinner::AutoInterlaceMethod()
+  EINTERLACEMETHOD CRendererVDPAUAllwinner::AutoInterlaceMethod()
 {
   return VS_INTERLACEMETHOD_NONE;
 }
@@ -173,14 +205,48 @@ CRenderInfo CRendererVDPAUAllwinner::GetRenderInfo()
 
 bool CRendererVDPAUAllwinner::LoadShadersHook()
 {
+  bool loadShaders = false;
+  
   CLog::Log(LOGNOTICE, "GL: Using Allwinner Layer render method");
   m_textureTarget = GL_TEXTURE_2D;
   m_renderMethod = RENDER_VDPAU_ALLWINNER;
-  return true;
+  return loadShaders;
+}
+
+bool CRendererVDPAUAllwinner::NeedBuffer(int idx)
+{
+  bool needBuffer = false;
+  
+  if(m_format != RENDER_FMT_VDPAU && m_format != RENDER_FMT_VDPAU_420)
+  {
+    YUVBUFFER &buf = m_buffers[idx];
+    if(buf.hwDec)
+    {
+      CHwRenderPicture *pic = (CHwRenderPicture *)((AVFrame*)buf.hwDec)->opaque;
+    
+      if(pic && pic->FenceEnabled())
+      {
+        CHwLayerManagerAW::HwLayerSyncValue value;
+        bool status = g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic->GetFence(), value);
+        if(value != CHwLayerManagerAW::HwLayerSyncValue::HWLayerFenceSignaled)
+        {
+          needBuffer = true;
+        }
+      }
+    }
+  }
+  return needBuffer;
 }
 
 bool CRendererVDPAUAllwinner::RenderHook(int index)
 {
+#if 1
+  YUVBUFFER &buf = m_buffers[index];
+  if (buf.hwDec)
+  {
+    ((VDPAU::CVdpauRenderPicture*)buf.hwDec)->Sync();
+  }
+#endif
   return true;// nothing to be done 
 }
 
@@ -189,11 +255,30 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
   ManageRenderArea();
 
   int top_field = (flags & RENDER_FLAG_TOP) == RENDER_FLAG_TOP;
-
-  VDPAU::CVdpauRenderPicture *buffer = static_cast<VDPAU::CVdpauRenderPicture*>(m_buffers[m_iYV12RenderBuffer].hwDec);
-  if (buffer != NULL && buffer->valid)
+  int surf;
+  int *fencePtr=0;
+  if(m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420)
   {
-    m_vdpauAdaptor.setFrame(buffer->surfaceCedar);
+    VDPAU::CVdpauRenderPicture *buffer = static_cast<VDPAU::CVdpauRenderPicture*>(m_buffers[m_iYV12RenderBuffer].hwDec);
+    if(buffer)
+    {
+      surf = buffer->surfaceCedar;
+      fencePtr = &buffer->GetFence();
+    }
+  }
+  else
+  {
+    CHwRenderPicture *pic = (CHwRenderPicture *)((AVFrame*)m_buffers[m_iYV12RenderBuffer].hwDec)->opaque;
+    if(pic)
+    {
+      surf = pic->surfaceCedar;
+      fencePtr = &pic->GetFence();
+    }
+  }
+  
+  if (surf)
+  {
+    m_vdpauAdaptor.setFrame(surf);
     
     if(m_needReconfigure || (m_oldSrc != m_sourceRect || m_oldDst != m_destRect))
     {
@@ -244,9 +329,13 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
       m_oldSrc = m_sourceRect;
       m_oldDst = m_destRect;
     }
-    g_HwLayer.displayFrame(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, buffer,
-                          top_field);
-
+    if(fencePtr)
+    {
+      int &fence = *fencePtr;
+      bool status = g_HwLayer.displayFrame(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, fence,
+                                          top_field);
+    }
+    
     // This code reduces rendering fps of the video layer when playing videos in fullscreen mode
     // it makes only sense on architectures with multiple layers
     int fps = m_fps*2;
@@ -272,12 +361,11 @@ bool CRendererVDPAUAllwinner::CreateTexture(int index)
 void CRendererVDPAUAllwinner::DeleteTexture(int index)
 {
   CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s index=%d", __FUNCTION__, index);
-  ReleaseBuffer(index);
 }
 
 bool CRendererVDPAUAllwinner::UploadTexture(int index)
 {
-  return true;// nothing todo for IMX
+  return true;// nothing todo
 }
 
 #endif
