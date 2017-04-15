@@ -3949,7 +3949,7 @@ void COutput::ReleaseBufferPool()
   m_bufferPool.outputSurfaces.clear();
 
   // wait for all fences
-  XbmcThreads::EndTime timeout(1000);
+  XbmcThreads::EndTime timeout(200);
   for (unsigned int i = 0; i < m_bufferPool.allRenderPics.size(); i++)
   {
     CVdpauRenderPicture *pic = m_bufferPool.allRenderPics[i];
