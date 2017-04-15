@@ -292,32 +292,51 @@ bool CPicture::CreateTiledThumb(const std::vector<std::string> &files, const std
     // load in the image
     unsigned int width = tile_width - 2*tile_gap, height = tile_height - 2*tile_gap;
     CBaseTexture *texture = CTexture::LoadFromFile(files[i], width, height, true);
+    bool validTile = false;
+    
     if (texture && texture->GetWidth() && texture->GetHeight())
     {
       GetScale(texture->GetWidth(), texture->GetHeight(), width, height);
 
-      // scale appropriately
-      uint32_t *scaled = new uint32_t[width * height];
-      if (ScaleImage(texture->GetPixels(), texture->GetWidth(), texture->GetHeight(), texture->GetPitch(),
-                     (uint8_t *)scaled, width, height, width * 4))
+      uint32_t *scaled = NULL;
+      if(texture->GetWidth() != width || texture->GetHeight() != height || texture->GetOrientation())
       {
-        if (!texture->GetOrientation() || OrientateImage(scaled, width, height, texture->GetOrientation()))
+        // scale appropriately
+        scaled = new uint32_t[width * height];
+        if (ScaleImage(texture->GetPixels(), texture->GetWidth(), texture->GetHeight(), texture->GetPitch(),
+                      (uint8_t *)scaled, width, height, width * 4))
         {
-          success = true; // Flag that we at least had one succesfull image processed
-          // drop into the texture
-          unsigned int posX = x*tile_width + (tile_width - width)/2;
-          unsigned int posY = y*tile_height + (tile_height - height)/2;
-          uint32_t *dest = buffer + posX + posY*g_advancedSettings.m_imageRes;
-          uint32_t *src = scaled;
-          for (unsigned int y = 0; y < height; ++y)
+          if (!texture->GetOrientation() || OrientateImage(scaled, width, height, texture->GetOrientation()))
           {
-            memcpy(dest, src, width*4);
-            dest += g_advancedSettings.m_imageRes;
-            src += width;
+            success = true; // Flag that we at least had one succesfull image processed
+            validTile = true;
           }
         }
       }
-      delete[] scaled;
+      else
+        validTile = true;
+
+      if(validTile)
+      {
+        // drop into the texture
+        unsigned int posX = x*tile_width + (tile_width - width)/2;
+        unsigned int posY = y*tile_height + (tile_height - height)/2;
+        uint32_t *dest = buffer + posX + posY*g_advancedSettings.m_imageRes;
+        uint32_t *src;
+        if(scaled)
+          src = scaled;
+        else
+          src = (uint32_t*)texture->GetPixels();
+        
+        for (unsigned int y = 0; y < height; ++y)
+        {
+          memcpy(dest, src, width*4);
+          dest += g_advancedSettings.m_imageRes;
+          src += width;
+        }
+      }
+      if(scaled)
+        delete[] scaled;
     }
     delete texture;
   }
