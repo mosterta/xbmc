@@ -167,8 +167,6 @@ CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS" \
 	--enable-zlib \
 	--disable-mipsdsp \
 	--disable-mipsdspr2 \
-	--enable-libsoxr \
-	--enable-librtmp \
         ${FLAGS}
 
 make -j ${BUILDTHREADS} 
