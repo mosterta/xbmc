@@ -48,11 +48,11 @@ class CHwLayerAllwinnerA10 : public CHwLayerAllwinnerBase
    virtual bool show();
    virtual bool top();
    virtual bool back();
-   virtual bool displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field);
+   virtual bool displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int &fence, int top_field);
    virtual bool getCurrentFrameId(int &frameId);
-   virtual bool getSyncFenceValue(VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value);
-   virtual bool initSyncFence(RENDERPICTURE *pic) {pic->frameId = -1; return true; };
-   virtual bool destroySyncFence(RENDERPICTURE *pic) { return initSyncFence(pic); }
+   virtual bool getSyncFenceValue(int fence, HwLayerSyncValue &value);
+   virtual bool initSyncFence(int &fence) {fence = -1; return true; };
+   virtual bool destroySyncFence(int &fence) { return initSyncFence(fence); }
    virtual bool setProperty(CHwLayerAllwinnerBase::CPropertyValue &prop);
 
   protected:

@@ -112,31 +112,31 @@ bool CHwLayerManagerAllwinner::configure(HwLayerType type, CHwLayerAdaptorVdpauA
   return m_manager->configure(type, frame, srcRect, dstRect);
 };
 
-bool CHwLayerManagerAllwinner::displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field)
+bool CHwLayerManagerAllwinner::displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, int &fence, int top_field)
 {
   if(!m_manager)
     return false;
-  return m_manager->displayFrame(type, frame, buffer, top_field);
+  return m_manager->displayFrame(type, frame, fence, top_field);
 };
 
-bool CHwLayerManagerAllwinner::getSyncFenceValue(HwLayerType type, VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value)
+bool CHwLayerManagerAllwinner::getSyncFenceValue(HwLayerType type, int fence, HwLayerSyncValue &value)
 {
   if(!m_manager)
     return false;
-  return m_manager->getSyncFenceValue(type, pic, value);
+  return m_manager->getSyncFenceValue(type, fence, value);
 }
 
-bool CHwLayerManagerAllwinner::initSyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerManagerAllwinner::initSyncFence(HwLayerType type, int &fence)
 {
   if(!m_manager)
     return false;
-  return m_manager->initSyncFence(type, pic);
+  return m_manager->initSyncFence(type, fence);
 }
-bool CHwLayerManagerAllwinner::destroySyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerManagerAllwinner::destroySyncFence(HwLayerType type, int &fence)
 {
   if(!m_manager)
     return false;
-  return m_manager->destroySyncFence(type, pic);
+  return m_manager->destroySyncFence(type, fence);
 }
 
 bool CHwLayerManagerAllwinner::setProperty(HwLayerType type, CPropertyValue &prop)

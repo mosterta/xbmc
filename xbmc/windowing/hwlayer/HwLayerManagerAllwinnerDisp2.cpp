@@ -242,13 +242,13 @@ bool CHwLayerManagerAllwinnerDisp2::configure(HwLayerType type, CHwLayerAdaptorV
   }
 };
 
-bool CHwLayerManagerAllwinnerDisp2::displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field)
+bool CHwLayerManagerAllwinnerDisp2::displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, int &fence, int top_field)
 {
   if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
   {
     CHwLayerAllwinnerBase *layer = Base::m_layers[type];
     if(layer)
-      return layer->displayFrame(frame, buffer, top_field);
+      return layer->displayFrame(frame, fence, top_field);
     else
       return false;
   }
@@ -258,13 +258,13 @@ bool CHwLayerManagerAllwinnerDisp2::displayFrame(HwLayerType type, CHwLayerAdapt
   }
 };
 
-bool CHwLayerManagerAllwinnerDisp2::getSyncFenceValue(HwLayerType type, VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value)
+bool CHwLayerManagerAllwinnerDisp2::getSyncFenceValue(HwLayerType type, int fence, HwLayerSyncValue &value)
 {
   if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
   {
     CHwLayerAllwinnerBase *layer = Base::m_layers[type];
     if(layer)
-      return layer->getSyncFenceValue(pic, value);
+      return layer->getSyncFenceValue(fence, value);
     else
       return false;
   }
@@ -274,13 +274,13 @@ bool CHwLayerManagerAllwinnerDisp2::getSyncFenceValue(HwLayerType type, VDPAU::C
   }
 }
 
-bool CHwLayerManagerAllwinnerDisp2::initSyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerManagerAllwinnerDisp2::initSyncFence(HwLayerType type, int &fence)
 {
   if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
   {
     CHwLayerAllwinnerBase *layer = Base::m_layers[type];
     if(layer)
-      return layer->initSyncFence(pic);
+      return layer->initSyncFence(fence);
     else
       return false;
   }
@@ -290,13 +290,13 @@ bool CHwLayerManagerAllwinnerDisp2::initSyncFence(HwLayerType type, VDPAU::CVdpa
   }
 }
 
-bool CHwLayerManagerAllwinnerDisp2::destroySyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerManagerAllwinnerDisp2::destroySyncFence(HwLayerType type, int &fence)
 {
   if(type >= HwLayerType::Video && type <= HwLayerType::GUI)
   {
     CHwLayerAllwinnerBase *layer = Base::m_layers[type];
     if(layer)
-      return layer->destroySyncFence(pic);
+      return layer->destroySyncFence(fence);
     else
       return false;
   }

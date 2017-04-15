@@ -299,6 +299,9 @@ public:
 #if HAS_GL
       fence = None;
 #endif
+#if ALLWINNER_FRAME_sync
+      fence = -1;
+#endif
     }
   void Sync();
   DVDVideoPicture DVDPic;
@@ -313,8 +316,9 @@ public:
   CDecoder *vdpau;
   CVdpauRenderPicture* Acquire();
   long Release();
+  bool FenceEnabled() { return usefence; }
 #if ALLWINNER_FRAME_sync
-  int frameId;
+  int& GetFence() { return fence; }
 #endif
 private:
   void ReturnUnused();
@@ -324,6 +328,9 @@ private:
 #endif
 #if GL_OES_EGL_sync
   EGLSyncKHR fence;
+#endif
+#if ALLWINNER_FRAME_sync
+  int fence;
 #endif
   int refCount;
   CCriticalSection &renderPicSection;

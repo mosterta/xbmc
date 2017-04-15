@@ -27,7 +27,7 @@
 #include "HwLayerAllwinnerDefs.h"
 #include "HwLayerAdaptorVdpau.h"
 
-#include "DVDCodecs/Video/VDPAU.h"
+//#include "DVDCodecs/Video/VDPAU.h"
 
 class CHwLayerManagerAllwinnerItf : public CHwLayerManager<CHwLayerAllwinnerBase, CHwLayerManagerConfigAllwinner>
 {
@@ -54,10 +54,10 @@ class CHwLayerManagerAllwinnerItf : public CHwLayerManager<CHwLayerAllwinnerBase
    virtual bool sendTop(HwLayerType type) = 0;
    virtual bool sendBack(HwLayerType type) = 0;
    virtual bool configure(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, CRect &srcRect, CRect &dstRect) = 0;
-   virtual bool displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field) = 0;
-   virtual bool getSyncFenceValue(HwLayerType type, VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value) = 0;
-   virtual bool initSyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic) = 0;
-   virtual bool destroySyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic) = 0;
+   virtual bool displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, int &fence, int top_field) = 0;
+   virtual bool getSyncFenceValue(HwLayerType type, int fence, HwLayerSyncValue &value) = 0;
+   virtual bool initSyncFence(HwLayerType type, int &fence) = 0;
+   virtual bool destroySyncFence(HwLayerType type, int &fence) = 0;
    virtual bool setProperty(HwLayerType type, CPropertyValue &prop) = 0;
    virtual bool setProperty(HwLayerType type, CColorKey &prop) = 0;
    

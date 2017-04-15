@@ -351,12 +351,12 @@ bool CHwLayerAllwinnerA10::back()
   return true;
 };
 
-bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field)
+bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int &fence, int top_field)
 {
   bool status = true;
   int ret;
 
-  if( ! m_layerCreated )
+  if( ! m_layerCreated || fence >= 0)
     return false;
 
   struct CHwLayerAdaptorVdpauAllwinner::cFrameConfig config;
@@ -365,7 +365,7 @@ bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, VD
   __disp_video_fb_t fb_info;
   memset(&fb_info, 0, sizeof(fb_info));
 	
-  fb_info.id = buffer->frameId = m_frameId++;
+  fb_info.id = fence = m_fence++;
   fb_info.addr[0] = (__u32)config.addrY;
   fb_info.addr[1] = (__u32)config.addrU;
   fb_info.addr[2] = (__u32)config.addrV;
@@ -391,7 +391,7 @@ bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, VD
   return status;
 }
 
-bool CHwLayerAllwinnerA10::getSyncFenceValue(VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value)
+bool CHwLayerAllwinnerA10::getSyncFenceValue(int fence, HwLayerSyncValue &value)
 {
   int curDisplayedFrameId;
   bool status = getCurrentFrameId(curDisplayedFrameId);
@@ -400,8 +400,8 @@ bool CHwLayerAllwinnerA10::getSyncFenceValue(VDPAU::CVdpauRenderPicture *pic, Hw
 
   value = HwLayerSyncValue::HWLayerFenceSignaled;
 
-  if((status && curDisplayedFrameId != -1 && (pic->frameId >= curDisplayedFrameId)) ||
-    (pic->frameId == -1))
+  if((status && curDisplayedFrameId != -1 && (fence >= curDisplayedFrameId)) ||
+    (fence == -1))
   {
     value = HwLayerSyncValue::HWLayerFenceUnsignaled;
   }

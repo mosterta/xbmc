@@ -327,75 +327,93 @@ typedef struct {
 }WriteBack_t;
 typedef struct
 {
-  int                 forceflip;
-  int                 layer_num[2];
-  disp_layer_config   layer_info[2][16];
-  int                 firstdisplay;
-  int*                aquireFenceFd;
-  int                 aquireFenceCnt;
-  int                 firstDispFenceCnt;
-  int*                returnfenceFd;
-  bool                needWB[2]; //[0] is HDMI, [1] is miracast
-  unsigned int        ehancemode[2]; //0 is close,1 is whole,2 is half mode
-  unsigned int        androidfrmnum;
-  WriteBack_t         *WriteBackdata;
+    int                 layer_num[2];
+    int			layer_active[2];
+    disp_layer_config   layer_info[2][16];
+    int*                aquireFenceFd;
+    int                 aquireFenceCnt;
+    int*                returnfenceFd;
+    bool                needWB[2];
+    unsigned int        ehancemode[2]; //0 is close,1 is whole,2 is half mode
+    unsigned int        androidfrmnum;
+    WriteBack_t         *WriteBackdata;
 }setup_dispc_data_t;
 
-bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field)
+bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int &fence, int top_field)
 {
   bool status = true;
   int ret;
   setup_dispc_data_t hwc;
   int dispFenceFd[2];
   
-  if( ! m_layerCreated )
+  if( ! m_layerCreated || fence >= 0)
     return false;
+
+  unsigned long args[4];
+  args[0] =  m_config.m_screenId;
+  args[1] =  (unsigned long)(&m_layerConfig);
+  args[2] =  1;
+  args[3] =  0;
+  if (ioctl(m_config.m_dispFd, DISP_LAYER_GET_CONFIG, args) < 0)
+  {
+     m_layerId = -1;
+     CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: DISP_LAYER_GET_CONFIG failed.\n");
+     status = false;
+  }
 
   struct CHwLayerAdaptorVdpauAllwinner::cFrameConfig config;
   frame.getFrameConfig(config);
   
   memset(&hwc, 0, sizeof(hwc));
-  hwc.layer_num[1] = m_layerId;
+  hwc.layer_num[0] = 1;
+  hwc.layer_active[0] = 1;
   hwc.returnfenceFd = dispFenceFd;
-  hwc.layer_info[m_config.m_screenId][0] = m_layerConfig;
-  hwc.layer_info[m_config.m_screenId][0].info.fb.addr[0] = (__u32)config.addrY;
-  hwc.layer_info[m_config.m_screenId][0].info.fb.addr[1] = (__u32)config.addrU;
-  hwc.layer_info[m_config.m_screenId][0].info.fb.addr[2] = (__u32)config.addrV;
+  m_layerConfig.info.fb.size[0].width = config.fbSize.width;
+  m_layerConfig.info.fb.size[0].height = config.fbSize.height;
+  m_layerConfig.info.fb.size[1].width = config.fbSize.width/2;
+  m_layerConfig.info.fb.size[1].height = config.fbSize.height/2;
+  m_layerConfig.info.fb.size[2].width = config.fbSize.width/2;
+  m_layerConfig.info.fb.size[2].height = config.fbSize.height/2;
+  m_layerConfig.info.fb.align[0] = 32;
+  m_layerConfig.info.fb.align[1] = 16;
+  m_layerConfig.info.fb.align[2] = 16;
+  hwc.layer_info[0][0] = m_layerConfig;
+  hwc.layer_info[0][0].info.fb.addr[0] = (__u32)config.addrY ;
+  hwc.layer_info[0][0].info.fb.addr[1] = (__u32)config.addrU ;
+  hwc.layer_info[0][0].info.fb.addr[2] = (__u32)config.addrV ;
   if(m_interlaceMode.value == CPropertyValue::IlaceOff)
-    hwc.layer_info[m_config.m_screenId][0].info.fb.scan = DISP_SCAN_PROGRESSIVE;
+    hwc.layer_info[0][0].info.fb.scan = DISP_SCAN_PROGRESSIVE;
   else
   {
     if (top_field)
-      hwc.layer_info[m_config.m_screenId][0].info.fb.scan = DISP_SCAN_INTERLACED_EVEN_FLD_FIRST;
+      hwc.layer_info[0][0].info.fb.scan = DISP_SCAN_INTERLACED_EVEN_FLD_FIRST;
     else
-      hwc.layer_info[m_config.m_screenId][0].info.fb.scan = DISP_SCAN_INTERLACED_ODD_FLD_FIRST;
+      hwc.layer_info[0][0].info.fb.scan = DISP_SCAN_INTERLACED_ODD_FLD_FIRST;
   }
 
-  unsigned long args[4];
   args[0] =  m_config.m_screenId;
   args[1] =  (unsigned long)(&hwc); 
   args[2] =  0;
   args[3] =  0;
 
+  //ioctl(m_config.m_fbFd, FBIO_WAITFORVSYNC, 0);
   int error = ioctl(m_config.m_dispFd, DISP_HWC_COMMIT, args);
   if(error < 0)
   {
     CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: set video framebuffer failed\n");
     ret = false;
   }
-
-  if(buffer->frameId >= 0)
+  if(fence >= 0)
   {
-    close(buffer->frameId);
+    close(fence);
   }
 
-  buffer->frameId = dispFenceFd[0];
-  CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2:displayFrame buffer:%X fence0:%d\n", buffer, dispFenceFd[0]);
+  fence = dispFenceFd[0];
 
   return status;
 }
 
-bool CHwLayerAllwinnerDisp2::getSyncFenceValue(VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value)
+bool CHwLayerAllwinnerDisp2::getSyncFenceValue(int fence, HwLayerSyncValue &value)
 {
   bool retval = false;
   struct sync_fence_info_data *fenceInfo = (struct sync_fence_info_data *)m_fenceBuffer;
@@ -403,15 +421,13 @@ bool CHwLayerAllwinnerDisp2::getSyncFenceValue(VDPAU::CVdpauRenderPicture *pic, 
  
   value = HwLayerSyncValue::HWLayerFenceUnsignaled;
  
-  if (pic->frameId < 0)
+  if (fence < 0)
      return false;
 
-  CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: syncFrame: cmd:%X buffer:%X fence:%d\n", SYNC_IOC_FENCE_INFO, pic, pic->frameId);
-
-  int status = ioctl(pic->frameId, SYNC_IOC_FENCE_INFO, fenceInfo);
+  int status = ioctl(fence, SYNC_IOC_FENCE_INFO, fenceInfo);
   if(status >= 0)
   {
-    if(fenceInfo->status == 0) //fence still active
+    if(fenceInfo->status == 1) //fence still active
     {
       value = HwLayerSyncValue::HWLayerFenceSignaled;
       retval = true;
@@ -419,16 +435,15 @@ bool CHwLayerAllwinnerDisp2::getSyncFenceValue(VDPAU::CVdpauRenderPicture *pic, 
   }
   else
   {
-     CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: syncFrame: returned error:%d errno:%d fence:%d\n", status, errno, pic->frameId);
+     CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: syncFrame: returned error:%d errno:%d fence:%d\n", status, errno, fence);
   }
   return retval;
 }
-bool CHwLayerAllwinnerDisp2::destroySyncFence(VDPAU::CVdpauRenderPicture *pic)
+bool CHwLayerAllwinnerDisp2::destroySyncFence(int &fence)
 {
-  CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: destroySyncFence: fence:%d\n", pic->frameId);
-  if(pic->frameId != -1)
-    close(pic->frameId);
-  pic->frameId = -1;
+  if(fence != -1)
+    close(fence);
+fence = -1;
   return true;
 }
 

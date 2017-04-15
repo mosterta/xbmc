@@ -50,10 +50,10 @@ class CHwLayerManagerAllwinnerDisp2 : public CHwLayerManagerAllwinnerItf
    virtual bool sendTop(HwLayerType type);
    virtual bool sendBack(HwLayerType type);
    virtual bool configure(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, CRect &srcRect, CRect &dstRect);
-   virtual bool displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, VDPAU::CVdpauRenderPicture *buffer, int top_field);
-   virtual bool getSyncFenceValue(HwLayerType type, VDPAU::CVdpauRenderPicture *pic, HwLayerSyncValue &value);
-   virtual bool initSyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic);
-   virtual bool destroySyncFence(HwLayerType type, VDPAU::CVdpauRenderPicture *pic);
+   virtual bool displayFrame(HwLayerType type, CHwLayerAdaptorVdpauAllwinner &frame, int &fence, int top_field);
+   virtual bool getSyncFenceValue(HwLayerType type, int fence, HwLayerSyncValue &value);
+   virtual bool initSyncFence(HwLayerType type, int &fence);
+   virtual bool destroySyncFence(HwLayerType type, int &fence);
 
    virtual bool setProperty(HwLayerType type, CPropertyValue &prop);
    virtual bool setProperty(HwLayerType type, CColorKey &prop);

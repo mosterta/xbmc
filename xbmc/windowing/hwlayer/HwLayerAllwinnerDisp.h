@@ -50,10 +50,10 @@ class CHwLayerAllwinnerDisp2 : public CHwLayerAllwinnerBase
    virtual bool show();
    virtual bool top();
    virtual bool back();
-   virtual bool displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, CHwLayer::RENDERPICTURE *buffer, int top_field);
-   virtual bool getSyncFenceValue(CHwLayer::RENDERPICTURE *pic, HwLayerSyncValue &value);
-   virtual bool initSyncFence(RENDERPICTURE *pic) { pic->frameId = -1; return true; };
-   virtual bool destroySyncFence(RENDERPICTURE *pic);
+   virtual bool displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int &fence, int top_field);
+   virtual bool getSyncFenceValue(int fence, HwLayerSyncValue &value);
+   virtual bool initSyncFence(int &fence) { fence = -1; return true; };
+   virtual bool destroySyncFence(int &fence);
    virtual bool setProperty(CPropertyValue &prop);
 
   protected:

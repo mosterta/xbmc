@@ -71,7 +71,6 @@ class CHwLayer
                           unsigned char green_match_rule;
                           unsigned char blue_match_rule;
     };
-    typedef typename CVideoDataProvider::RENDERPICTURE RENDERPICTURE;
     
    CHwLayer(CHwLayerConfig &config) {};
    virtual ~CHwLayer() {};
@@ -83,10 +82,10 @@ class CHwLayer
    virtual bool show() = 0;
    virtual bool top() = 0;
    virtual bool back() = 0;
-   virtual bool displayFrame(CVideoDataProvider &frame, RENDERPICTURE *buffer, int top_field) = 0;
-   virtual bool getSyncFenceValue(RENDERPICTURE *pic, HwLayerSyncValue &value) = 0;
-   virtual bool initSyncFence(RENDERPICTURE *pic) = 0;
-   virtual bool destroySyncFence(RENDERPICTURE *pic) = 0;
+   virtual bool displayFrame(CVideoDataProvider &frame, int &fence, int top_field) = 0;
+   virtual bool getSyncFenceValue(int fence, HwLayerSyncValue &value) = 0;
+   virtual bool initSyncFence(int &fence) = 0;
+   virtual bool destroySyncFence(int &fence) = 0;
    virtual bool setProperty(CPropertyValue &prop) = 0;
 
 };

@@ -1588,8 +1588,7 @@ void CVdpauRenderPicture::Sync()
   CSingleLock lock(renderPicSection);
   if (usefence)
   {
-    frameId = -1;
-    //g_HwLayer.initSyncFence(CHwLayerManagerAW::HwLayerType::Video, this);
+    g_HwLayer.initSyncFence(CHwLayerManagerAW::HwLayerType::Video, fence);
   }
 #endif
 }
@@ -3775,10 +3774,10 @@ bool COutput::ProcessSyncPicture(bool cleanup)
       if(! cleanup)
       {
         CHwLayerManagerAW::HwLayerSyncValue value;
-        g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic, value);
+        bool status = g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic->fence, value);
         if(value == CHwLayerManagerAW::HwLayerSyncValue::HWLayerFenceSignaled)
         {
-          g_HwLayer.destroySyncFence(CHwLayerManagerAW::HwLayerType::Video, pic);
+          g_HwLayer.destroySyncFence(CHwLayerManagerAW::HwLayerType::Video, pic->fence);
         }
         else
         {
@@ -3792,8 +3791,8 @@ bool COutput::ProcessSyncPicture(bool cleanup)
         XbmcThreads::EndTime timeout(80);
 
         CHwLayerManagerAW::HwLayerSyncValue value;
-        g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic, value);
-        while(value == CHwLayerManagerAW::HwLayerSyncValue::HWLayerFenceUnsignaled)
+        bool status = g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic->fence, value);
+        while(status && value == CHwLayerManagerAW::HwLayerSyncValue::HWLayerFenceUnsignaled)
         {
            if(!timeout.IsTimePast())
            {
@@ -3802,9 +3801,9 @@ bool COutput::ProcessSyncPicture(bool cleanup)
            else
               break;
 
-           g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic, value);
+           status = g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic->fence, value);
         }
-        g_HwLayer.destroySyncFence(CHwLayerManagerAW::HwLayerType::Video, pic);
+        g_HwLayer.destroySyncFence(CHwLayerManagerAW::HwLayerType::Video, pic->fence);
       }
     }
 #endif
@@ -3988,7 +3987,7 @@ void COutput::ReleaseBufferPool()
 #elif ALLWINNER_FRAME_sync
       {
         CHwLayerManagerAW::HwLayerSyncValue value;
-        g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic, value);
+        g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic->fence, value);
         while(value == CHwLayerManagerAW::HwLayerSyncValue::HWLayerFenceUnsignaled)
         { 
            if(!timeout.IsTimePast())
@@ -3997,9 +3996,9 @@ void COutput::ReleaseBufferPool()
            }
            else
               break;
-           g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic, value);
+           g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic->fence, value);
         }
-        g_HwLayer.destroySyncFence(CHwLayerManagerAW::HwLayerType::Video, pic);
+        g_HwLayer.destroySyncFence(CHwLayerManagerAW::HwLayerType::Video, pic->fence);
       }
 #endif
     }
