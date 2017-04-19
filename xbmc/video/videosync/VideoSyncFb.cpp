@@ -61,7 +61,7 @@ void CVideoSyncFb::Run(std::atomic<bool>& stop)
 
   while (!stop && !m_abort)
   {
-    if(ioctl(m_fd_fb, FBIO_WAITFORVSYNC, 0) < 0)
+    if(ioctl(m_fd_fb, FBIO_WAITFORVSYNC) < 0)
       CLog::Log(LOGERROR, "CVideoReferenceClock: ioctl FBIO_WAITFORVSYNC errno=%d", errno);
 
     uint64_t now = CurrentHostCounter();
