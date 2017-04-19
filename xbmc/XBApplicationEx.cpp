@@ -158,10 +158,6 @@ INT CXBApplicationEx::Run(CFileItemList &playlist)
     }
 #endif
 
-    frameTime = (XbmcThreads::SystemClockMillis() - lastFrameTime)*2;
-    if(frameTime < noRenderFrameTime)
-      Sleep(noRenderFrameTime - frameTime);
-
   } // while (!m_bStop)
   Destroy();
 
