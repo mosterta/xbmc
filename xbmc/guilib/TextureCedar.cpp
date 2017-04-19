@@ -160,8 +160,6 @@ void CCedarTexture::BindToUnit(unsigned int unit)
   
   glEnable(GL_TEXTURE_2D);
    error = glGetError();
-  if( error != GL_NO_ERROR)
-    CLog::Log(LOGERROR, "CCedarTexture error %d", error);
 
   //CheckForError();
 }
