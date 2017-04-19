@@ -185,9 +185,10 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
   }
   else if(ctx->GetHwRenderManager())
   {
-    ctx->SetHwRenderManager(NULL);
     avctx->get_buffer2 = avcodec_default_get_buffer2;
+    ctx->m_pCodecContext->get_buffer2 = avcodec_default_get_buffer2;
     avctx->slice_flags = 0;
+    ctx->SetHwRenderManager(NULL);
   }
   
   const AVPixelFormat * cur = fmt;
@@ -494,11 +495,7 @@ void CDVDVideoCodecFFmpeg::Dispose()
   av_frame_free(&m_pFilterFrame);
   avcodec_free_context(&m_pCodecContext);
   SAFE_RELEASE(m_pHardware);
-  if(m_hwRenderManager)
-  {
-    delete m_hwRenderManager;
-    m_hwRenderManager = nullptr;
-  }
+  SetHwRenderManager(NULL);
 
   FilterClose();
 }
@@ -967,6 +964,14 @@ bool CDVDVideoCodecFFmpeg::GetPictureCommon(DVDVideoPicture* pDvdVideoPicture)
   return true;
 }
 
+bool CDVDVideoCodecFFmpeg::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
+{
+  if(m_hwRenderManager)
+    return m_hwRenderManager->ClearPicture(pDvdVideoPicture);
+  else
+    return CDVDVideoCodec::ClearPicture(pDvdVideoPicture);
+}
+
 bool CDVDVideoCodecFFmpeg::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 {
   if (m_pHardware)
@@ -1201,9 +1206,7 @@ void CDVDVideoCodecFFmpeg::SetHardware(IHardwareDecoder* hardware)
 }
 void CDVDVideoCodecFFmpeg::SetHwRenderManager(IHwRenderManager *renderManager)
 {
-  if(m_hwRenderManager)
-    delete m_hwRenderManager;
-
+  SAFE_RELEASE(m_hwRenderManager);
   m_hwRenderManager = renderManager;
 }
 

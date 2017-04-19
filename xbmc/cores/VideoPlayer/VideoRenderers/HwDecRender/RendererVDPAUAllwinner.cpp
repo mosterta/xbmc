@@ -30,11 +30,15 @@
 #include "windowing/hwlayer/HwLayerFactory.h"
 #include "settings/Settings.h"
 #include "settings/AdvancedSettings.h"
+#include <linux/fb.h>
+#include <sys/ioctl.h>
+#include <string>
 
 #define CS_MODE_BT709 1
 #define CS_MODE_BT601 0
 
 using namespace VDPAUAllwinner;
+using namespace std;
 
 CRendererVDPAUAllwinner::CRendererVDPAUAllwinner():
     m_dlHandle(NULL), m_needReconfigure(false), m_lastRenderTime(0)
@@ -53,7 +57,6 @@ CRendererVDPAUAllwinner::~CRendererVDPAUAllwinner()
   
   for (int i = 0; i < NUM_BUFFERS; ++i)
     DeleteTexture(i);
-
 }
 
 bool CRendererVDPAUAllwinner::RenderCapture(CRenderCapture* capture)
@@ -93,9 +96,8 @@ void CRendererVDPAUAllwinner::AddVideoPictureHW(DVDVideoPicture &picture, int in
       ((VDPAU::CVdpauRenderPicture*)buf.hwDec)->Release();
     pic->Sync();
     buf.hwDec = pic;
-    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner::AddVideoPictureHW: vdpau:%X pic:%X index:%d", vdpau, pic, index);
   }
-  else
+  else if (m_format == RENDER_FMT_ALLWINNER_HWBUF)
   {
     YUVBUFFER &buf = m_buffers[index];
     if (buf.hwDec)
@@ -104,7 +106,7 @@ void CRendererVDPAUAllwinner::AddVideoPictureHW(DVDVideoPicture &picture, int in
     pic->vdp->AcquireBuffer(picture.cedarRender);
     pic->Sync();
     buf.hwDec = (void*)picture.cedarRender;
-    CLog::Log(LOGERROR, "CRendererVDPAUAllwinner::AddVideoPictureHW non VDPAU: pic:%X index:%d", pic, index);
+    picture.cedarRender = NULL;
   }
 }
 
@@ -119,14 +121,17 @@ void CRendererVDPAUAllwinner::ReleaseBuffer(int idx)
       buf.hwDec = NULL;
     }
   }
-  else
+  else if (m_format == RENDER_FMT_ALLWINNER_HWBUF)
   {
     YUVBUFFER &buf = m_buffers[idx];
-
-    if (buf.hwDec && buf.fields[0].id != 0) {
+    AVFrame* ref = (AVFrame*)buf.hwDec;
+    if (ref) {
       CHwRenderPicture *pic = (CHwRenderPicture *)((AVFrame*)buf.hwDec)->opaque;
-      bool status = g_HwLayer.destroySyncFence(CHwLayerManagerAW::HwLayerType::Video, pic->GetFence());
-      pic->vdp->ReleaseBuffer(buf.hwDec);
+      if(pic)
+      {
+        bool status = g_HwLayer.destroySyncFence(CHwLayerManagerAW::HwLayerType::Video, pic->GetFence());
+        pic->vdp->ReleaseBuffer(buf.hwDec);
+      }
       buf.hwDec = NULL;
     }
   }
@@ -205,11 +210,14 @@ CRenderInfo CRendererVDPAUAllwinner::GetRenderInfo()
 
 bool CRendererVDPAUAllwinner::LoadShadersHook()
 {
-  bool loadShaders = false;
-  
-  CLog::Log(LOGNOTICE, "GL: Using Allwinner Layer render method");
-  m_textureTarget = GL_TEXTURE_2D;
-  m_renderMethod = RENDER_VDPAU_ALLWINNER;
+  bool loadShaders = true;
+  if( m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420 || m_format == RENDER_FMT_ALLWINNER_HWBUF)
+  {
+    CLog::Log(LOGNOTICE, "GL: Using Allwinner Layer render method");
+    m_textureTarget = GL_TEXTURE_2D;
+    m_renderMethod = RENDER_VDPAU_ALLWINNER;
+    loadShaders = false;
+  }
   return loadShaders;
 }
 
@@ -217,7 +225,7 @@ bool CRendererVDPAUAllwinner::NeedBuffer(int idx)
 {
   bool needBuffer = false;
   
-  if(m_format != RENDER_FMT_VDPAU && m_format != RENDER_FMT_VDPAU_420)
+  if(m_format == RENDER_FMT_ALLWINNER_HWBUF)
   {
     YUVBUFFER &buf = m_buffers[idx];
     if(buf.hwDec)
@@ -240,7 +248,7 @@ bool CRendererVDPAUAllwinner::NeedBuffer(int idx)
 
 bool CRendererVDPAUAllwinner::RenderHook(int index)
 {
-#if 1
+#if 0
   YUVBUFFER &buf = m_buffers[index];
   if (buf.hwDec)
   {
@@ -335,10 +343,11 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
       bool status = g_HwLayer.displayFrame(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, fence,
                                           top_field);
     }
-    
+
     // This code reduces rendering fps of the video layer when playing videos in fullscreen mode
     // it makes only sense on architectures with multiple layers
-    int fps = m_fps*2;
+    m_fps = g_graphicsContext.GetFPS();
+    int fps = m_fps;
 
     unsigned int now = XbmcThreads::SystemClockMillis();
     unsigned int frameTime = now - m_lastRenderTime;
@@ -346,7 +355,6 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
       XbmcThreads::ThreadSleep(1000/fps - frameTime);
 
     m_lastRenderTime = now;
-
   }
 
   return true;
@@ -354,18 +362,35 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
 
 bool CRendererVDPAUAllwinner::CreateTexture(int index)
 {
-  CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s ", __FUNCTION__);
-  return true;
+  if( m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420 || m_format == RENDER_FMT_ALLWINNER_HWBUF)
+  {
+    CLog::Log(LOGDEBUG, "CRendererVDPAUAllwinner:%s ", __FUNCTION__);
+    return true;
+  }
+  else
+    return CLinuxRendererGLES::CreateTexture(index);
 }
 
 void CRendererVDPAUAllwinner::DeleteTexture(int index)
 {
-  CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s index=%d", __FUNCTION__, index);
+  if( m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420 || m_format == RENDER_FMT_ALLWINNER_HWBUF)
+  {
+    CLog::Log(LOGDEBUG, "CRendererVDPAUAllwinner:%s index=%d", __FUNCTION__, index);
+    ReleaseBuffer(index);
+  }
+  else
+    return CLinuxRendererGLES::DeleteTexture(index);
 }
 
 bool CRendererVDPAUAllwinner::UploadTexture(int index)
 {
-  return true;// nothing todo
+  if( m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420 || m_format == RENDER_FMT_ALLWINNER_HWBUF)
+  {
+    CLog::Log(LOGDEBUG, "CRendererVDPAUAllwinner:%s index=%d", __FUNCTION__, index);
+    ReleaseBuffer(index);
+  }
+  else
+    return CLinuxRendererGLES::UploadTexture(index);
 }
 
 #endif

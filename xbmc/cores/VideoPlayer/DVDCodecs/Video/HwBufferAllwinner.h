@@ -51,7 +51,6 @@
 #include "guilib/DispResource.h"
 #include "threads/Event.h"
 #include "threads/Thread.h"
-#include "utils/ActorProtocol.h"
 #include "guilib/Geometry.h"
 
 extern "C" {
@@ -126,6 +125,9 @@ struct CVdpauConfig
 {
   CVdpauConfig() : videoSurfacePool(NULL) {};
   ~CVdpauConfig() {
+    Destroy();
+  }
+  void Destroy() {
     if(videoSurfacePool)
       av_buffer_pool_uninit(&videoSurfacePool);
   }
@@ -157,6 +159,7 @@ public:
   void Sync();
   vdpauSurfaceCedar surfaceCedar;
   bool valid;
+  bool added;
   CCedarRender *vdp;
   bool FenceEnabled() { return usefence; }
   int& GetFence() { return fence; }
@@ -183,12 +186,13 @@ public:
 
   CCedarRender();
   virtual ~CCedarRender();
-
+  
   virtual bool Create (AVCodecContext* avctx, AVCodecContext* mainctx, const enum AVPixelFormat);
   virtual void Destroy();
+  virtual bool ClearPicture(DVDVideoPicture* pDvdVideoPicture);
   virtual bool GetPicture(AVCodecContext* avctx, AVFrame* frame, DVDVideoPicture* picture);
   virtual bool AcquireBuffer(void* frame);
-  virtual bool ReleaseBuffer(void* frame);
+  virtual bool ReleaseBuffer(void* frame, bool delete_frame=true);
   
   static void FFReleaseBuffer(void *opaque, uint8_t *data);
   static int FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int flags);

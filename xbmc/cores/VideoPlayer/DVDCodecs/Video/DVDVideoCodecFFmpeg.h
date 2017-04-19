@@ -56,10 +56,6 @@ public:
     virtual bool CanSkipDeint() {return false; }
     virtual const std::string Name() = 0;
     virtual void SetCodecControl(int flags) {};
-    bool isCapabilitySupported(enum IHardwareCapabilities cap) { return m_hwCapabilities & cap; };
-    
-    protected:
-      enum IHardwareCapabilities m_hwCapabilities;
   };
 
   class IHwRenderManager : public IDVDResourceCounted<IHwRenderManager>
@@ -71,6 +67,7 @@ public:
       virtual void Destroy() {};
       virtual AVFrame* GetBuffer() {};
       virtual bool FreeBuffer() {};
+      virtual bool ClearPicture(DVDVideoPicture* pDvdVideoPicture) {};
       virtual bool GetPicture(AVCodecContext* avctx, AVFrame* frame, DVDVideoPicture* picture) = 0;
   };
   CDVDVideoCodecFFmpeg(CProcessInfo &processInfo);
@@ -87,7 +84,8 @@ public:
   virtual unsigned GetAllowedReferences() override;
   virtual bool GetCodecStats(double &pts, int &droppedFrames, int &skippedPics) override;
   virtual void SetCodecControl(int flags) override;
-
+  virtual bool ClearPicture(DVDVideoPicture* pDvdVideoPicture);
+  
   IHardwareDecoder * GetHardware() { return m_pHardware; };
   void SetHardware(IHardwareDecoder* hardware);
 

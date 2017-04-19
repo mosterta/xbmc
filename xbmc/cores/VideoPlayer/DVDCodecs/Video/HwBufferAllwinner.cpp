@@ -78,12 +78,11 @@ CCedarRender::CCedarRender()
 {
   m_vdpauConfigured = false;
   GLInit();
-  
 }
 
 bool CCedarRender::Create(AVCodecContext* avctx, AVCodecContext* mainctx, const enum AVPixelFormat fmt)
 {
-#if 0
+#if 1
   avctx->get_buffer2 = CCedarRender::FFGetBuffer;
   avctx->slice_flags = SLICE_FLAG_CODED_ORDER|SLICE_FLAG_ALLOW_FIELD;
   mainctx->get_buffer2 = CCedarRender::FFGetBuffer;
@@ -104,6 +103,8 @@ void CCedarRender::Destroy()
 
 //  g_Windowing.Unregister(this);
 
+  m_vdpauConfig.Destroy();
+  
   if(m_vdpProcs.m_dlVdpauNvHandle)
   {
      dlclose(m_vdpProcs.m_dlVdpauNvHandle);
@@ -158,6 +159,9 @@ int CCedarRender::video_get_buffer(AVCodecContext *s, AVFrame *pic)
     vdp->m_vdpProcs.glVDPAUGetMappedMemoryCedar(
 				      (vdpauSurfaceCedar)pic->buf[0]->data, &buf[0],
 				      &buf[1], &buf[2]);
+#if VDPAU_DEBUG
+    CLog::Log(LOGERROR, "CVDPAU::%s - (re-)used video surface=%d", __FUNCTION__, pic->buf[0]->data);
+#endif
 
     for(int i=0; i < 3; ++i)
     {
@@ -183,6 +187,19 @@ int CCedarRender::update_frame_pool(AVCodecContext *avctx, AVFrame *frame)
     int i, ret;
     int stride_align[8];
 
+    switch (avctx->codec_type) {
+    case AVMEDIA_TYPE_VIDEO: {
+        uint8_t *data[4];
+	int linesize[4];
+        int w = frame->width;
+        int h = frame->height;
+        int tmpsize, unaligned;
+
+        if (vdp->m_vdpauConfig.format == frame->format &&
+            vdp->m_vdpauConfig.vidWidth == frame->width && 
+            vdp->m_vdpauConfig.vidHeight == frame->height)
+            return 0;
+
 	switch (frame->format) {
 	case AV_PIX_FMT_YUV420P: 
 	  vdp->m_vdpauConfig.chromaType = VDP_CHROMA_TYPE_420; 
@@ -202,19 +219,6 @@ int CCedarRender::update_frame_pool(AVCodecContext *avctx, AVFrame *frame)
 	  );
 	    return -1;
 	}
-
-    switch (avctx->codec_type) {
-    case AVMEDIA_TYPE_VIDEO: {
-        uint8_t *data[4];
-	int linesize[4];
-        int w = frame->width;
-        int h = frame->height;
-        int tmpsize, unaligned;
-
-        if (vdp->m_vdpauConfig.format == frame->format &&
-            vdp->m_vdpauConfig.vidWidth == frame->width && 
-            vdp->m_vdpauConfig.vidHeight == frame->height)
-            return 0;
 
 	avcodec_align_dimensions2(avctx, &w, &h, stride_align);
 
@@ -276,7 +280,9 @@ AVBufferRef *CCedarRender::pool_alloc(void *opaque, int size)
     }
     else
     {
-       CLog::Log(LOGINFO, "CVDPAU::FFGetBuffer - Video surface=%d created", surf);
+#if VDPAU_DEBUG
+       CLog::Log(LOGERROR, "CVDPAU::FFGetBuffer - Video surface=%d created", surf);
+#endif
     }
 
     ret = av_buffer_create((uint8_t*)surf, 0, FFReleaseBuffer, vdp, 0);
@@ -297,48 +303,61 @@ void CCedarRender::FFReleaseBuffer(void *opaque, uint8_t *data)
   CCedarRender             *vdp = (CCedarRender *)opaque;
   
   surf = (VdpVideoSurface)(uintptr_t)data;
-#if 0
-  if(pic->surfaceCedar)
-  {
-    vdp->m_vdpProcs.glVDPAUUnregisterSurfaceCedar(pic->surfaceCedar);
-  }
-#endif
-  vdp->m_vdpProcs.glVDPAUDestroySurfaceCedar(surf);
 
+  vdp->m_vdpProcs.glVDPAUDestroySurfaceCedar(surf);
   
 #if VDPAU_DEBUG
-  CLog::Log(LOGNOTICE, " (VDPAU) %s releasing video surface=%d", __FUNCTION__, surf);
+  CLog::Log(LOGERROR, " (VDPAU) %s releasing video surface=%d", __FUNCTION__, surf);
 #endif
+}
+
+bool CCedarRender::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
+{
+  bool status = true;
+  if(pDvdVideoPicture->cedarRender)
+  {
+    CHwRenderPicture *pic = (CHwRenderPicture *)pDvdVideoPicture->cedarRender->opaque;
+    if(pic && !pic->added)
+      ReleaseBuffer(pDvdVideoPicture->cedarRender, false);
+  }
+  memset(pDvdVideoPicture, 0, sizeof(*pDvdVideoPicture));
+  return status;
 }
 
 bool CCedarRender::GetPicture(AVCodecContext* avctx, AVFrame* frame, DVDVideoPicture* picture)
 {
   bool status = false;
 
-  picture->cedarRender = av_frame_alloc();
+  if(!picture->cedarRender)
+    picture->cedarRender = av_frame_alloc();
 
   if(picture->cedarRender)
   {
     status = true;
 
     ((CDVDVideoCodecFFmpeg*)avctx->opaque)->GetPictureCommon(picture);
+    av_frame_move_ref(picture->cedarRender, frame);
     picture->cedarRender->format         = frame->format;
     picture->cedarRender->width          = frame->width;
     picture->cedarRender->height         = frame->height;
     picture->cedarRender->channels       = frame->channels;
     picture->cedarRender->channel_layout = frame->channel_layout;
     picture->cedarRender->nb_samples     = frame->nb_samples;
-    av_frame_copy_props(picture->cedarRender, frame);
-    int status = FFGetBuffer(avctx, picture->cedarRender, 0);
-    status = av_frame_copy(picture->cedarRender, frame);
 
-    picture->format = REMDER_FMT_ALLWINNER_HWBUF;
+    picture->format = RENDER_FMT_ALLWINNER_HWBUF;
     CHwRenderPicture *additionalData;
     picture->cedarRender->opaque = additionalData = new CHwRenderPicture;
+    this->Acquire();
     additionalData->vdp = this;
     additionalData->usefence = true;
     additionalData->surfaceCedar = 0;
+    additionalData->valid = true;
+    additionalData->added = false;
     additionalData->Sync();
+#if VDPAU_DEBUG
+      CLog::Log(LOGERROR, " (VDPAU) %s GetPicture video surface=%d", __FUNCTION__, picture->cedarRender-> buf[0]->data);
+#endif
+
   }
   return status;
 }
@@ -354,23 +373,49 @@ bool CCedarRender::AcquireBuffer(void *frame)
       vdpauSurfaceCedar glVdpauSurfaceCedar = pic->vdp->m_vdpProcs.glVDPAURegisterVideoSurfaceCedar(surf);
       pic->vdp->m_vdpProcs.glVDPAUMapSurfacesCedar(1, &glVdpauSurfaceCedar);
       pic->surfaceCedar = glVdpauSurfaceCedar;
+      pic->added = true;
+#if VDPAU_DEBUG
+      CLog::Log(LOGERROR, " (VDPAU) %s mapped video surface=%d to surface %d", __FUNCTION__, surf, glVdpauSurfaceCedar);
+#endif
     }
+    else
+    {
+      	CLog::Log(LOGERROR, " (VDPAU) %s pic==NULL", __FUNCTION__);
+    }
+    
     return true;
 }
 
-bool CCedarRender::ReleaseBuffer(void *frame)
+bool CCedarRender::ReleaseBuffer(void *frame, bool delete_frame)
 {
     AVFrame *ref = (AVFrame*)frame;
     CHwRenderPicture *pic = (CHwRenderPicture *)ref->opaque;
-  
+    CCedarRender *cedar;
+    
     assert(pic);
     if(pic)
     {
-      //surface is unmapped internally first, if surface is still mapped, no need to call explicitly here
-      pic->vdp->m_vdpProcs.glVDPAUUnregisterSurfaceCedar(pic->surfaceCedar);
+      if(pic->surfaceCedar)
+      {
+	//surface is unmapped internally first, if surface is still mapped, no need to call explicitly here
+	pic->vdp->m_vdpProcs.glVDPAUUnregisterSurfaceCedar(pic->surfaceCedar);
+#if VDPAU_DEBUG
+	CLog::Log(LOGERROR, " (VDPAU) %s unmapped surface=%d", __FUNCTION__, pic->surfaceCedar);
+#endif	
+      }
+      cedar = pic->vdp;
+      delete pic;
+      ref->opaque = NULL;
+      if(delete_frame)
+	av_frame_free(&ref);
+      else
+	av_frame_unref(ref);
+      cedar->Release();
     }
-    delete pic;
-    av_frame_free(&ref);
+    else
+    {
+      	CLog::Log(LOGERROR, " (VDPAU) %s pic==NULL", __FUNCTION__);
+    }
     return true;
 }
 
@@ -467,10 +512,6 @@ bool CCedarRender::GLInit()
 #endif
 
   m_vdpProcs.glVDPAUInitCedar(NULL, NULL);
-
-#if defined(ALLWINNER_FRAME_sync)
-  bool hasfence = true;
-#endif
 
   return true;
 }
