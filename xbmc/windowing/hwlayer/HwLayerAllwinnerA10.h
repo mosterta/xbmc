@@ -73,6 +73,6 @@ class CHwLayerAllwinnerA10 : public CHwLayerAllwinnerBase
    CPropertyValue m_scalerType;
    CPropertyValue m_colorSpace;
    CPropertyValue m_interlaceMode;
-   int m_frameId;
+   int m_fence;
 };
 

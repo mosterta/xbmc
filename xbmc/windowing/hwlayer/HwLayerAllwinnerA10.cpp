@@ -39,7 +39,7 @@ CHwLayerAllwinnerA10::CHwLayerAllwinnerA10(CHwLayerConfigAllwinner &config) :
              m_scalerType(PropertyKey::ScalerType, (int)ScalerType::Type_Normal),
              m_colorSpace(PropertyKey::ColorSpace, (int)ColorSpace::BT709),
              m_interlaceMode(PropertyKey::InterlaceMode, (int)Interlace::IlaceOff), 
-             m_frameId(0)
+             m_fence(0)
 {
 }
 
