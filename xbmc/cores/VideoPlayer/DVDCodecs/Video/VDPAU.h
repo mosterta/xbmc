@@ -116,13 +116,6 @@ typedef VdpStatus (*PVDPDEVICEOPENGLESNVOPEN)(EGLDisplay _eglDisplay, VdpGetProc
 
 #if defined(Cedar_vdpau_interop)
 typedef uint32_t vdpauSurfaceCedar;
-typedef struct cdRect
-{
-  uint32_t       x;
-  uint32_t       y;
-  uint32_t       width;
-  uint32_t       height;
-} cdRect_t;
 
 typedef void (GL_APIENTRYP PFNGLVDPAUUNMAPSURFACESCEDAR)(GLsizei numSurfaces, const vdpauSurfaceCedar *surfaces);
 typedef void (GL_APIENTRYP PFNGLVDPAUINITCEDAR)(const void *vdpDevice, const void *getProcAddress);

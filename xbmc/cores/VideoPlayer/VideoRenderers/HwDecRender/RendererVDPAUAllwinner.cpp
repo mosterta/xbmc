@@ -276,11 +276,15 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
   }
   else
   {
-    CHwRenderPicture *pic = (CHwRenderPicture *)((AVFrame*)m_buffers[m_iYV12RenderBuffer].hwDec)->opaque;
-    if(pic)
+    AVFrame *ref = (AVFrame*)m_buffers[m_iYV12RenderBuffer].hwDec;
+    if(ref)
     {
-      surf = pic->surfaceCedar;
-      fencePtr = &pic->GetFence();
+      CHwRenderPicture *pic = (CHwRenderPicture *)ref->opaque;
+      if(pic)
+      {
+        surf = pic->surfaceCedar;
+        fencePtr = &pic->GetFence();
+      }
     }
   }
   
@@ -290,11 +294,6 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
     
     if(m_needReconfigure || (m_oldSrc != m_sourceRect || m_oldDst != m_destRect))
     {
-      cdRect_t src = { (uint32_t)m_sourceRect.x1, (uint32_t)m_sourceRect.y1, 
-        (uint32_t)(m_sourceRect.x2 - m_sourceRect.x1), (uint32_t)(m_sourceRect.y2 - m_sourceRect.y1) };
-      cdRect_t dst = { (uint32_t)m_destRect.x1, (uint32_t)m_destRect.y1, 
-        (uint32_t)(m_destRect.x2 - m_destRect.x1), (uint32_t)(m_destRect.y2 - m_destRect.y1) };
-
       bool status;
       CHwLayerManagerAW::CPropertyValue prop(CHwLayerManagerAW::PropertyKey::ScalerType,
                                               CHwLayerManagerAW::ScalerType::Type_Scale);

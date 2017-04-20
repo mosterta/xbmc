@@ -21,6 +21,7 @@
 #include "HwLayerAllwinnerDisp.h"
 #include "HwLayerAdaptorVdpau.h"
 #include "utils/log.h"
+#include "guilib/GraphicContext.h"
 
 #include <sys/ioctl.h>
 #include <string.h>
@@ -147,6 +148,35 @@ bool CHwLayerAllwinnerDisp2::destroy()
 
 }
 
+bool CHwLayerAllwinnerDisp2::calcCroppedValues(cdRect_t *src, cdRect_t *scn, int screen_width)
+{
+  if (scn->y < 0)
+  {
+    int scn_clip = -scn->y;
+    int src_clip = scn_clip * src->height / scn->height;
+    scn->y = 0;
+    scn->height -= scn_clip;
+    src->y += src_clip;
+    src->height -= src_clip;
+  }
+  if (scn->x < 0)
+  {
+    int scn_clip = -scn->x;
+    int src_clip = scn_clip * src->width / scn->width;
+    scn->x = 0;
+    scn->width -= scn_clip;
+    src->x += src_clip;
+    src->width -= src_clip;
+  }
+  if (scn->x + scn->width > screen_width)
+  {
+    int scn_clip = scn->x + scn->width - screen_width;
+    int src_clip = scn_clip * src->width / scn->width;
+    scn->width -= scn_clip;
+    src->width -= src_clip;
+  }
+}
+
 bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRect &srcRect, CRect &dstRect)
 {
   bool status = true;
@@ -203,7 +233,14 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
       m_layerConfig.info.fb.color_space = DISP_BT709;
       break;
   }
-      
+  
+  cdRect_t src = { (int32_t)srcRect.x1, (int32_t)srcRect.y1, 
+    (uint32_t)(srcRect.x2 - srcRect.x1), (uint32_t)(srcRect.y2 - srcRect.y1) };
+  cdRect_t scn = { (int32_t)dstRect.x1, (int32_t)dstRect.y1, 
+    (uint32_t)(dstRect.x2 - dstRect.x1), (uint32_t)(dstRect.y2 - dstRect.y1) };
+
+  calcCroppedValues(&src, &scn, g_graphicsContext.GetWidth());
+    
   m_layerConfig.info.fb.size[0].width = config.fbSize.width;
   m_layerConfig.info.fb.size[0].height = config.fbSize.height;
   m_layerConfig.info.fb.size[1].width = config.fbSize.width/2;
@@ -213,14 +250,14 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
   m_layerConfig.info.fb.align[0] = 32;
   m_layerConfig.info.fb.align[1] = 16;
   m_layerConfig.info.fb.align[2] = 16;
-  m_layerConfig.info.fb.crop.x = ((long long)(srcRect.x1)) << 32;
-  m_layerConfig.info.fb.crop.y = ((long long)(srcRect.y1)) << 32;
-  m_layerConfig.info.fb.crop.width = ((long long)(srcRect.x2 - srcRect.x1)) << 32;
-  m_layerConfig.info.fb.crop.height = ((long long)(srcRect.y2 - srcRect.y1)) << 32;
-  m_layerConfig.info.screen_win.x = dstRect.x1;
-  m_layerConfig.info.screen_win.y = dstRect.y1;
-  m_layerConfig.info.screen_win.width = (dstRect.x2 - dstRect.x1);
-  m_layerConfig.info.screen_win.height = (dstRect.y2 - dstRect.y1);
+  m_layerConfig.info.fb.crop.x = ((long long)(src.x)) << 32;
+  m_layerConfig.info.fb.crop.y = ((long long)(src.y)) << 32;
+  m_layerConfig.info.fb.crop.width = ((long long)(src.width)) << 32;
+  m_layerConfig.info.fb.crop.height = ((long long)(src.height)) << 32;
+  m_layerConfig.info.screen_win.x = scn.x;
+  m_layerConfig.info.screen_win.y = scn.y;
+  m_layerConfig.info.screen_win.width = (scn.width);
+  m_layerConfig.info.screen_win.height = (scn.height);
   m_layerConfig.info.fb.flags = DISP_BF_NORMAL;
   m_layerConfig.info.b_trd_out = 0;
   
