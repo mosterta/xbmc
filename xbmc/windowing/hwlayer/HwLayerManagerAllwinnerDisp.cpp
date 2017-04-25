@@ -128,13 +128,13 @@ bool CHwLayerManagerAllwinnerDisp::setup()
   createLayer(HwLayerType::Video);
 
   CColorKey ck;
-  ck.min_red = 0x1;
-  ck.min_green = 0x1;
-  ck.min_blue = 0x1;
-  ck.min_alpha = 0x0;
-  ck.max_red = 0xff;
+  ck.min_red   = 0x00;
+  ck.min_green = 0x00;
+  ck.min_blue  = 0x00;
+  ck.min_alpha = 0x00;
+  ck.max_red   = 0xff;
   ck.max_green = 0xff;
-  ck.max_blue = 0xff;
+  ck.max_blue  = 0xff;
   ck.max_alpha = 0xff;
   // 3 means alpha blending for color < min && > max
   ck.red_match_rule = 3;
