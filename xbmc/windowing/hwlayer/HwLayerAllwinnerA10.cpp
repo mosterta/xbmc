@@ -398,12 +398,11 @@ bool CHwLayerAllwinnerA10::getSyncFenceValue(int fence, HwLayerSyncValue &value)
   if(! status )
     CLog::Log(LOGERROR, "CHwLayerAllwinnerA10:%s error calling getCurrentFrameId", __FUNCTION__);
 
-  value = HwLayerSyncValue::HWLayerFenceSignaled;
+  value = HwLayerSyncValue::HWLayerFenceUnsignaled;
 
-  if((status && curDisplayedFrameId != -1 && (fence >= curDisplayedFrameId)) ||
-    (fence == -1))
+  if(status && curDisplayedFrameId != -1 && (fence < curDisplayedFrameId))
   {
-    value = HwLayerSyncValue::HWLayerFenceUnsignaled;
+    value = HwLayerSyncValue::HWLayerFenceSignaled;
   }
   return true;
 }
