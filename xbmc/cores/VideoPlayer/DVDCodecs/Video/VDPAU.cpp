@@ -1069,7 +1069,7 @@ bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)
 int CDecoder::FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int flags)
 {
 #if VDPAU_DEBUG
-  CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
+  CLog::Log(LOGDEBUG, " (VDPAU) %s", __FUNCTION__);
 #endif
 
   CDVDVideoCodecFFmpeg* ctx        = (CDVDVideoCodecFFmpeg*)avctx->opaque;
@@ -1117,7 +1117,7 @@ int CDecoder::FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int flags)
   pic->data[3] = (uint8_t*)(uintptr_t)surf;
 
 #if VDPAU_DEBUG
-  CLog::Log(LOGINFO, "CVDPAU::FFGetBuffer - using video surface=%d", surf);
+  CLog::Log(LOGDEBUG, "CVDPAU::FFGetBuffer - using video surface=%d", surf);
 #endif
 
   pic->linesize[0] = pic->linesize[1] =  pic->linesize[2] = 0;
@@ -1136,7 +1136,7 @@ int CDecoder::FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int flags)
 void CDecoder::FFReleaseBuffer(void *opaque, uint8_t *data)
 {
 #if VDPAU_DEBUG
-   CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
+   CLog::Log(LOGDEBUG, " (VDPAU) %s", __FUNCTION__);
 #endif
   CDecoder *vdp = (CDecoder*)((CDVDVideoCodecFFmpeg*)opaque)->GetHardware();
   
@@ -1148,7 +1148,7 @@ void CDecoder::FFReleaseBuffer(void *opaque, uint8_t *data)
 
   surf = (VdpVideoSurface)(uintptr_t)data;
 #if VDPAU_DEBUG
-  CLog::Log(LOGNOTICE, " (VDPAU) %s releasing video surface=%d", __FUNCTION__, surf);
+  CLog::Log(LOGDEBUG, " (VDPAU) %s releasing video surface=%d", __FUNCTION__, surf);
 #endif
 
   vdp->m_videoSurfaces.ClearReference(surf);
@@ -1198,7 +1198,7 @@ int CDecoder::Render(struct AVCodecContext *s, struct AVFrame *src,
                      const VdpBitstreamBuffer *buffers)
 {
 #if VDPAU_DEBUG
-  CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
+  CLog::Log(LOGDEBUG, " (VDPAU) %s", __FUNCTION__);
 #endif
   
   CDVDVideoCodecFFmpeg* ctx = (CDVDVideoCodecFFmpeg*)s->opaque;
@@ -1299,7 +1299,7 @@ void CDecoder::SetCodecControl(int flags)
 int CDecoder::Decode(AVCodecContext *avctx, AVFrame *pFrame)
 {
 #if VDPAU_DEBUG
-  CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
+  CLog::Log(LOGDEBUG, " (VDPAU) %s", __FUNCTION__);
 #endif
   static unsigned int picNum = 0;
   
@@ -1375,7 +1375,7 @@ int CDecoder::Decode(AVCodecContext *avctx, AVFrame *pFrame)
         {
            
 #if VDPAU_DEBUG
-          CLog::Log(LOGWARNING, "CVDPAU::Decode - remove old picture surface=%d", m_presentPicture->sourceIdx);
+          CLog::Log(LOGDEBUG, "CVDPAU::Decode - remove old picture surface=%d", m_presentPicture->sourceIdx);
 #endif
           m_presentPicture->ReturnUnused();
           m_presentPicture = 0;
@@ -1389,7 +1389,7 @@ int CDecoder::Decode(AVCodecContext *avctx, AVFrame *pFrame)
          m_bufferStats.Get(decoded, processed, render);
          retval |= VC_PICTURE;
 #if VDPAU_DEBUG
-         CLog::Log(LOGWARNING, "CVDPAU::Decode - got new picture surface=%d m_presentPicture=0x%X", 
+         CLog::Log(LOGDEBUG, "CVDPAU::Decode - got new picture surface=%d m_presentPicture=0x%X", 
                    m_presentPicture->sourceIdx, m_presentPicture);
 #endif
         }
@@ -1750,6 +1750,13 @@ void CMixer::StateMachine(int signal, Protocol *port, Message *msg)
           }
           return;
         default:
+#if VDPAU_DEBUG
+      {
+        std::string portName = port == NULL ? "timer" : port->portName;
+        CLog::Log(LOGWARNING, "CMixer::%s - signal: %d form port: %s not handled for state: %d",
+                  __FUNCTION__, signal, portName.c_str(), m_state);
+      }
+#endif
           break;
         }
       }
@@ -1766,6 +1773,13 @@ void CMixer::StateMachine(int signal, Protocol *port, Message *msg)
           m_state = M_TOP_CONFIGURED_WAIT1;
           return;
         default:
+#if VDPAU_DEBUG
+      {
+        std::string portName = port == NULL ? "timer" : port->portName;
+        CLog::Log(LOGWARNING, "CMixer::%s - signal: %d form port: %s not handled for state: %d",
+                  __FUNCTION__, signal, portName.c_str(), m_state);
+      }
+#endif
           break;
         }
       }
@@ -1796,6 +1810,13 @@ void CMixer::StateMachine(int signal, Protocol *port, Message *msg)
           m_extTimeout = 0;
           return;
         default:
+#if VDPAU_DEBUG
+      {
+        std::string portName = port == NULL ? "timer" : port->portName;
+        CLog::Log(LOGWARNING, "CMixer::%s - signal: %d form port: %s not handled for state: %d",
+                  __FUNCTION__, signal, portName.c_str(), m_state);
+      }
+#endif
           break;
         }
       }
@@ -1829,6 +1850,13 @@ void CMixer::StateMachine(int signal, Protocol *port, Message *msg)
           }
           return;
         default:
+#if VDPAU_DEBUG
+      {
+        std::string portName = port == NULL ? "timer" : port->portName;
+        CLog::Log(LOGWARNING, "CMixer::%s - signal: %d form port: %s not handled for state: %d",
+                  __FUNCTION__, signal, portName.c_str(), m_state);
+      }
+#endif
           break;
         }
       }
@@ -1854,6 +1882,7 @@ void CMixer::StateMachine(int signal, Protocol *port, Message *msg)
           {
             m_state = M_TOP_CONFIGURED_WAIT1;
             m_extTimeout = 1000;
+            CLog::Log(LOGERROR, "CMixer::%s - after ProcessPicture m_vdpError=%d", __FUNCTION__, m_vdpError);
             return;
           }
 #if 1
@@ -1883,6 +1912,13 @@ void CMixer::StateMachine(int signal, Protocol *port, Message *msg)
           }
           return;
         default:
+#if VDPAU_DEBUG
+      {
+        std::string portName = port == NULL ? "timer" : port->portName;
+        CLog::Log(LOGWARNING, "CMixer::%s - signal: %d form port: %s not handled for state: %d",
+                  __FUNCTION__, signal, portName.c_str(), m_state);
+      }
+#endif
           break;
         }
       }
@@ -1905,6 +1941,13 @@ void CMixer::StateMachine(int signal, Protocol *port, Message *msg)
           }
           return;
         default:
+#if VDPAU_DEBUG
+      {
+        std::string portName = port == NULL ? "timer" : port->portName;
+        CLog::Log(LOGWARNING, "CMixer::%s - signal: %d form port: %s not handled for state: %d",
+                  __FUNCTION__, signal, portName.c_str(), m_state);
+      }
+#endif
           break;
         }
       }
@@ -1946,6 +1989,13 @@ void CMixer::StateMachine(int signal, Protocol *port, Message *msg)
            m_extTimeout = 0;
            return;
          default:
+#if VDPAU_DEBUG
+      {
+        std::string portName = port == NULL ? "timer" : port->portName;
+        CLog::Log(LOGWARNING, "CMixer::%s - signal: %d form port: %s not handled for state: %d",
+                  __FUNCTION__, signal, portName.c_str(), m_state);
+      }
+#endif
            break;
          }
        }
@@ -2667,7 +2717,7 @@ std::string CMixer::GetDeintStrFromInterlaceMethod(EINTERLACEMETHOD method)
 void CMixer::InitCycle()
 {
 #if VDPAU_DEBUG
-  CLog::Log(LOGNOTICE, " (VDPAU) CMixer %s", __FUNCTION__);
+  CLog::Log(LOGDEBUG, " (VDPAU) CMixer %s", __FUNCTION__);
 #endif
   
   CheckFeatures();
@@ -2780,7 +2830,7 @@ void CMixer::InitCycle()
 void CMixer::FiniCycle()
 {
 #if VDPAU_DEBUG
-  CLog::Log(LOGNOTICE, " (VDPAU) CMixer %s", __FUNCTION__);
+  CLog::Log(LOGDEBUG, " (VDPAU) CMixer %s", __FUNCTION__);
 #endif
   // Keep video surfaces for one 2 cycles longer than used
   // by mixer. This avoids blocking in decoder.
@@ -2810,7 +2860,7 @@ void CMixer::FiniCycle()
 void CMixer::ProcessPicture()
 {
 #if VDPAU_DEBUG
-  CLog::Log(LOGNOTICE, " (VDPAU) CMixer %s format=%d", __FUNCTION__, m_processPicture.DVDPic.format);
+  CLog::Log(LOGDEBUG, " (VDPAU) CMixer %s format=%d", __FUNCTION__, m_processPicture.DVDPic.format);
 #endif
 
 #if 1
@@ -3077,7 +3127,7 @@ const char* getVDPAU_OUTPUT_parentStates_names(int state)
 void COutput::StateMachine(int signal, Protocol *port, Message *msg)
 {
 #if VDPAU_DEBUG
-  CLog::Log(LOGDEBUG, " (VDPAU) COutput %s: m_state=%s, portname=%s, signal=%d", 
+  CLog::Log(LOGNOTICE, " (VDPAU) COutput %s: m_state=%s, portname=%s, signal=%d", 
             __FUNCTION__, getVDPAU_OUTPUT_parentStates_names(m_state),
              port ? port->portName.c_str() : "NULL", signal);
 #endif
@@ -3117,7 +3167,7 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
           break;
         }
       }
-#if 0
+#if 1
       {
         std::string portName = port == NULL ? "timer" : port->portName;
         CLog::Log(LOGWARNING, "COutput::%s - signal: %d form port: %s not handled for state: %s", __FUNCTION__, signal, portName.c_str(), VDPAU_OUTPUT_parentStates_names[state]);
@@ -3193,9 +3243,6 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
       break;
 
     case O_TOP_CONFIGURED:
-       //m_dataPort.DeferOut(false);
-       //m_mixer.m_dataPort.DeferIn(false);
-
       if (port == &m_controlPort)
       {
         switch (signal)
@@ -3210,6 +3257,11 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
           msg->Reply(COutputControlProtocol::ACC);
           return;
         default:
+          {
+            std::string portName = port == NULL ? "timer" : port->portName;
+            CLog::Log(LOGWARNING, "COutput::%s - signal: %d form port: %s not handled for state: %s", __FUNCTION__, 
+                      signal, portName.c_str(), VDPAU_OUTPUT_parentStates_names[state]);
+          }
           break;
         }
       }
@@ -3228,6 +3280,11 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
           {
             m_mixer.m_dataPort.SendOutMessage(CMixerDataProtocol::FRAME,
                                                frame,sizeof(CVdpauDecodedPicture));
+          }
+          else
+          {
+            CLog::Log(LOGERROR, " (VDPAU) COutput %s: NEWFRAME frame pointer=NULL m_state=%s", 
+                      __FUNCTION__, VDPAU_OUTPUT_parentStates_names[state]);
           }
           return;
         case COutputDataProtocol::RETURNPIC:
@@ -3250,6 +3307,11 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
           //m_bStateMachineSelfTrigger=true;
           return;
         default:
+          {
+            std::string portName = port == NULL ? "timer" : port->portName;
+            CLog::Log(LOGWARNING, "COutput::%s - signal: %d form port: %s not handled for state: %s", __FUNCTION__, signal, 
+                      portName.c_str(), VDPAU_OUTPUT_parentStates_names[state]);
+          }
           break;
         }
       }
@@ -3258,12 +3320,12 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
         switch (signal)
         {
         case CMixerDataProtocol::PICTURE:
-#if VDPAU_DEBUG
-          CLog::Log(LOGDEBUG, " (VDPAU) COutput %s: PICTURE m_state=%s", 
-                    __FUNCTION__, VDPAU_OUTPUT_parentStates_names[state]);
-#endif
           CVdpauProcessedPicture *pic;
           pic = (CVdpauProcessedPicture*)msg->data;
+#if VDPAU_DEBUG
+          CLog::Log(LOGDEBUG, " (VDPAU) COutput %s: got PICTURE m_state=%s pic=%x", 
+                    __FUNCTION__, VDPAU_OUTPUT_parentStates_names[state], pic);
+#endif
           m_bufferPool.processedPics.push(*pic);
           //m_state = O_TOP_CONFIGURED_WORK;
 #if VDPAU_DEBUG
@@ -3277,12 +3339,16 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
           {
              CVdpauRenderPicture *pic;
              pic = ProcessMixerPicture();
+#if VDPAU_DEBUG
+             CLog::Log(LOGDEBUG, " (VDPAU) COutput %s: processMixer PICTURE data=0x%X", 
+                       __FUNCTION__, pic);
+#endif
              if (pic)
              {
                 m_config.stats->DecProcessed();
                 m_config.stats->IncRender();
 #if VDPAU_DEBUG
-                CLog::Log(LOGDEBUG, " (VDPAU) COutput %s: PICTURE data=0x%X", 
+                CLog::Log(LOGNOTICE, " (VDPAU) COutput %s: sending PICTURE data=0x%X", 
                           __FUNCTION__, pic);
 #endif
                 m_dataPort.SendInMessage(COutputDataProtocol::PICTURE, &pic, sizeof(pic));
@@ -3293,6 +3359,10 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
           //m_bStateMachineSelfTrigger=true;
           return;
         default:
+          {
+            std::string portName = port == NULL ? "timer" : port->portName;
+            CLog::Log(LOGWARNING, "COutput::%s - signal: %d form port: %s not handled for state: %s", __FUNCTION__, signal, portName.c_str(), VDPAU_OUTPUT_parentStates_names[state]);
+          }
           break;
         }
       }
@@ -3307,21 +3377,25 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
                else
                   m_extTimeout = 100;
                
-           if (HasWork())
-          {
-            CVdpauRenderPicture *pic;
-            pic = ProcessMixerPicture();
-            if (pic)
-            {
-              m_config.stats->DecProcessed();
-              m_config.stats->IncRender();
-              m_dataPort.SendInMessage(COutputDataProtocol::PICTURE, &pic, sizeof(pic));
-            }
-            m_extTimeout = 1;
-            //m_bStateMachineSelfTrigger=true;
-          }
+              if (HasWork())
+              {
+                CVdpauRenderPicture *pic;
+                pic = ProcessMixerPicture();
+                if (pic)
+                {
+                  m_config.stats->DecProcessed();
+                  m_config.stats->IncRender();
+                  m_dataPort.SendInMessage(COutputDataProtocol::PICTURE, &pic, sizeof(pic));
+                }
+                m_extTimeout = 1;
+                //m_bStateMachineSelfTrigger=true;
+              }
               return;
             default:
+                {
+                  std::string portName = port == NULL ? "timer" : port->portName;
+                  CLog::Log(LOGWARNING, "COutput::%s - signal: %d form port: %s not handled for state: %s", __FUNCTION__, signal, portName.c_str(), VDPAU_OUTPUT_parentStates_names[state]);
+                }
                break;
          }
       }
@@ -3351,6 +3425,10 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
           }
           return;
         default:
+          {
+            std::string portName = port == NULL ? "timer" : port->portName;
+            CLog::Log(LOGWARNING, "COutput::%s - signal: %d form port: %s not handled for state: %s", __FUNCTION__, signal, portName.c_str(), VDPAU_OUTPUT_parentStates_names[state]);
+          }
           break;
         }
       }
@@ -3395,6 +3473,10 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
           }
           return;
         default:
+          {
+            std::string portName = port == NULL ? "timer" : port->portName;
+            CLog::Log(LOGWARNING, "COutput::%s - signal: %d form port: %s not handled for state: %s", __FUNCTION__, signal, portName.c_str(), VDPAU_OUTPUT_parentStates_names[state]);
+          }
           break;
         }
       }
@@ -3623,6 +3705,13 @@ bool COutput::HasWork()
 {
   if (!m_bufferPool.processedPics.empty() && !m_bufferPool.freeRenderPics.empty())
     return true;
+  
+  
+#if VDPAU_DEBUG1
+  CLog::Log(LOGNOTICE, " (VDPAU) prcesssedPics empty:%d freeRenderPics empty:%d", 
+            m_bufferPool.processedPics.empty(), m_bufferPool.freeRenderPics.empty());
+#endif
+  
   return false;
 }
 
@@ -3641,6 +3730,11 @@ CVdpauRenderPicture* COutput::ProcessMixerPicture()
     m_bufferPool.usedRenderPics.push_back(idx);
     CVdpauProcessedPicture procPic = m_bufferPool.processedPics.front();
     m_bufferPool.processedPics.pop();
+
+#if VDPAU_DEBUG
+      CLog::Log(LOGNOTICE, " (VDPAU):%s prcesssedPics pop free renderpic empty:%d freeRenderPics empty:%d", 
+                __FUNCTION__, m_bufferPool.processedPics.empty(), m_bufferPool.freeRenderPics.empty());
+#endif
 
     retPic->DVDPic = procPic.DVDPic;
     retPic->valid = true;
@@ -3678,6 +3772,13 @@ CVdpauRenderPicture* COutput::ProcessMixerPicture()
       retPic->crop.y2 = m_config.surfaceHeight - m_config.vidHeight;
     }
   }
+#if VDPAU_DEBUG
+  else
+  {
+        CLog::Log(LOGNOTICE, " (VDPAU) prcesssedPics empty:%d freeRenderPics empty:%d", 
+			m_bufferPool.processedPics.empty(), m_bufferPool.freeRenderPics.empty());
+  }
+#endif
   return retPic;
 }
 
@@ -3719,8 +3820,8 @@ void COutput::QueueReturnPicture(CVdpauRenderPicture *pic)
 
 bool COutput::ProcessSyncPicture(bool cleanup)
 {
-#if VDPAU_DVDPAU_DEBUG
-  CLog::Log(LOGNOTICE, " (VDPAU) COutput %s", __FUNCTION__);
+#if VDPAU_DEBUG
+  CLog::Log(LOGNOTICE, " (VDPAU) COutput %s processing %d syncRenderPics", __FUNCTION__, m_bufferPool.syncRenderPics.size());
 #endif
   CVdpauRenderPicture *pic;
   bool busy = false;
@@ -3816,7 +3917,12 @@ bool COutput::ProcessSyncPicture(bool cleanup)
 
     m_bufferPool.freeRenderPics.push_back(*it);
 
-    std::deque<int>::iterator it2 = find(m_bufferPool.usedRenderPics.begin(),
+#if VDPAU_DEBUG
+      CLog::Log(LOGNOTICE, " (VDPAU):%s pushed free render pic empty:%d freeRenderPics empty:%d", 
+                __FUNCTION__, m_bufferPool.processedPics.empty(), m_bufferPool.freeRenderPics.empty());
+#endif
+      
+      std::deque<int>::iterator it2 = find(m_bufferPool.usedRenderPics.begin(),
                                          m_bufferPool.usedRenderPics.end(),
                                          *it);
     if (it2 == m_bufferPool.usedRenderPics.end())
