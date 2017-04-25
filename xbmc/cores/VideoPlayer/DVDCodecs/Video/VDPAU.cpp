@@ -3837,7 +3837,7 @@ bool COutput::ProcessSyncPicture(bool cleanup)
       }
       else
       {
-        XbmcThreads::EndTime timeout(80);
+        XbmcThreads::EndTime timeout( 1000 / g_graphicsContext.GetFPS() );
 
         CHwLayerManagerAW::HwLayerSyncValue value;
         bool status = g_HwLayer.getSyncFenceValue(CHwLayerManagerAW::HwLayerType::Video, pic->fence, value);
