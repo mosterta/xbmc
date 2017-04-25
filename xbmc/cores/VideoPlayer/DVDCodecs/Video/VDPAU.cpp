@@ -56,7 +56,6 @@ using namespace Actor;
 using namespace VDPAU;
 #define NUM_RENDER_PICS 7
 #define NUM_CROP_PIX 3
-#define NO_GL_NV_EXT 0
 
 #define VDPAU_DEBUG 0
 
@@ -242,25 +241,6 @@ bool CVDPAUContext::CreateContext()
   
   QueryProcs();
   SpewHardwareAvailable();
-
-#if NO_GL_NV_EXT
-  vdp_st = m_vdpProcs.vdp_presentation_queue_target_create_x11(m_vdpDevice,
-#if HAS_GL
-        m_Pixmap, //x_window,
-#endif
-#if HAS_GLES
-        NULL,
-#endif
-        &m_vdpFlipTarget);
-  if (CheckStatus(vdp_st, __LINE__))
-     return false;
-  
-  vdp_st = m_vdpProcs.vdp_presentation_queue_create(m_vdpDevice,
-        m_vdpFlipTarget,
-        &m_vdpFlipQueue);
-  if (CheckStatus(vdp_st, __LINE__))
-     return false;
-#endif
 
   return true;
 }
@@ -752,11 +732,7 @@ long CDecoder::ReleasePicReference()
 
 void CDecoder::SetWidthHeight(int width, int height)
 {
-#if ! NO_GL_NV_EXT
   m_vdpauConfig.upscale = g_advancedSettings.m_videoVDPAUScaling;
-#else
-  m_vdpauConfig.upscale = 0;
-#endif
 
   //pick the smallest dimensions, so we downscale with vdpau and upscale with opengl when appropriate
   //this requires the least amount of gpu memory bandwidth
@@ -1265,28 +1241,6 @@ int CDecoder::Render(struct AVCodecContext *s, struct AVFrame *src,
   return 0;
 }
 
-#ifdef NO_GL_NV_EXT
-void CDecoder::Present(uint32_t surface)
-{
-  CLog::Log(LOGNOTICE,"CDecode::%s sourceIdx=%d",__FUNCTION__, surface);
-  VdpStatus vdp_st;
-
-#if 0
-  CSingleLock lock(m_DecoderSection);
-   { CSharedLock dLock(m_DisplaySection);
-   if (m_DisplayState != VDPAU_OPEN)
-      return;
-   }
-#endif
-  vdp_st = m_vdpauConfig.context->GetProcs().vdp_presentation_queue_display(m_vdpauConfig.context->m_vdpFlipQueue,
-                                           surface,
-                                           0,
-                                           0,
-                                           0);
-  CheckStatus(vdp_st, __LINE__);
-}
-
-#endif
 void CDecoder::SetCodecControl(int flags)
 {
   m_codecControl = flags & (DVD_CODEC_CTRL_DRAIN | DVD_CODEC_CTRL_HURRY);
@@ -2953,18 +2907,6 @@ void CMixer::ProcessPicture()
   destRect.y0 = (g_graphicsContext.GetHeight() - m_config.outHeight) / 2;
   destRect.x1 = m_config.outWidth;
   destRect.y1 = m_config.outHeight;
-  
-#if NO_GL_NV_EXT
-#if 1
-  VdpTime time;
-  vdp_st = m_config.context->GetProcs().vdp_presentation_queue_block_until_surface_idle(
-                                          m_config.context->m_vdpFlipQueue,
-                                     m_processPicture.outputSurface,&time);
-#else
-  //wait 1ms
-  //usleep(1L);
-#endif
-#endif
   
   // start vdpau video mixer
   CLog::Log(LOGDEBUG, " (VDPAU) CMixer render: video handle=%d, output handle=%d\n", 
