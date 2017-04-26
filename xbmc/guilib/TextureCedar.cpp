@@ -1,3 +1,4 @@
+
 /*
  *      Copyright (C) 2013 Team XBMC
  *      http://xbmc.org
@@ -56,7 +57,7 @@ CCedarTexture::CCedarTexture(unsigned int width, unsigned int height, unsigned i
   EGLDisplay eglD = g_Windowing.GetEGLDisplay();
 
   std::string hardware = g_cpuInfo.getCPUHardware();
-  if(hardware == std::string("sun4i") || hardware == std::string("sun7i"))
+  if(hardware == std::string("sun4i") || hardware == std::string("sun7i") || hardware == std::string("sun8i"))
   {
     m_jpgHandle = cedarInitJpeg(eglD);
     if(m_jpgHandle == NULL)
