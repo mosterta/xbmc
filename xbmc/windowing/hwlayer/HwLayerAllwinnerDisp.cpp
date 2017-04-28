@@ -45,7 +45,6 @@ CHwLayerAllwinnerDisp2::CHwLayerAllwinnerDisp2(CHwLayerConfigAllwinner &config) 
 
 CHwLayerAllwinnerDisp2::~CHwLayerAllwinnerDisp2()
 {
-  hide();
   destroy();
   if(m_fenceBuffer)
     free(m_fenceBuffer);
@@ -128,13 +127,16 @@ bool CHwLayerAllwinnerDisp2::destroy()
   {
     unsigned long args[4] = { m_config.m_screenId, (unsigned long)(&m_layerConfig), 1, 0 };
 
-    m_layerConfig.enable = 0;
-
-    if (ioctl(m_config.m_dispFd, DISP_LAYER_SET_CONFIG, args))
+    if(m_layerType != HwLayerType::GUI)
     {
-      m_layerId = -1;
-      CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: DISP_LAYER_SET_CONFIG failed.\n");
-      status = false;
+      m_layerConfig.enable = 0;
+  
+      if (ioctl(m_config.m_dispFd, DISP_LAYER_SET_CONFIG, args))
+      {
+        m_layerId = -1;
+        CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: DISP_LAYER_SET_CONFIG failed.\n");
+        status = false;
+      }
     }
     m_layerId = -1;
     m_layerCreated = false;
