@@ -1,11 +1,11 @@
-#include "EGLNativeTypeDisp2.h"
+#include "EGLNativeTypeSunxiDisp2.h"
 #include <sys/ioctl.h>
 
 typedef unsigned long u32;
 
 #include "sunxi_display2.h"
 
-int CEGLNativeTypeDisp2::GetWidth()
+int CEGLNativeTypeSunxiDisp2::GetWidth()
 {
   unsigned long       args[4];
   args[0] = m_screenid;
@@ -15,7 +15,7 @@ int CEGLNativeTypeDisp2::GetWidth()
   return ioctl(m_hdisp, DISP_GET_SCN_WIDTH, args);
 }
 
-int CEGLNativeTypeDisp2::GetHeight()
+int CEGLNativeTypeSunxiDisp2::GetHeight()
 {
   unsigned long       args[4];
   args[0] = m_screenid;
@@ -26,7 +26,7 @@ int CEGLNativeTypeDisp2::GetHeight()
   return ioctl(m_hdisp, DISP_GET_SCN_HEIGHT, args);
 }
 
-int CEGLNativeTypeDisp2::GetRefreshRate()
+int CEGLNativeTypeSunxiDisp2::GetRefreshRate()
 {
   disp_output output;
   int refreshRate = 50;

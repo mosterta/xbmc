@@ -13,8 +13,19 @@ ifeq (@USE_IMXVPU@,1)
 SRCS+= EGLNativeTypeIMX.cpp
 endif
 SRCS+= EGLWrapper.cpp
-SRCS+= EGLNativeTypeA10.cpp
-SRCS+= EGLNativeTypeDisp2.cpp
+
+is_allwinner=0
+ifeq (@USE_ALLWINNER_DISP@,1)
+is_allwinner=1
+endif
+ifeq (@USE_ALLWINNER_GLES@,1)
+is_allwinner=1
+endif
+
+ifeq (is_allwinner,1)
+SRCS+= EGLNativeTypeSunxiDisp.cpp
+SRCS+= EGLNativeTypeSunxiDisp2.cpp
+endif
 
 LIB = windowing_egl.a
 

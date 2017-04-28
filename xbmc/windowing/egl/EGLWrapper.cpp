@@ -23,8 +23,8 @@
 #include "system_gl.h"
 #include "utils/log.h"
 #if defined(ALLWINNERA10)
-  #include "EGLNativeTypeA10.h"
-  #include "EGLNativeTypeDisp2.h"
+  #include "EGLNativeTypeSunxiDisp.h"
+  #include "EGLNativeTypeSunxiDisp2.h"
   #include "utils/CPUInfo.h"
 #endif
 #include <assert.h>
@@ -108,9 +108,9 @@ bool CEGLWrapper::Initialize(const std::string &implementation)
       nativeGuess = CreateEGLNativeType<CEGLNativeTypeAmlogic>(implementation);
 #elif defined(TARGET_LINUX) && defined(ALLWINNERA10)
       if (std::string("sun8i") == g_cpuInfo.getCPUHardware())
-        nativeGuess = CreateEGLNativeType<CEGLNativeTypeDisp2>(implementation);
+        nativeGuess = CreateEGLNativeType<CEGLNativeTypeSunxiDisp2>(implementation);
       else
-        nativeGuess = CreateEGLNativeType<CEGLNativeTypeA10>(implementation);
+        nativeGuess = CreateEGLNativeType<CEGLNativeTypeSunxiDisp>(implementation);
 #endif
   if (nativeGuess)
   {
@@ -446,27 +446,6 @@ bool CEGLWrapper::SurfaceAttrib(EGLDisplay display, EGLSurface surface, EGLint a
     return false;
   return eglSurfaceAttrib(display, surface, attribute, value);
 }
-bool CEGLWrapper::GetVideoLayerHandle(void* &handle)
-{
-  if (!m_nativeTypes)
-    return false;
 
-  return m_nativeTypes->GetVideoLayerHandle(handle);
-}
-bool CEGLWrapper::GetDispIdHandle(void* &handle)
-{
-  if (!m_nativeTypes)
-    return false;
-  
-  return m_nativeTypes->GetDispIdHandle(handle);
-}
-
-bool CEGLWrapper::GetLayerInformation(CWinSystemEGL::CWinLayerInformation* layer)
-{
-  if (!m_nativeTypes)
-    return false;
-
-  return m_nativeTypes->GetLayerInformation(layer);
-}
 #endif
 

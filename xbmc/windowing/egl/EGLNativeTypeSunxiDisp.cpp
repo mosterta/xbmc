@@ -20,7 +20,7 @@
 #include "system.h"
 #include <EGL/egl.h>
 #include "EGL/eglplatform.h"
-#include "EGLNativeTypeA10.h"
+#include "EGLNativeTypeSunxiDisp.h"
 #include "utils/log.h"
 #include "guilib/gui3d.h"
 #include "utils/StringUtils.h"
@@ -40,15 +40,15 @@ static struct mali_native_window g_fbwin;
 static double       g_refreshRate;
 #endif
 
-CEGLNativeTypeA10::CEGLNativeTypeA10() : m_hfb(-1), m_hdisp(-1), m_screenid(0)
+CEGLNativeTypeSunxiDisp::CEGLNativeTypeSunxiDisp() : m_hfb(-1), m_hdisp(-1), m_screenid(0)
 {
 }
 
-CEGLNativeTypeA10::~CEGLNativeTypeA10()
+CEGLNativeTypeSunxiDisp::~CEGLNativeTypeSunxiDisp()
 {
 } 
 
-bool CEGLNativeTypeA10::CheckCompatibility()
+bool CEGLNativeTypeSunxiDisp::CheckCompatibility()
 {
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
   return true;
@@ -56,7 +56,7 @@ bool CEGLNativeTypeA10::CheckCompatibility()
   return false;
 }
 
-void CEGLNativeTypeA10::Initialize()
+void CEGLNativeTypeSunxiDisp::Initialize()
 {
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
   int width, height;
@@ -67,7 +67,7 @@ void CEGLNativeTypeA10::Initialize()
 #endif
   return;
 }
-void CEGLNativeTypeA10::Destroy()
+void CEGLNativeTypeSunxiDisp::Destroy()
 {
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID) 
   VLExit();
@@ -75,13 +75,13 @@ void CEGLNativeTypeA10::Destroy()
   return;
 }
 
-bool CEGLNativeTypeA10::CreateNativeDisplay()
+bool CEGLNativeTypeSunxiDisp::CreateNativeDisplay()
 {
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
   return true;
 }
 
-bool CEGLNativeTypeA10::CreateNativeWindow()
+bool CEGLNativeTypeSunxiDisp::CreateNativeWindow()
 {
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
   m_nativeWindow = &g_fbwin;
@@ -91,7 +91,7 @@ bool CEGLNativeTypeA10::CreateNativeWindow()
 #endif
 }  
 
-bool CEGLNativeTypeA10::GetNativeDisplay(XBNativeDisplayType **nativeDisplay) const
+bool CEGLNativeTypeSunxiDisp::GetNativeDisplay(XBNativeDisplayType **nativeDisplay) const
 {
   if (!nativeDisplay)
     return false;
@@ -99,7 +99,7 @@ bool CEGLNativeTypeA10::GetNativeDisplay(XBNativeDisplayType **nativeDisplay) co
   return true;
 }
 
-bool CEGLNativeTypeA10::GetNativeWindow(XBNativeWindowType **nativeWindow) const
+bool CEGLNativeTypeSunxiDisp::GetNativeWindow(XBNativeWindowType **nativeWindow) const
 {
   if (!nativeWindow)
     return false;
@@ -107,17 +107,17 @@ bool CEGLNativeTypeA10::GetNativeWindow(XBNativeWindowType **nativeWindow) const
   return true;
 }
 
-bool CEGLNativeTypeA10::DestroyNativeDisplay()
+bool CEGLNativeTypeSunxiDisp::DestroyNativeDisplay()
 {
   return true;
 }
 
-bool CEGLNativeTypeA10::DestroyNativeWindow()
+bool CEGLNativeTypeSunxiDisp::DestroyNativeWindow()
 {
   return true;
 }
 
-bool CEGLNativeTypeA10::GetNativeResolution(RESOLUTION_INFO *res) const
+bool CEGLNativeTypeSunxiDisp::GetNativeResolution(RESOLUTION_INFO *res) const
 {
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
   res->iWidth = g_fbwin.width;
@@ -140,12 +140,12 @@ bool CEGLNativeTypeA10::GetNativeResolution(RESOLUTION_INFO *res) const
 #endif
 }
 
-bool CEGLNativeTypeA10::SetNativeResolution(const RESOLUTION_INFO &res)
+bool CEGLNativeTypeSunxiDisp::SetNativeResolution(const RESOLUTION_INFO &res)
 {
   return false;
 }
 
-bool CEGLNativeTypeA10::ProbeResolutions(std::vector<RESOLUTION_INFO> &resolutions)
+bool CEGLNativeTypeSunxiDisp::ProbeResolutions(std::vector<RESOLUTION_INFO> &resolutions)
 {
   RESOLUTION_INFO res;
   bool ret = false;
@@ -158,17 +158,17 @@ bool CEGLNativeTypeA10::ProbeResolutions(std::vector<RESOLUTION_INFO> &resolutio
   return false;
 }
 
-bool CEGLNativeTypeA10::GetPreferredResolution(RESOLUTION_INFO *res) const
+bool CEGLNativeTypeSunxiDisp::GetPreferredResolution(RESOLUTION_INFO *res) const
 {
   return false;
 }
 
-bool CEGLNativeTypeA10::ShowWindow(bool show)
+bool CEGLNativeTypeSunxiDisp::ShowWindow(bool show)
 {
   return false;
 }
 
-int CEGLNativeTypeA10::GetWidth()
+int CEGLNativeTypeSunxiDisp::GetWidth()
 {
   unsigned long       args[4];
   args[0] = m_screenid;
@@ -178,7 +178,7 @@ int CEGLNativeTypeA10::GetWidth()
   return ioctl(m_hdisp, DISP_CMD_SCN_GET_WIDTH , args);
 }
 
-int CEGLNativeTypeA10::GetHeight()
+int CEGLNativeTypeSunxiDisp::GetHeight()
 {
   unsigned long       args[4];
   args[0] = m_screenid;
@@ -189,7 +189,7 @@ int CEGLNativeTypeA10::GetHeight()
   return ioctl(m_hdisp, DISP_CMD_SCN_GET_HEIGHT, args);
 }
 
-int CEGLNativeTypeA10::GetRefreshRate()
+int CEGLNativeTypeSunxiDisp::GetRefreshRate()
 {
   unsigned long       args[4];
   unsigned int        i;
@@ -223,7 +223,7 @@ int CEGLNativeTypeA10::GetRefreshRate()
   return _refreshRate;
 }
 
-bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
+bool CEGLNativeTypeSunxiDisp::VLInit(int &width, int &height, double &refreshRate)
 {
   __disp_layer_info_t layera;
   int status;
@@ -253,7 +253,7 @@ bool CEGLNativeTypeA10::VLInit(int &width, int &height, double &refreshRate)
   return true;
 }
 
-void CEGLNativeTypeA10::VLExit()
+void CEGLNativeTypeSunxiDisp::VLExit()
 {
   if (m_hdisp != -1)
   {

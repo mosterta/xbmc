@@ -23,18 +23,11 @@
 #include "EGLNativeType.h"
 #include "WinSystemEGL.h"
 
-class CEGLNativeTypeA10 : public CEGLNativeType
+class CEGLNativeTypeSunxiDisp : public CEGLNativeType
 {
 public:
-  class CWinLayerInfoAllwinner : public CWinSystemEGL::CWinLayerInformation
-  {
-public:
-    int m_GuiLayer;
-    int m_VideoLayer;
-    int m_dispFd;
-  };
-  CEGLNativeTypeA10();
-  virtual ~CEGLNativeTypeA10();
+  CEGLNativeTypeSunxiDisp();
+  virtual ~CEGLNativeTypeSunxiDisp();
   virtual std::string GetNativeName() const { return "A10"; };
   virtual bool  CheckCompatibility();
   virtual void  Initialize();
