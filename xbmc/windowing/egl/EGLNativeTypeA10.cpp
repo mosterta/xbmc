@@ -28,9 +28,6 @@
 
 #include <sys/ioctl.h>
 #include <drv_display_sun4i.h>
-#ifndef CEDARV_FRAME_HAS_PHY_ADDR
-#include <os_adapter.h>
-#endif
 
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
 
