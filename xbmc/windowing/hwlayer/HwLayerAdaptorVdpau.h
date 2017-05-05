@@ -25,7 +25,8 @@
 
 typedef unsigned int vdpauSurfaceCedar;
 
-typedef int (*PFGLVDPAUGETVIDEOFRAMECCONFIG)(vdpauSurfaceCedar surface, int *srcFormat, void** addrY, void** addrU, void** addrV, int *height, int * width);
+struct videoFrameConfig;
+typedef int (*PFGLVDPAUGETVIDEOFRAMECCONFIG)(vdpauSurfaceCedar surface,  struct videoFrameConfig *config);
 
 class CHwLayerAdaptorVdpauAllwinner
 {
@@ -46,6 +47,9 @@ class CHwLayerAdaptorVdpauAllwinner
       void *addrY;
       void *addrU;
       void *addrV;
+      uint8_t alignY;
+      uint8_t alignU;
+      uint8_t alignV;
       struct cFbSize fbSize;
       FrameFormat dataFormat;
     };

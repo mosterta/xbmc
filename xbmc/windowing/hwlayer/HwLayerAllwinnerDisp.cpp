@@ -420,9 +420,9 @@ bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, 
   m_layerConfig.info.fb.size[1].height = config.fbSize.height/2;
   m_layerConfig.info.fb.size[2].width = config.fbSize.width/2;
   m_layerConfig.info.fb.size[2].height = config.fbSize.height/2;
-  m_layerConfig.info.fb.align[0] = 32;
-  m_layerConfig.info.fb.align[1] = 16;
-  m_layerConfig.info.fb.align[2] = 16;
+  m_layerConfig.info.fb.align[0] = config.alignY;
+  m_layerConfig.info.fb.align[1] = config.alignU;
+  m_layerConfig.info.fb.align[2] = config.alignV;
   hwc.layer_info[0][0] = m_layerConfig;
   hwc.layer_info[0][0].info.fb.addr[0] = (__u32)config.addrY ;
   hwc.layer_info[0][0].info.fb.addr[1] = (__u32)config.addrU ;

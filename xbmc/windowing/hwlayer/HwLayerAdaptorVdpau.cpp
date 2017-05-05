@@ -23,6 +23,7 @@
 
 #include <dlfcn.h>
 #include <stdio.h>
+#include <libcedarDisplay.h>
 
 #define INTERNAL_YCBCR_FORMAT (0xffff)
 
@@ -61,10 +62,11 @@ CHwLayerAdaptorVdpauAllwinner::~CHwLayerAdaptorVdpauAllwinner()
 bool CHwLayerAdaptorVdpauAllwinner::getFrameConfig(struct cFrameConfig &config)
 {
   int format;
-  int status = glVDPAUGetVideoFrameConfig(m_surface, &format, &config.addrY, &config.addrU, 
-                                          &config.addrV, &config.fbSize.height, &config.fbSize.width);
+  struct videoFrameConfig frame_config;
+  int status = glVDPAUGetVideoFrameConfig(m_surface, &frame_config); 
+  
   FrameFormat fmt;
-  switch(format) {
+  switch(frame_config.srcFormat) {
     case VDP_YCBCR_FORMAT_YUYV:
       fmt = YCBCR_FORMAT_YUYV;
       break;
@@ -85,6 +87,14 @@ bool CHwLayerAdaptorVdpauAllwinner::getFrameConfig(struct cFrameConfig &config)
       break;
   };
   config.dataFormat = fmt;
+  config.addrY = frame_config.addr[0];
+  config.addrU = frame_config.addr[1];
+  config.addrV = frame_config.addr[2];
+  config.alignY = frame_config.align[0];
+  config.alignU = frame_config.align[1];
+  config.alignV = frame_config.align[2];
+  config.fbSize.height = frame_config.height;
+  config.fbSize.width = frame_config.width;
 
   return status;
 }
