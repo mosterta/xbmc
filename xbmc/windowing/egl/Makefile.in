@@ -22,7 +22,7 @@ ifeq (@USE_ALLWINNER_GLES@,1)
 is_allwinner=1
 endif
 
-ifeq (is_allwinner,1)
+ifeq ($(is_allwinner),1)
 SRCS+= EGLNativeTypeSunxiDisp.cpp
 SRCS+= EGLNativeTypeSunxiDisp2.cpp
 endif
