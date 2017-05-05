@@ -1235,7 +1235,8 @@ int CDecoder::Render(struct AVCodecContext *s, struct AVFrame *src,
   if (diff*1000/CurrentHostFrequency() > 30)
   {
     if (g_advancedSettings.CanLogComponent(LOGVIDEO))
-      CLog::Log(LOGERROR, "CVDPAU::DrawSlice - VdpDecoderRender long decoding: %d ms, dec: %d, proc: %d, rend: %d", (int)((diff*1000)/CurrentHostFrequency()), decoded, processed, rend);
+      CLog::Log(LOGERROR, "CVDPAU::DrawSlice - VdpDecoderRender long decoding: %d ms, dec: %d, proc: %d, rend: %d",
+                (int)((diff*1000)/CurrentHostFrequency()), decoded, processed, rend);
   }
 
   return 0;
@@ -4204,6 +4205,10 @@ bool COutput::GLInit()
            const char* error = dlerror();
            if (!error)
               error = "dlerror() returned NULL";
+           CLog::Log(LOGERROR, "VDPAU::%s - dlopen for library '%s' failed with error '%s'",
+                    __FUNCTION__, driver_path, error);
+           m_vdpError = true;
+           return false;
         }
         else
         {
@@ -4226,6 +4231,10 @@ bool COutput::GLInit()
       const char* error = dlerror();
       if (!error)
         error = "dlerror() returned NULL";
+      CLog::Log(LOGERROR, "VDPAU::%s - dlopen for library '%s' failed with error '%s'",
+                __FUNCTION__, driver_path, error);
+      m_vdpError = true;
+      return false;
     }
   }
 #endif
