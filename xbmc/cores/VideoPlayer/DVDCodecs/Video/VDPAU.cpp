@@ -544,7 +544,6 @@ CDecoder::CDecoder(CProcessInfo& processInfo) : m_vdpauOutput(&m_inMsgEvent), m_
   m_vdpauConfig.context = 0;
   m_dataSet = false;
   m_vdpauConfig.processInfo = &m_processInfo;
-  m_initalVideoControlSent = false;
 }
 
 bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum AVPixelFormat fmt, unsigned int surfaces)
@@ -650,16 +649,10 @@ bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum A
       avctx->get_buffer2 = CDecoder::FFGetBuffer;
       avctx->slice_flags = SLICE_FLAG_CODED_ORDER|SLICE_FLAG_ALLOW_FIELD;
       avctx->hwaccel_context = &m_hwContext;
-      avctx->set_video_header = CDecoder::FFSetVideoHeader;
-
       mainctx->get_buffer2 = CDecoder::FFGetBuffer;
       mainctx->slice_flags = SLICE_FLAG_CODED_ORDER|SLICE_FLAG_ALLOW_FIELD;
       mainctx->hwaccel_context = &m_hwContext;
-      mainctx->set_video_header = CDecoder::FFSetVideoHeader;
-
       g_Windowing.Register(this);
-
-      m_initalVideoControlSent = false;
 
       return true;
     }
@@ -995,7 +988,7 @@ bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)
                               &m_vdpauConfig.vdpDecoder);
   if (CheckStatus(vdp_st, __LINE__))
     return false;
-  
+#if 0
   if(m_dataSet == true)
   {
 #if 1
@@ -1005,7 +998,7 @@ bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)
         return false;
 #endif
   }
-  
+#endif
 
   // initialize output
   CSingleLock lock(g_graphicsContext);
@@ -1131,7 +1124,7 @@ void CDecoder::FFReleaseBuffer(void *opaque, uint8_t *data)
 }
 
 extern "C" int vdpau_mpeg4_create_video_headers(AVCodecContext *avctx, uint32_t id, VdpDecoderControlData *data);
-
+#if 1
 int CDecoder::FFSetVideoHeader(AVCodecContext *avctx, uint32_t id)
 {
    CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
@@ -1168,6 +1161,7 @@ int CDecoder::FFSetVideoHeader(AVCodecContext *avctx, uint32_t id)
 
    return 0;
 }
+#endif
 
 int CDecoder::Render(struct AVCodecContext *s, struct AVFrame *src,
                      const VdpPictureInfo *info, uint32_t buffers_used,
@@ -1217,12 +1211,6 @@ int CDecoder::Render(struct AVCodecContext *s, struct AVFrame *src,
       return -1;
   }
 
-  if(s->codec_id == AV_CODEC_ID_MPEG4 && vdp->m_initalVideoControlSent == false) 
-  {
-    //ugly hack, but timing is not correct between opening FFMPEG codec and registering the callbacks :(
-    FFSetVideoHeader(s, VDP_MPEG4_VOL_HEADER);
-    vdp->m_initalVideoControlSent = true;
-  }
   uint64_t startTime = CurrentHostCounter();
   uint16_t decoded, processed, rend;
   vdp->m_bufferStats.Get(decoded, processed, rend);

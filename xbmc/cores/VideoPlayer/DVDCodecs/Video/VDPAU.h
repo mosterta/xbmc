@@ -755,8 +755,6 @@ protected:
 
   int m_codecControl;
   CProcessInfo& m_processInfo;
-
-  bool 		m_initalVideoControlSent;
 };
 
 }
