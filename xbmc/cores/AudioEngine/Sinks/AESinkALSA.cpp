@@ -36,6 +36,7 @@
 #include "utils/SystemInfo.h"
 #include "threads/SingleLock.h"
 #include "settings/AdvancedSettings.h"
+#include "utils/CPUInfo.h"
 #if defined(HAS_LIBAMCODEC)
 #include "utils/AMLUtils.h"
 #endif
@@ -1205,11 +1206,20 @@ void CAESinkALSA::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
       else
       {
         /* sunxi whilelist */
-        std::string strDevice = std::string(name);
-        size_t found = strDevice.find("sunxi");
-        
+        std::string hardware = g_cpuInfo.getCPUHardware();
+        size_t found = hardware.find("sun");
         if(found != std::string::npos)
-          EnumerateDevice(list, name, desc ? desc : name, config);
+        {
+          std::string strDevice = std::string(name);
+          size_t foundCodec = strDevice.find("codec");
+          size_t foundHdmi = strDevice.find("hdmi");
+          size_t foundSpdif = strDevice.find("spdif");
+          size_t foundSunxi = strDevice.find("sunxi");
+        
+          if(((baseName == "sysdefault") && (foundCodec != std::string::npos || foundHdmi != std::string::npos ||
+            foundSpdif != std::string::npos)) || (foundSunxi != std::string::npos))
+            EnumerateDevice(list, name, desc ? desc : name, config);
+        }
       }
     }
     free(io);
