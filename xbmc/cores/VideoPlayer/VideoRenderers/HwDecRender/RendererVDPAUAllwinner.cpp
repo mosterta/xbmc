@@ -346,7 +346,7 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
     // This code reduces rendering fps of the video layer when playing videos in fullscreen mode
     // it makes only sense on architectures with multiple layers
     m_fps = g_graphicsContext.GetFPS();
-    int fps = m_fps;
+    int fps = m_fps * 2;
 
     unsigned int now = XbmcThreads::SystemClockMillis();
     unsigned int frameTime = now - m_lastRenderTime;
