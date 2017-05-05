@@ -183,6 +183,7 @@ bool CCedarTexture::LoadFromFileInternal(const std::string& texturePath, unsigne
       XFILE::CFile file;
       XFILE::auto_buffer buf;
       bool okay = false;
+      int orientation = 0;
 
       if (file.LoadFile(texturePath, buf) <= 0)
          return false;
@@ -195,7 +196,6 @@ bool CCedarTexture::LoadFromFileInternal(const std::string& texturePath, unsigne
         int result = cedarLoadMem(m_jpgHandle, reinterpret_cast<uint8_t*>(buf.get()), buf.size());
         if(result)
         {
-          int orientation = 0;
   
           orientation = cedarGetOrientation(m_jpgHandle);
           // limit the sizes of jpegs (even if we fail to decode)
@@ -229,6 +229,7 @@ bool CCedarTexture::LoadFromFileInternal(const std::string& texturePath, unsigne
       if (okay)
       {
          m_hasAlpha = false;
+         m_orientation = orientation;
          return true;
       }
       else
