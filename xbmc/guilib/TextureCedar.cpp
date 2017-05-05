@@ -220,6 +220,10 @@ bool CCedarTexture::LoadFromFileInternal(const std::string& texturePath, unsigne
             }
           }
         }
+        else 
+        {
+          CLog::Log(LOGERROR, "CCedarTexture jpeg hw loader parse error:%d, file %s", result, texturePath.c_str());
+        }
         cedarCloseJpeg(m_jpgHandle);
       }
       if (okay)
