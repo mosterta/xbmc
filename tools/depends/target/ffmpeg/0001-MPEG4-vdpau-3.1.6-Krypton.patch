@@ -74,29 +74,6 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/avcodec.h ffmpeg-3.1.
       AV_CODEC_ID_WMV1,
       AV_CODEC_ID_WMV2,
       AV_CODEC_ID_H263P,
-***************
-*** 1911,1919 ****
-                              const AVFrame *src, int offset[AV_NUM_DATA_POINTERS],
-                              int y, int type, int height);
-  
-      /**
-       * callback to negotiate the pixelFormat
-!      * @param fmt is the list of formats which are supported by the codec,
-       * it is terminated by -1 as 0 is a valid format, the formats are ordered by quality.
-       * The first is always the native one.
-       * @note The callback may be called again immediately if initialization for
---- 1912,1922 ----
-                              const AVFrame *src, int offset[AV_NUM_DATA_POINTERS],
-                              int y, int type, int height);
-  
-+     int (*set_video_header)(struct AVCodecContext *avctx, const uint32_t id);
-+ 
-      /**
-       * callback to negotiate the pixelFormat
-!      * @param fmt is the list of formats which are supported by the codec,F
-       * it is terminated by -1 as 0 is a valid format, the formats are ordered by quality.
-       * The first is always the native one.
-       * @note The callback may be called again immediately if initialization for
 diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/h263dec.c ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/h263dec.c
 *** FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/h263dec.c	2016-07-03 19:59:32.000000000 +0200
 --- ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/h263dec.c	2016-08-03 22:20:12.448129476 +0200
@@ -121,23 +98,6 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/h263dec.c ffmpeg-3.1.
           /* We would have to scan through the whole buf to handle the weird
            * reordering ... */
           return buf_size;
-***************
-*** 197,203 ****
-  
-      ff_set_qscale(s, s->qscale);
-  
-!     if (s->avctx->hwaccel) {
-          const uint8_t *start = s->gb.buffer + get_bits_count(&s->gb) / 8;
-          ret = s->avctx->hwaccel->decode_slice(s->avctx, start, s->gb.buffer_end - start);
-          // ensure we exit decode loop
---- 201,207 ----
-  
-      ff_set_qscale(s, s->qscale);
-  
-!     if (s->avctx->hwaccel /* && !s->msmpeg4_version */) {
-          const uint8_t *start = s->gb.buffer + get_bits_count(&s->gb) / 8;
-          ret = s->avctx->hwaccel->decode_slice(s->avctx, start, s->gb.buffer_end - start);
-          // ensure we exit decode loop
 ***************
 *** 604,610 ****
           ff_thread_finish_setup(avctx);
@@ -252,18 +212,6 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/mpeg4videodec.c ffmpe
   
   /* The defines below define the number of bits that are read at once for
    * reading vlc values. Changing these may improve speed and data cache needs
-***************
-*** 2610,2615 ****
---- 2611,2619 ----
-          if (startcode >= 0x120 && startcode <= 0x12F) {
-              if ((ret = decode_vol_header(ctx, gb)) < 0)
-                  return ret;
-+             if(s->avctx->set_video_header) {
-+                s->avctx->set_video_header(s->avctx, VDP_MPEG4_VOL_HEADER);
-+             }
-          } else if (startcode == USER_DATA_STARTCODE) {
-              decode_user_data(ctx, gb);
-          } else if (startcode == GOP_STARTCODE) {
 ***************
 *** 2769,2774 ****
 --- 2773,2790 ----
@@ -519,29 +467,6 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/msmpeg4dec.c ffmpeg-3
 + };
 + 
 + #endif
-Binary files FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/neon/mpegvideo.o and ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/neon/mpegvideo.o differ
-diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/utils.c ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/utils.c
-*** FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/utils.c	2016-07-03 19:59:32.000000000 +0200
---- ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/utils.c	2016-08-03 22:20:16.947994611 +0200
-***************
-*** 1025,1032 ****
-  
-  enum AVPixelFormat avcodec_default_get_format(struct AVCodecContext *s, const enum AVPixelFormat *fmt)
-  {
-!     while (*fmt != AV_PIX_FMT_NONE && is_hwaccel_pix_fmt(*fmt))
-!         ++fmt;
-      return fmt[0];
-  }
-  
---- 1025,1032 ----
-  
-  enum AVPixelFormat avcodec_default_get_format(struct AVCodecContext *s, const enum AVPixelFormat *fmt)
-  {
-! //    while (*fmt != AV_PIX_FMT_NONE && is_hwaccel_pix_fmt(*fmt))
-! //         ++fmt;
-      return fmt[0];
-  }
-  
 Binary files FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/.utils.c.rej.swp and ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/.utils.c.rej.swp differ
 diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vc1dec.c ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vc1dec.c
 *** FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vc1dec.c	2016-07-03 19:59:32.000000000 +0200
@@ -599,19 +524,6 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau.c ffmpeg-3.1.1-
           render->info.mpeg4.vop_coding_type        = 2;
           // no break here, going to set forward prediction
       case AV_PICTURE_TYPE_P:
-diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau.h ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vdpau.h
-*** FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau.h	2016-07-03 19:59:32.000000000 +0200
---- ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vdpau.h	2016-08-03 22:20:18.727941266 +0200
-***************
-*** 101,106 ****
---- 101,107 ----
-       * Set by the user.
-       */
-      VdpDecoderRender *render;
-+     VdpDecoderSetControlData *set_video_header;
-  
-  #if FF_API_BUFS_VDPAU
-      /**
 diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_internal.h ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vdpau_internal.h
 *** FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_internal.h	2016-07-03 19:59:32.000000000 +0200
 --- ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vdpau_internal.h	2016-08-03 22:20:19.597915193 +0200
@@ -630,75 +542,6 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_mpeg4.c ffmpeg-
 *** FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_mpeg4.c	2016-07-03 19:59:32.000000000 +0200
 --- ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vdpau_mpeg4.c	2016-08-03 22:40:40.691294606 +0200
 ***************
-*** 28,33 ****
---- 28,93 ----
-  #include "vdpau.h"
-  #include "vdpau_internal.h"
-  
-+ int vdpau_mpeg4_create_video_headers(AVCodecContext *avctx, uint32_t id, VdpDecoderControlData *data);
-+ 
-+ int vdpau_mpeg4_create_video_headers(AVCodecContext *avctx, uint32_t id, VdpDecoderControlData *data)
-+ {
-+    Mpeg4DecContext * const s = avctx->priv_data;
-+    memset(data, 0x0, sizeof(*data));
-+     
-+    if(id == VDP_MPEG4_VOL_HEADER) 
-+    {
-+       VdpDecoderMpeg4VolHeader *vol = &(data->mpeg4VolHdr);
-+         
-+       vol->struct_version               = VDP_MPEG4_STRUCT_VERSION;
-+       vol->video_object_type_indication = s->m.vo_type;
-+       vol->aspect_ratio_info            = s->m.aspect_ratio_info;
-+       vol->par_width                    = s->m.avctx->sample_aspect_ratio.num;
-+       vol->par_height                   = s->m.avctx->sample_aspect_ratio.den;
-+       vol->vol_control_parameters       = s->vol_control_parameters;
-+       vol->low_delay                    = s->m.low_delay;
-+       vol->video_object_layer_shape     = s->shape;
-+       vol->vop_time_increment_resolution = s->m.avctx->time_base.den;
-+       vol->video_object_layer_width     = s->m.width;
-+       vol->video_object_layer_height    = s->m.height;
-+       vol->interlaced                   = s->m.progressive_frame ^ 1;
-+       vol->sprite_enable                = s->vol_sprite_usage;
-+       vol->no_of_sprite_warping_points  = s->num_sprite_warping_points;
-+       vol->sprite_warping_accuracy      = s->m.sprite_warping_accuracy;
-+       vol->sprite_brightness_change     = s->sprite_brightness_change;
-+       vol->quant_precision              = s->m.quant_precision;
-+       vol->quant_type                   = s->m.mpeg_quant;
-+       for(int i=0; i < 64; ++i)
-+       {
-+             //to be done matrices
-+       }
-+       vol->quarter_sample               = s->m.quarter_sample;
-+       vol->resync_marker_disable        = s->resync_marker;
-+       vol->data_partitioned             = s->m.data_partitioning;
-+       vol->reversible_vlc               = s->rvlc;
-+       vol->newpred_enable               = s->new_pred;
-+       vol->scalability                  = s->scalability;
-+       vol->enhancement_type             = s->enhancement_type;
-+ 
-+       return 1;
-+    }
-+    return 0;
-+ }
-+ 
-+ static int vdpau_mpeg4_set_video_header (AVCodecContext *avctx, uint32_t id)
-+ {
-+     AVVDPAUContext *hwctx = avctx->hwaccel_context;
-+     VdpDecoderControlData data;
-+ 
-+     if(!hwctx->set_video_header)
-+        return 0;
-+ 
-+     if(vdpau_mpeg4_create_video_headers(avctx, id, &data))
-+        return hwctx->set_video_header(hwctx->decoder, id, &data);
-+ 
-+     return 0;
-+ }
-+ 
-  static int vdpau_mpeg4_start_frame(AVCodecContext *avctx,
-                                     const uint8_t *buffer, uint32_t size)
-  {
-***************
 *** 46,54 ****
 --- 106,116 ----
   
@@ -712,23 +555,12 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_mpeg4.c ffmpeg-
           info->vop_coding_type    = 2;
           /* fall-through */
       case AV_PICTURE_TYPE_P:
-***************
-*** 117,122 ****
---- 179,186 ----
-      .start_frame    = vdpau_mpeg4_start_frame,
-      .end_frame      = ff_vdpau_mpeg_end_frame,
-      .decode_slice   = vdpau_mpeg4_decode_slice,
-+ //    .set_video_header = vdpau_mpeg4_set_video_header
-+ //    .set_video_header = vdpau_mpeg4_set_video_header
-      .frame_priv_data_size = sizeof(struct vdpau_picture_context),
-      .init           = vdpau_mpeg4_init,
-      .uninit         = ff_vdpau_common_uninit,
 diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_msmpeg4.c ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vdpau_msmpeg4.c
 *** FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_msmpeg4.c	1970-01-01 01:00:00.000000000 +0100
 --- ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vdpau_msmpeg4.c	2016-08-04 15:48:52.539348238 +0200
 ***************
 *** 0 ****
---- 1,158 ----
+--- 1,157 ----
 + /*
 +  * MPEG-4 Part 2 / H.263 decode acceleration through VDPAU
 +  *
@@ -880,7 +712,6 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_msmpeg4.c ffmpe
 +     .start_frame    = vdpau_msmpeg4_start_frame,
 +     .end_frame      = ff_vdpau_mpeg_end_frame,
 +     .decode_slice   = vdpau_msmpeg4_decode_slice,
-+ //    .set_video_header = vdpau_msmpeg4_set_video_header,
 +     .frame_priv_data_size = sizeof(struct vdpau_picture_context),
 +     .init           = vdpau_msmpeg4_init,
 +     .uninit         = ff_vdpau_common_uninit,
@@ -1030,3 +861,17 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavutil/utils.c ffmpeg-3.1.1-K
   #endif
       av_assert0(AV_SAMPLE_FMT_DBLP == 9);
       av_assert0(AVMEDIA_TYPE_ATTACHMENT == 4);
+diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_mpeg4.c ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vdpau_mpeg4.c
+*** ffmpeg-3.1.6-Krypton.orig/libavcodec/vdpau_mpeg4.c	2017-05-05 15:03:35.929598046 +0200
+--- ffmpeg-3.1.6-Krypton/libavcodec/vdpau_mpeg4.c	2017-05-04 23:31:10.729339757 +0200
+***************
+*** 140,145 ****
+--- 140,147 ----
+      }
+  
+      ff_vdpau_common_start_frame(pic_ctx, buffer, size);
++     if(avctx->extradata_size && s->picture_number==1)
++         ff_vdpau_add_buffer(pic_ctx, avctx->extradata, avctx->extradata_size);
+      return ff_vdpau_add_buffer(pic_ctx, buffer, size);
+  }
+  

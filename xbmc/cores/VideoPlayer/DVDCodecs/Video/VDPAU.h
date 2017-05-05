@@ -708,7 +708,6 @@ public:
   static int Render(struct AVCodecContext *s, struct AVFrame *src,
                     const VdpPictureInfo *info, uint32_t buffers_used,
                     const VdpBitstreamBuffer *buffers);
-  static int FFSetVideoHeader(AVCodecContext *avctx, uint32_t id);
 
   virtual void OnLostDisplay();
   virtual void OnResetDisplay();

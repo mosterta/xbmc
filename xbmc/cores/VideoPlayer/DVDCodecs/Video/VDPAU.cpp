@@ -291,7 +291,6 @@ void CVDPAUContext::QueryProcs()
   VDP_PROC(VDP_FUNC_ID_PRESENTATION_QUEUE_QUERY_SURFACE_STATUS, m_vdpProcs.vdp_presentation_queue_query_surface_status);
   VDP_PROC(VDP_FUNC_ID_PRESENTATION_QUEUE_GET_TIME         , m_vdpProcs.vdp_presentation_queue_get_time);
   VDP_PROC(VDP_FUNC_ID_PRESENTATION_QUEUE_TARGET_DESTROY   , m_vdpProcs.vdp_presentation_queue_target_destroy);
-  VDP_PROC(VDP_FUNC_ID_DECODER_SET_VIDEO_CONTROL_DATA      , m_vdpProcs.vdp_decoder_set_video_control_data);
 #undef VDP_PROC
 }
 
@@ -988,17 +987,6 @@ bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)
                               &m_vdpauConfig.vdpDecoder);
   if (CheckStatus(vdp_st, __LINE__))
     return false;
-#if 0
-  if(m_dataSet == true)
-  {
-#if 1
-     vdp_st = m_vdpauConfig.context->GetProcs().vdp_decoder_set_video_control_data(m_vdpauConfig.vdpDecoder,
-           (VdpDecoderControlDataId)m_dataId, &m_data);
-     if (CheckStatus(vdp_st, __LINE__))
-        return false;
-#endif
-  }
-#endif
 
   // initialize output
   CSingleLock lock(g_graphicsContext);
@@ -1122,46 +1110,6 @@ void CDecoder::FFReleaseBuffer(void *opaque, uint8_t *data)
 
   vdp->m_videoSurfaces.ClearReference(surf);
 }
-
-extern "C" int vdpau_mpeg4_create_video_headers(AVCodecContext *avctx, uint32_t id, VdpDecoderControlData *data);
-#if 1
-int CDecoder::FFSetVideoHeader(AVCodecContext *avctx, uint32_t id)
-{
-   CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
-   CDVDVideoCodecFFmpeg* ctx = (CDVDVideoCodecFFmpeg*)avctx->opaque;
-   CDecoder*               vdp = (CDecoder*)ctx->GetHardware();
-
-   VdpStatus vdp_st;
-
-#if 1
-  // while we are waiting to recover we can't do anything
-   CSingleLock lock(vdp->m_DecoderSection);
-
-   if(vdp->m_DisplayState != VDPAU_OPEN)
-   {
-      CLog::Log(LOGNOTICE, " (VDPAU) %s displaystate != OPEN", __FUNCTION__);
-      return 0;
-   }
-#endif
-
-   if(vdpau_mpeg4_create_video_headers(avctx, id, &vdp->m_data))
-   {
-#if 1
-      vdp->m_dataSet = true;
-      vdp->m_dataId = id;
-      if(vdp->m_vdpauConfig.vdpDecoder != VDP_INVALID_HANDLE)
-      {
-         vdp_st = vdp->m_vdpauConfig.context->GetProcs().vdp_decoder_set_video_control_data(vdp->m_vdpauConfig.vdpDecoder,
-            (VdpDecoderControlDataId)id, &vdp->m_data);
-         if (vdp->CheckStatus(vdp_st, __LINE__))
-            return 0;
-      }
-#endif
-   }
-
-   return 0;
-}
-#endif
 
 int CDecoder::Render(struct AVCodecContext *s, struct AVFrame *src,
                      const VdpPictureInfo *info, uint32_t buffers_used,
