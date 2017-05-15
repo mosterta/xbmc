@@ -106,7 +106,7 @@
 CCPUInfo::CCPUInfo(void)
 {
 #ifdef TARGET_POSIX
-  m_fProcStat = m_fProcTemperature = m_fCPUFreq = NULL;
+  m_fProcStat = m_fProcTemperature = m_fCPUFreq = m_fCPUMinFreq = m_fCPUMaxFreq = NULL;
   m_cpuInfoForFreq = false;
 #elif defined(TARGET_WINDOWS)
   m_cpuQueryFreq = nullptr;
@@ -282,6 +282,24 @@ CCPUInfo::CCPUInfo(void)
   else
     m_cpuInfoForFreq = false;
 
+
+  m_fCPUMinFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", "r");
+  if(m_fCPUMinFreq)
+  {
+    fscanf(m_fCPUMinFreq, "%d", &m_storedMinFreq);
+    m_storedMinFreq /= 1000;
+    fclose(m_fCPUMinFreq);
+  }
+  m_fCPUMinFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", "r+");
+  
+  m_fCPUMaxFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", "r");
+  if(m_fCPUMaxFreq)
+  {
+    fscanf(m_fCPUMaxFreq, "%d", &m_storedMaxFreq);
+    m_storedMaxFreq /= 1000;
+    fclose(m_fCPUMaxFreq);
+  }
+  m_fCPUMaxFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", "r+");
 
   FILE* fCPUInfo = fopen("/proc/cpuinfo", "r");
   m_cpuCount = 0;
@@ -490,6 +508,10 @@ CCPUInfo::~CCPUInfo()
 
   if (m_fCPUFreq != NULL)
     fclose(m_fCPUFreq);
+  if (m_fCPUMinFreq != NULL)
+    fclose(m_fCPUMinFreq);
+  if (m_fCPUMaxFreq != NULL)
+    fclose(m_fCPUMaxFreq);
 #elif defined(TARGET_WINDOWS)
   if (m_cpuQueryFreq)
     PdhCloseQuery(m_cpuQueryFreq);
@@ -602,6 +624,51 @@ float CCPUInfo::getCPUFrequency()
   }
   return value;
 #endif
+}
+
+bool CCPUInfo::setCPUMinFrequency(int mhz)
+{
+  int newFreq;
+  int freqKhz = mhz * 1000;
+
+  bool retval = false;
+  if(m_fCPUMinFreq)
+  {
+    int status = fprintf(m_fCPUMinFreq, "%d", freqKhz);
+    status = fflush(m_fCPUMinFreq);
+    rewind(m_fCPUMinFreq);
+    status = fscanf(m_fCPUMinFreq, "%d", &newFreq);
+    if (newFreq == freqKhz)
+      retval = true;
+  }
+  return retval;
+}
+
+bool CCPUInfo::setCPUMaxFrequency(int mhz)
+{
+  int newFreq;
+  int freqKhz = mhz * 1000;
+  bool retval = false;
+  if(m_fCPUMinFreq)
+  {
+    int status = fprintf(m_fCPUMaxFreq, "%d", freqKhz);
+    status = fflush(m_fCPUMaxFreq);
+    rewind(m_fCPUMaxFreq);
+    status = fscanf(m_fCPUMaxFreq, "%d", &newFreq);
+    if (newFreq == freqKhz)
+      retval = true;
+  }
+  return retval;
+}
+
+bool CCPUInfo::restoreCPUMinFrequency()
+{
+  return setCPUMinFrequency(m_storedMinFreq);
+}
+
+bool CCPUInfo::restoreCPUMaxFrequency()
+{
+  return setCPUMaxFrequency(m_storedMaxFreq);
 }
 
 bool CCPUInfo::getTemperature(CTemperature& temperature)
