@@ -30,6 +30,7 @@
 #include "windowing/hwlayer/HwLayerFactory.h"
 #include "settings/Settings.h"
 #include "settings/AdvancedSettings.h"
+#include "utils/CPUInfo.h"
 #include <linux/fb.h>
 #include <sys/ioctl.h>
 #include <string>
@@ -46,6 +47,7 @@ CRendererVDPAUAllwinner::CRendererVDPAUAllwinner():
   bool status = m_vdpauAdaptor.initialize();
   if(! status )
     CLog::Log(LOGERROR, "CRendererVDPAUAllwinner:%s error initializing vdpauAdaptor", __FUNCTION__);
+  g_cpuInfo.setCPUMinFrequency(800);
 }
 
 CRendererVDPAUAllwinner::~CRendererVDPAUAllwinner()
@@ -57,6 +59,8 @@ CRendererVDPAUAllwinner::~CRendererVDPAUAllwinner()
   
   for (int i = 0; i < NUM_BUFFERS; ++i)
     DeleteTexture(i);
+  
+  g_cpuInfo.restoreCPUMinFrequency();
 }
 
 bool CRendererVDPAUAllwinner::RenderCapture(CRenderCapture* capture)
