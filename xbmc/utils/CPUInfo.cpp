@@ -22,6 +22,7 @@
 
 #include "CPUInfo.h"
 #include "utils/Temperature.h"
+#include "utils/log.h"
 #include <string>
 #include <string.h>
 
@@ -291,6 +292,10 @@ CCPUInfo::CCPUInfo(void)
     fclose(m_fCPUMinFreq);
   }
   m_fCPUMinFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", "r+");
+  if(! m_fCPUMinFreq)
+  {
+    CLog::Log(LOGWARNING, "cannot write to file /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq, setting CPU freq disabled");
+  }
   
   m_fCPUMaxFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", "r");
   if(m_fCPUMaxFreq)
@@ -300,6 +305,10 @@ CCPUInfo::CCPUInfo(void)
     fclose(m_fCPUMaxFreq);
   }
   m_fCPUMaxFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", "r+");
+  if(! m_fCPUMaxFreq)
+  {
+    CLog::Log(LOGWARNING, "cannot write to file /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq, setting CPU freq disabled");
+  }
 
   FILE* fCPUInfo = fopen("/proc/cpuinfo", "r");
   m_cpuCount = 0;
