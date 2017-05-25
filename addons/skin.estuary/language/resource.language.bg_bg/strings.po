@@ -386,7 +386,7 @@ msgstr "мин"
 
 msgctxt "#31134"
 msgid "Remaining"
-msgstr "Преименуване"
+msgstr "Оставащо"
 
 msgctxt "#31136"
 msgid "Click here to see latest changes..."
@@ -399,3 +399,11 @@ msgstr "ПВР информация"
 msgctxt "#31144"
 msgid "Enter add-on browser"
 msgstr "Браузър за добавки"
+
+msgctxt "#31148"
+msgid "Categories"
+msgstr "Категории"
+
+msgctxt "#31150"
+msgid "Repository"
+msgstr "Хранилище"

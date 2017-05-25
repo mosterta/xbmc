@@ -272,6 +272,9 @@ void CGUIEPGGridContainerModel::FindChannelAndBlockIndex(int channelUid, unsigne
   const CDateTimeSpan blockDuration(0, 0, MINSPERBLOCK, 0);
   bool bFoundPrevChannel = false;
 
+  newChannelIndex = INVALID_INDEX;
+  newBlockIndex = INVALID_INDEX;
+
   for (size_t channel = 0; channel < m_channelItems.size(); ++channel)
   {
     CDateTime gridCursor(m_gridStart); //reset cursor for new channel
@@ -287,6 +290,16 @@ void CGUIEPGGridContainerModel::FindChannelAndBlockIndex(int channelUid, unsigne
       {
         tag = m_programmeItems[progIdx]->GetEPGInfoTag();
 
+        if (!bFoundPrevChannel && channelUid > -1)
+        {
+          chan = tag->ChannelTag();
+          if (chan && chan->UniqueID() == channelUid)
+          {
+            newChannelIndex = channel;
+            bFoundPrevChannel = true;
+          }
+        }
+
         if (tag->EpgID() != iEpgId || gridCursor < tag->StartAsUTC() || m_gridEnd <= tag->StartAsUTC())
           break; // next block
 
@@ -297,15 +310,6 @@ void CGUIEPGGridContainerModel::FindChannelAndBlockIndex(int channelUid, unsigne
             newChannelIndex = channel;
             newBlockIndex   = block + eventOffset;
             return; // both found. done.
-          }
-          if (!bFoundPrevChannel && channelUid > -1)
-          {
-            chan = tag->ChannelTag();
-            if (chan && chan->UniqueID() == channelUid)
-            {
-              newChannelIndex = channel;
-              bFoundPrevChannel = true;
-            }
           }
           break; // next block
         }

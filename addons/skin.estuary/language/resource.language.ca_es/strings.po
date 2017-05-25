@@ -142,7 +142,7 @@ msgstr "La vostra valoració"
 
 msgctxt "#31034"
 msgid "Extended info"
-msgstr "Informació estesa"
+msgstr "Info estesa"
 
 msgctxt "#31035"
 msgid "Pages"
@@ -190,7 +190,7 @@ msgstr "Disponible"
 
 msgctxt "#31050"
 msgid "Press [B]OK[/B] to stop"
-msgstr "Preu [B]D'ACORD[/B] per aturar"
+msgstr "Premeu [B]D'ACORD[/B] per aturar"
 
 msgctxt "#31051"
 msgid "Toggle language"
