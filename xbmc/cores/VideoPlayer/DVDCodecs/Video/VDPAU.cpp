@@ -541,7 +541,6 @@ CDecoder::CDecoder(CProcessInfo& processInfo) : m_vdpauOutput(&m_inMsgEvent), m_
   m_vdpauConfigured = false;
   m_DisplayState = VDPAU_OPEN;
   m_vdpauConfig.context = 0;
-  m_dataSet = false;
   m_vdpauConfig.processInfo = &m_processInfo;
 }
 
