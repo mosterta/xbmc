@@ -22,7 +22,6 @@
 
 #include "CPUInfo.h"
 #include "utils/Temperature.h"
-#include "utils/log.h"
 #include <string>
 #include <string.h>
 
@@ -97,6 +96,9 @@
 
 #ifdef TARGET_POSIX
 #include "settings/AdvancedSettings.h"
+#include "utils/SysfsUtils.h"
+static const std::string scalingMinFreqName = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq";
+static const std::string scalingMaxFreqName = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq";
 #endif
 
 #include "utils/StringUtils.h"
@@ -284,30 +286,16 @@ CCPUInfo::CCPUInfo(void)
     m_cpuInfoForFreq = false;
 
 
-  m_fCPUMinFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", "r");
-  if(m_fCPUMinFreq)
+  bool valid = SysfsUtils::GetInt(scalingMinFreqName, m_storedMinFreq);
+  if(valid)
   {
-    fscanf(m_fCPUMinFreq, "%d", &m_storedMinFreq);
     m_storedMinFreq /= 1000;
-    fclose(m_fCPUMinFreq);
-  }
-  m_fCPUMinFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", "r+");
-  if(! m_fCPUMinFreq)
-  {
-    CLog::Log(LOGWARNING, "cannot write to file /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq, setting CPU freq disabled");
   }
   
-  m_fCPUMaxFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", "r");
-  if(m_fCPUMaxFreq)
+  valid = SysfsUtils::GetInt(scalingMaxFreqName, m_storedMaxFreq);
+  if(valid)
   {
-    fscanf(m_fCPUMaxFreq, "%d", &m_storedMaxFreq);
     m_storedMaxFreq /= 1000;
-    fclose(m_fCPUMaxFreq);
-  }
-  m_fCPUMaxFreq = fopen ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", "r+");
-  if(! m_fCPUMaxFreq)
-  {
-    CLog::Log(LOGWARNING, "cannot write to file /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq, setting CPU freq disabled");
   }
 
   FILE* fCPUInfo = fopen("/proc/cpuinfo", "r");
@@ -638,17 +626,10 @@ float CCPUInfo::getCPUFrequency()
 bool CCPUInfo::setCPUMinFrequency(int mhz)
 {
   int newFreq;
-  int freqKhz = mhz * 1000;
-
   bool retval = false;
-  if(m_fCPUMinFreq)
+  if(SysfsUtils::HasRW(scalingMinFreqName))
   {
-    int status = fprintf(m_fCPUMinFreq, "%d", freqKhz);
-    status = fflush(m_fCPUMinFreq);
-    rewind(m_fCPUMinFreq);
-    status = fscanf(m_fCPUMinFreq, "%d", &newFreq);
-    if (newFreq == freqKhz)
-      retval = true;
+    retval = SysfsUtils::SetInt(scalingMinFreqName, mhz * 1000);
   }
   return retval;
 }
@@ -656,16 +637,11 @@ bool CCPUInfo::setCPUMinFrequency(int mhz)
 bool CCPUInfo::setCPUMaxFrequency(int mhz)
 {
   int newFreq;
-  int freqKhz = mhz * 1000;
   bool retval = false;
-  if(m_fCPUMinFreq)
+
+  if(SysfsUtils::HasRW(scalingMaxFreqName))
   {
-    int status = fprintf(m_fCPUMaxFreq, "%d", freqKhz);
-    status = fflush(m_fCPUMaxFreq);
-    rewind(m_fCPUMaxFreq);
-    status = fscanf(m_fCPUMaxFreq, "%d", &newFreq);
-    if (newFreq == freqKhz)
-      retval = true;
+    retval = SysfsUtils::SetInt(scalingMaxFreqName, mhz * 1000);
   }
   return retval;
 }
