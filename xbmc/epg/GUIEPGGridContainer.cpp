@@ -1387,6 +1387,7 @@ void CGUIEPGGridContainer::GoToNow()
   SetBlock(GetPageNowOffset());
 }
 
+#if 0
 void CGUIEPGGridContainer::GoToChannel(int channelIndex)
 {
   if (channelIndex > m_gridModel->ChannelItemsSize() - m_channelsPerPage)
@@ -1400,6 +1401,7 @@ void CGUIEPGGridContainer::GoToChannel(int channelIndex)
     SetChannel(m_channelCursor);
   }
 }
+#endif
 
 void CGUIEPGGridContainer::SetTimelineItems(const std::unique_ptr<CFileItemList> &items, const CDateTime &gridStart, const CDateTime &gridEnd)
 {
@@ -1452,7 +1454,6 @@ void CGUIEPGGridContainer::GoToChannel(int channelIndex)
     ScrollToChannelOffset(channelIndex - m_channelCursor);
     SetChannel(m_channelCursor);
   }
-#endif
 }
 
 void CGUIEPGGridContainer::GoToBlock(int blockIndex)
