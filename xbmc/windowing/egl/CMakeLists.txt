@@ -35,6 +35,13 @@ if(IMX_FOUND)
   list(APPEND HEADERS EGLNativeTypeIMX.h)
 endif()
 
+if(CEDARDISPLAY_FOUND)
+  list(APPEND SOURCES EGLNativeTypeSunxiDisp.cpp)
+  list(APPEND HEADERS EGLNativeTypeSunxiDisp.h)
+  list(APPEND SOURCES EGLNativeTypeSunxiDisp2.cpp)
+  list(APPEND HEADERS EGLNativeTypeSunxiDisp2.h)
+endif()
+
 if(SOURCES)
   core_add_library(windowing_egl)
 endif()

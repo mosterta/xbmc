@@ -8,7 +8,7 @@ if(VAAPI_FOUND)
   list(APPEND HEADERS RendererVAAPI.h)
 endif()
 
-if(VDPAU_FOUND)
+if(VDPAU_FOUND AND NOT CORE_SYSTEM_NAME STREQUAL allwinner)
   list(APPEND SOURCES RendererVDPAU.cpp)
   list(APPEND HEADERS RendererVDPAU.h)
 endif()
@@ -48,6 +48,11 @@ if(CORE_SYSTEM_NAME STREQUAL android)
                       RendererMediaCodecSurface.cpp)
   list(APPEND HEADERS RendererMediaCodec.h
                       RendererMediaCodecSurface.h)
+endif()
+
+if(CEDARDISPLAY_FOUND)
+  list(APPEND SOURCES RendererVDPAUAllwinner.cpp)
+  list(APPEND HEADERS RendererVDPAUAllwinner.h)
 endif()
 
 # we might want to build on linux systems

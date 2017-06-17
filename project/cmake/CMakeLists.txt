@@ -63,7 +63,7 @@ if(NOT WIN32)
   option(WITH_ARCH              "build with given arch" OFF)
   option(WITH_CPU               "build with given cpu" OFF)
 endif()
-if(CORE_SYSTEM_NAME STREQUAL linux OR CORE_SYSTEM_NAME STREQUAL rbpi)
+if(CORE_SYSTEM_NAME STREQUAL linux OR CORE_SYSTEM_NAME STREQUAL rbpi OR CORE_SYSTEM_NAME STREQUAL allwinner)
   option(ENABLE_LIRC            "Enable LIRC support?" ON)
   option(ENABLE_EVENTCLIENTS    "Enable event clients support?" OFF)
 endif()
@@ -117,13 +117,15 @@ endif()
 # Optional dependencies
 set(optional_deps LCMS2 MicroHttpd MySqlClient SSH XSLT
                   Alsa UDEV DBus Avahi SmbClient CCache
-                  PulseAudio VDPAU VAAPI Bluetooth CAP)
+                  PulseAudio VDPAU VAAPI CAP)
+#Bluetooth
 
 # Required, dyloaded deps
 set(required_dyload Curl ASS)
 
 # Optional, dyloaded deps
-set(dyload_optional CEC Bluray Plist NFS)
+set(dyload_optional CEC Plist NFS)
+#Bluray
 
 # Required by shared objects we link
 set(required_dep_libs EXPAT)
@@ -192,14 +194,16 @@ else()
 endif()
 
 if(NOT WIN32)
-  core_optional_dep(OpenGl)
+  if(NOT CORE_SYSTEM_NAME STREQUAL allwinner)
+    core_optional_dep(OpenGl)
+  endif()
   if(OPENGL_FOUND)
     core_optional_dep(X ENABLE_X11)
     core_optional_dep(LibDRM ENABLE_X11)
     core_optional_dep(XRandR ENABLE_X11)
   else()
     core_optional_dep(OpenGLES)
-    if(OPENGLES_FOUND)
+    if(OPENGLES_FOUND AND NOT CORE_SYSTEM_NAME STREQUAL allwinner)
       core_optional_dep(X ENABLE_X11)
       core_optional_dep(LibDRM ENABLE_X11)
     endif()
@@ -214,6 +218,12 @@ if(CORE_SYSTEM_NAME STREQUAL android OR CORE_SYSTEM_NAME STREQUAL linux)
   core_optional_dep(IMX)
 elseif(CORE_SYSTEM_NAME STREQUAL rbpi)
   core_require_dep(MMAL)
+elseif(CORE_SYSTEM_NAME STREQUAL allwinner)
+  core_require_dep(CedarDisplay)
+  core_require_dep(VdpauSunxi)
+  core_require_dep(CedarAccess)
+  core_require_dep(UMP)
+  core_optional_dep(CedarJpeg)
 endif()
 
 

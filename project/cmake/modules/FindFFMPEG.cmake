@@ -261,7 +261,8 @@ if(NOT FFMPEG_FOUND)
                                     <SOURCE_DIR> &&
                                     ${CMAKE_COMMAND} -E copy
                                     ${CORE_SOURCE_DIR}/tools/depends/target/ffmpeg/FindGnuTls.cmake
-                                    <SOURCE_DIR>)
+                                    <SOURCE_DIR> &&
+                                     patch -p1 -f -N -i ${CORE_SOURCE_DIR}/tools/depends/target/ffmpeg/0001-MPEG4-vdpau-${FFMPEG_VER}.patch)
 
   file(WRITE ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/ffmpeg/ffmpeg-link-wrapper
 "#!/bin/bash

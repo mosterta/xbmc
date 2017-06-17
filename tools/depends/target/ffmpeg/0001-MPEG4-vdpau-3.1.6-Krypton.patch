@@ -560,7 +560,7 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_msmpeg4.c ffmpe
 --- ffmpeg-3.1.1-Krypton-Alpha3/libavcodec/vdpau_msmpeg4.c	2016-08-04 15:48:52.539348238 +0200
 ***************
 *** 0 ****
---- 1,157 ----
+--- 1,114 ----
 + /*
 +  * MPEG-4 Part 2 / H.263 decode acceleration through VDPAU
 +  *
@@ -651,49 +651,6 @@ diff -c3 -r -N FFmpeg-3.1.1-Krypton-Alpha3.orig/libavcodec/vdpau_msmpeg4.c ffmpe
 +                                     av_unused uint32_t size)
 + {
 +      return 0;
-+ }
-+ static int vdpau_msmpeg4_set_video_header (AVCodecContext *avctx, uint32_t id, VdpDecoderControlData *data)
-+ {
-+    Mpeg4DecContext * const s = avctx->priv_data;
-+    memset(data, 0x0, sizeof(*data));
-+     
-+    if(id == VDP_MPEG4_VOL_HEADER) 
-+    {
-+       VdpDecoderMpeg4VolHeader *vol = &(data->mpeg4VolHdr);
-+         
-+       vol->struct_version               = VDP_MPEG4_STRUCT_VERSION;
-+       vol->video_object_type_indication = s->m.vo_type;
-+       vol->aspect_ratio_info            = s->m.aspect_ratio_info;
-+       vol->par_width                    = s->m.avctx->sample_aspect_ratio.num;
-+       vol->par_height                   = s->m.avctx->sample_aspect_ratio.den;
-+       vol->vol_control_parameters       = s->vol_control_parameters;
-+       vol->low_delay                    = s->m.low_delay;
-+       vol->video_object_layer_shape     = s->shape;
-+       vol->vop_time_increment_resolution = s->m.avctx->time_base.den;
-+       vol->video_object_layer_width     = s->m.width;
-+       vol->video_object_layer_height    = s->m.height;
-+       vol->interlaced                   = s->m.progressive_frame ^ 1;
-+       vol->sprite_enable                = s->vol_sprite_usage;
-+       vol->no_of_sprite_warping_points  = s->num_sprite_warping_points;
-+       vol->sprite_warping_accuracy      = s->m.sprite_warping_accuracy;
-+       vol->sprite_brightness_change     = s->sprite_brightness_change;
-+       vol->quant_precision              = s->m.quant_precision;
-+       vol->quant_type                   = s->m.mpeg_quant;
-+       for(int i=0; i < 64; ++i)
-+       {
-+             //to be done matrices
-+       }
-+       vol->quarter_sample               = s->m.quarter_sample;
-+       vol->resync_marker_disable        = s->resync_marker;
-+       vol->data_partitioned             = s->m.data_partitioning;
-+       vol->reversible_vlc               = s->rvlc;
-+       vol->newpred_enable               = s->new_pred;
-+       vol->scalability                  = s->scalability;
-+       vol->enhancement_type             = s->enhancement_type;
-+ 
-+       return 1;
-+     }
-+     return 0;
 + }
 + static int vdpau_msmpeg4_init(AVCodecContext *avctx)
 + {
