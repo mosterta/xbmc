@@ -26,7 +26,7 @@ typedef unsigned char 		__u8;
 typedef unsigned short int 	__u16;
 typedef unsigned int  		__u32;
 typedef int 			__s32;
-#include <linux/sunxi_disp_ioctl.h>
+#include "sunxi_disp_ioctl.h"
 #include <sys/ioctl.h>
 #include <string.h>
 
