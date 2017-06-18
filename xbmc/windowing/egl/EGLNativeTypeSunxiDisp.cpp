@@ -27,7 +27,7 @@
 #include "utils/CPUInfo.h"
 
 #include <sys/ioctl.h>
-#include <drv_display_sun4i.h>
+#include "drv_display_sun4i.h"
 
 #if defined(ALLWINNERA10) && !defined(TARGET_ANDROID)
 
