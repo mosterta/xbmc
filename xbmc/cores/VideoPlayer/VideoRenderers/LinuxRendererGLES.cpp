@@ -426,7 +426,6 @@ void CLinuxRendererGLES::Update()
 
 void CLinuxRendererGLES::RenderUpdate(bool clear, DWORD flags, DWORD alpha)
 {
-  CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate");
   if (!m_bConfigured) 
   {
     CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate not configured");
@@ -499,15 +498,12 @@ void CLinuxRendererGLES::RenderUpdate(bool clear, DWORD flags, DWORD alpha)
       m_pYUVBobShader->SetAlpha(1.0f);
   }
 
-  CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate Check 1");
-
   if ((flags & RENDER_FLAG_TOP) && (flags & RENDER_FLAG_BOT))
     CLog::Log(LOGERROR, "GLES: Cannot render stipple!");
   else
   {
     Render(flags, index);
   }
-  CLog::Log(LOGDEBUG,"CLinuxRendererGLES::RenderUpdate Check 2");
   VerifyGLState();
   glEnable(GL_BLEND);
 }
