@@ -394,13 +394,20 @@ bool CHwLayerAllwinnerA10::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, in
 bool CHwLayerAllwinnerA10::getSyncFenceValue(int fence, HwLayerSyncValue &value)
 {
   int curDisplayedFrameId;
-  bool status = getCurrentFrameId(curDisplayedFrameId);
-  if(! status )
-    CLog::Log(LOGERROR, "CHwLayerAllwinnerA10:%s error calling getCurrentFrameId", __FUNCTION__);
+  if(m_layerVideoStarted)
+  {
+    bool status = getCurrentFrameId(curDisplayedFrameId);
+    if(! status )
+      CLog::Log(LOGERROR, "CHwLayerAllwinnerA10:%s error calling getCurrentFrameId", __FUNCTION__);
 
-  value = HwLayerSyncValue::HWLayerFenceUnsignaled;
+    value = HwLayerSyncValue::HWLayerFenceUnsignaled;
 
-  if(status && curDisplayedFrameId != -1 && (fence < curDisplayedFrameId))
+    if(status && curDisplayedFrameId != -1 && (fence < curDisplayedFrameId))
+    {
+      value = HwLayerSyncValue::HWLayerFenceSignaled;
+    }
+  }
+  else
   {
     value = HwLayerSyncValue::HWLayerFenceSignaled;
   }
@@ -418,7 +425,7 @@ bool CHwLayerAllwinnerA10::getCurrentFrameId(int &frameId)
   frameId = ioctl(m_config.m_dispFd, DISP_CMD_VIDEO_GET_FRAME_ID, args);
   if(frameId < 0)
   {
-    CLog::Log(LOGERROR, "get frame id failed\n");
+    CLog::Log(LOGERROR, "get frame id failed m_dispFd=%d frameId=%d\n", m_config.m_dispFd, frameId);
     status = false;
   }
   return status;
