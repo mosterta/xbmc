@@ -134,7 +134,8 @@ void CVideoReferenceClock::Process()
  #if defined ALLWINNERA10
     fbNum = 0;
  #endif
-    if(std::string("sun4i") != g_cpuInfo.getCPUHardware())
+    if((std::string("sun4i") != g_cpuInfo.getCPUHardware()) ||
+       (std::string("sun5i") != g_cpuInfo.getCPUHardware()))
       m_pVideoSync = new CVideoSyncFb(this, fbNum);
 #endif
 

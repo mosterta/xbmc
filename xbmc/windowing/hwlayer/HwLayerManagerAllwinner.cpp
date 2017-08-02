@@ -44,7 +44,9 @@ CHwLayerManagerAllwinner::~CHwLayerManagerAllwinner()
 bool CHwLayerManagerAllwinner::initialize(CHwLayerManagerConfigAllwinner & config)
 {
   std::string hardware = g_cpuInfo.getCPUHardware();
-  if(hardware == std::string("sun4i") || hardware == std::string("sun7i"))
+  if(hardware == std::string("sun4i") || 
+     hardware == std::string("sun5i") ||
+     hardware == std::string("sun7i"))
     m_manager = new CHwLayerManagerAllwinnerDispType;
   else
     m_manager = new CHwLayerManagerAllwinnerDisp2Type;
