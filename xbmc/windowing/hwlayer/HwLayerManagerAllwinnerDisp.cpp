@@ -106,8 +106,7 @@ bool CHwLayerManagerAllwinnerDisp::setup()
   createLayer(HwLayerType::GUI);
   
   //Allwinner A10 needs to use 2 scaler layer, display backend does not work properly
-  if ((std::string("sun4i") == g_cpuInfo.getCPUHardware()) ||
-      (std::string("sun5i") == g_cpuInfo.getCPUHardware()))
+  if (std::string("sun4i") == g_cpuInfo.getCPUHardware())
   {
     CPropertyValue prop(PropertyKey::ScalerType, (int)ScalerType::Type_Scale);
     setProperty(HwLayerType::GUI, prop);
