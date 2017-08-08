@@ -204,7 +204,7 @@ bool CDVDFileInfo::ExtractThumb(const std::string &strPath,
 #ifdef ALLWINNERA10
       // always use ffmpeg for thumb extraction instead of A10 HW
       CDVDCodecOptions dvdOptions;
-      pVideoCodec = CDVDFactoryCodec::OpenCodec(new CDVDVideoCodecFFmpeg(*pProcessInfo), hint, dvdOptions);
+      pVideoCodec = CDVDFactoryCodec::OpenCodec(new CDVDVideoCodecFFmpeg(*pProcessInfo, true), hint, dvdOptions);
 #else
     pVideoCodec = CDVDFactoryCodec::CreateVideoCodec(hint, *pProcessInfo);
 #endif

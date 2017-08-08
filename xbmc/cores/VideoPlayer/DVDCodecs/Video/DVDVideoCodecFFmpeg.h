@@ -70,7 +70,7 @@ public:
       virtual bool ClearPicture(DVDVideoPicture* pDvdVideoPicture) {};
       virtual bool GetPicture(AVCodecContext* avctx, AVFrame* frame, DVDVideoPicture* picture) = 0;
   };
-  CDVDVideoCodecFFmpeg(CProcessInfo &processInfo);
+  CDVDVideoCodecFFmpeg(CProcessInfo &processInfo, bool noHwRenderer=false);
   virtual ~CDVDVideoCodecFFmpeg();
   virtual bool Open(CDVDStreamInfo &hints, CDVDCodecOptions &options) override;
   virtual int Decode(uint8_t* pData, int iSize, double dts, double pts) override;
@@ -142,7 +142,8 @@ protected:
   double m_DAR;
   CDVDStreamInfo m_hints;
   CDVDCodecOptions m_options;
-
+  bool m_noHwRender;
+  
   struct CDropControl
   {
     CDropControl();

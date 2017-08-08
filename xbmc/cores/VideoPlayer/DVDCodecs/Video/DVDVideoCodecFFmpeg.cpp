@@ -159,7 +159,7 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
   if(ctx->m_decoderState != STATE_HW_SINGLE ||
      (avctx->codec_id == AV_CODEC_ID_VC1 && avctx->profile == FF_PROFILE_UNKNOWN))
   {
-    if (!ctx->GetHardware())
+    if (!ctx->GetHardware() && !ctx->m_noHwRender)
     {
       CLog::Log(LOGNOTICE,"CDVDVideoCodecFFmpeg::GetFormat - Creating VDPAU(%ix%i)", avctx->width, avctx->height);
       VDPAUAllwinner::CCedarRender* cedar = new VDPAUAllwinner::CCedarRender();
@@ -289,7 +289,7 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
   return avcodec_default_get_format(avctx, fmt);
 }
 
-CDVDVideoCodecFFmpeg::CDVDVideoCodecFFmpeg(CProcessInfo &processInfo) : CDVDVideoCodec(processInfo)
+CDVDVideoCodecFFmpeg::CDVDVideoCodecFFmpeg(CProcessInfo &processInfo, bool noHwRender) : CDVDVideoCodec(processInfo)
 {
   m_pCodecContext = nullptr;
   m_pFrame = nullptr;
@@ -320,6 +320,7 @@ CDVDVideoCodecFFmpeg::CDVDVideoCodecFFmpeg(CProcessInfo &processInfo) : CDVDVide
   m_droppedFrames = 0;
   m_interlaced = false;
   m_DAR = 1.0;
+  m_noHwRender = noHwRender;
 }
 
 CDVDVideoCodecFFmpeg::~CDVDVideoCodecFFmpeg()
