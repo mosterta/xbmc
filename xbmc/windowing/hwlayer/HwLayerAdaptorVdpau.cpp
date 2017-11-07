@@ -27,7 +27,7 @@
 
 #define INTERNAL_YCBCR_FORMAT (0xffff)
 
-CHwLayerAdaptorVdpauAllwinner::CHwLayerAdaptorVdpauAllwinner() : m_dlVdpauNvHandle(0) 
+CHwLayerAdaptorVdpauAllwinner::CHwLayerAdaptorVdpauAllwinner() : m_dlVdpauNvHandle(0), m_surface(-1)
 {
 }
 bool CHwLayerAdaptorVdpauAllwinner::initialize()
@@ -65,6 +65,9 @@ bool CHwLayerAdaptorVdpauAllwinner::getFrameConfig(struct cFrameConfig &config)
   struct videoFrameConfig frame_config;
   int status = glVDPAUGetVideoFrameConfig(m_surface, &frame_config); 
   
+  if(status != VDP_STATUS_OK)
+     return status;
+
   FrameFormat fmt;
   switch(frame_config.srcFormat) {
     case VDP_YCBCR_FORMAT_YUYV:
@@ -96,7 +99,7 @@ bool CHwLayerAdaptorVdpauAllwinner::getFrameConfig(struct cFrameConfig &config)
   config.fbSize.height = frame_config.height;
   config.fbSize.width = frame_config.width;
 
-  return status;
+  return status == VDP_STATUS_OK;
 }
 
 void CHwLayerAdaptorVdpauAllwinner::setFrame(vdpauSurfaceCedar frame)

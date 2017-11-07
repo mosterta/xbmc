@@ -161,11 +161,12 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
   {
     if (!ctx->GetHardware() && !ctx->m_noHwRender)
     {
-      CLog::Log(LOGNOTICE,"CDVDVideoCodecFFmpeg::GetFormat - Creating VDPAU(%ix%i)", avctx->width, avctx->height);
+      CLog::Log(LOGNOTICE,"CDVDVideoCodecFFmpeg::GetFormat - Creating VDPAU(%ix%i) testing hw buffer", avctx->width, avctx->height);
       VDPAUAllwinner::CCedarRender* cedar = new VDPAUAllwinner::CCedarRender();
       if(cedar->Create(avctx, ctx->m_pCodecContext, (AVPixelFormat)0))
       {
         ctx->SetHwRenderManager(cedar);
+        CLog::Log(LOGNOTICE,"CDVDVideoCodecFFmpeg::GetFormat - Creating VDPAU(%ix%i) using hw buffer", avctx->width, avctx->height);
       }
     }
     AVPixelFormat defaultFmt = avcodec_default_get_format(avctx, fmt);
