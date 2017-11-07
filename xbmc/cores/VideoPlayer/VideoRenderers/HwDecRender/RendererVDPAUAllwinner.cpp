@@ -197,7 +197,7 @@ bool CRendererVDPAUAllwinner::Supports(ERENDERFEATURE feature)
   return false;
 }
 
-  EINTERLACEMETHOD CRendererVDPAUAllwinner::AutoInterlaceMethod()
+EINTERLACEMETHOD CRendererVDPAUAllwinner::AutoInterlaceMethod()
 {
   return VS_INTERLACEMETHOD_NONE;
 }
@@ -214,15 +214,15 @@ CRenderInfo CRendererVDPAUAllwinner::GetRenderInfo()
 
 bool CRendererVDPAUAllwinner::LoadShadersHook()
 {
-  bool loadShaders = true;
+  bool shaderLoaded = false;
   if( m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420 || m_format == RENDER_FMT_ALLWINNER_HWBUF)
   {
     CLog::Log(LOGNOTICE, "GL: Using Allwinner Layer render method");
     m_textureTarget = GL_TEXTURE_2D;
     m_renderMethod = RENDER_VDPAU_ALLWINNER;
-    loadShaders = false;
+    shaderLoaded = true; /* no shaders required in this mode */
   }
-  return loadShaders;
+  return shaderLoaded;
 }
 
 bool CRendererVDPAUAllwinner::NeedBuffer(int idx)
@@ -267,7 +267,7 @@ bool CRendererVDPAUAllwinner::RenderUpdateVideoHook(bool clear, DWORD flags, DWO
   ManageRenderArea();
 
   int top_field = (flags & RENDER_FLAG_TOP) == RENDER_FLAG_TOP;
-  int surf;
+  int surf = 0;
   int *fencePtr=0;
   if(m_format == RENDER_FMT_VDPAU || m_format == RENDER_FMT_VDPAU_420)
   {
@@ -391,6 +391,7 @@ bool CRendererVDPAUAllwinner::UploadTexture(int index)
   {
     CLog::Log(LOGDEBUG, "CRendererVDPAUAllwinner:%s index=%d", __FUNCTION__, index);
     ReleaseBuffer(index);
+    return true;
   }
   else
     return CLinuxRendererGLES::UploadTexture(index);
