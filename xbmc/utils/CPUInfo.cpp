@@ -286,13 +286,13 @@ CCPUInfo::CCPUInfo(void)
     m_cpuInfoForFreq = false;
 
 
-  bool valid = SysfsUtils::GetInt(scalingMinFreqName, m_storedMinFreq);
+  bool valid = SysfsUtils::GetInt(scalingMinFreqName, m_storedMinFreq, 10);
   if(valid)
   {
     m_storedMinFreq /= 1000;
   }
   
-  valid = SysfsUtils::GetInt(scalingMaxFreqName, m_storedMaxFreq);
+  valid = SysfsUtils::GetInt(scalingMaxFreqName, m_storedMaxFreq, 10);
   if(valid)
   {
     m_storedMaxFreq /= 1000;
