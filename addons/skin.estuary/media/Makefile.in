@@ -15,7 +15,7 @@ compress_texture=-use_none
 endif
 
 $(TARGET):
-	@TEXTUREPACKER@ -dupecheck -input . -output $(TARGET)
+	@TEXTUREPACKER@ -dupecheck $(compress_texture) -input . -output $(TARGET)
 
 $(TARGET_CURIAL):
 	@TEXTUREPACKER@ -dupecheck $(compress_texture) -input ../themes/curial -output $(TARGET_CURIAL)
