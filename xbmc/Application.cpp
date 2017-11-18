@@ -2422,7 +2422,16 @@ int CApplication::GetMessageMask()
 
 void CApplication::OnApplicationMessage(ThreadMessage* pMsg)
 {
-  switch (pMsg->dwMessage)
+  uint32_t msg = pMsg->dwMessage;
+  if (msg == TMSG_SYSTEM_POWERDOWN)
+  {
+    if (CServiceBroker::GetPVRManager().CanSystemPowerdown())
+      msg = pMsg->param1; // perform requested shutdown action
+    else
+      return; // no shutdown
+  }
+
+  switch (msg)
   {
   case TMSG_POWERDOWN:
     Stop(EXITCODE_POWERDOWN);
@@ -2670,7 +2679,7 @@ void CApplication::OnApplicationMessage(ThreadMessage* pMsg)
     break;
 
   default:
-    CLog::Log(LOGERROR, "%s: Unhandled threadmessage sent, %u", __FUNCTION__, pMsg->dwMessage);
+    CLog::Log(LOGERROR, "%s: Unhandled threadmessage sent, %u", __FUNCTION__, msg);
     break;
   }
 }
