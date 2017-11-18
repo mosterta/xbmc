@@ -198,7 +198,11 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
   addr1 = (__u32)config.addrU;
   addr2 = (__u32)config.addrV;
 
-  frame.getFrameConfig(config);
+  if(! frame.getFrameConfig(config))
+  {
+    CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2:%s Failure in getting frame configuration!", __FUNCTION__);
+    return false;
+  }
   
   switch (config.dataFormat) {
     case CHwLayerAdaptorVdpauAllwinner::YCBCR_FORMAT_YUYV:

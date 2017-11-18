@@ -2529,10 +2529,18 @@ void CMixer::Init()
     if (m_config.vdpau->Supports(p->feature))
       deintMethods.push_back(p->method);
   }
+#if ! defined(ALLWINNERA10)
   deintMethods.push_back(VS_INTERLACEMETHOD_VDPAU_BOB);
+#endif
   deintMethods.push_back(VS_INTERLACEMETHOD_RENDER_BOB);
+
   m_config.processInfo->UpdateDeinterlacingMethods(deintMethods);
+
+#if ! defined(ALLWINNERA10)
   m_config.processInfo->SetDeinterlacingMethodDefault(EINTERLACEMETHOD::VS_INTERLACEMETHOD_VDPAU_TEMPORAL);
+#else
+ m_config.processInfo->SetDeinterlacingMethodDefault(EINTERLACEMETHOD::VS_INTERLACEMETHOD_RENDER_BOB);
+#endif
 }
 
 void CMixer::Uninit()
@@ -2630,7 +2638,7 @@ void CMixer::InitCycle()
       method != VS_INTERLACEMETHOD_NONE)
   {
     if (!m_config.processInfo->Supports(method))
-      method = VS_INTERLACEMETHOD_VDPAU_TEMPORAL;
+      method = m_config.processInfo->GetDeinterlacingMethodDefault(); //VS_INTERLACEMETHOD_VDPAU_TEMPORAL;
 
     if (method == VS_INTERLACEMETHOD_VDPAU_BOB ||
         method == VS_INTERLACEMETHOD_VDPAU_TEMPORAL ||
@@ -2753,10 +2761,8 @@ void CMixer::ProcessPicture()
   CLog::Log(LOGDEBUG, " (VDPAU) CMixer %s format=%d", __FUNCTION__, m_processPicture.DVDPic.format);
 #endif
 
-#if 1
   if (m_processPicture.DVDPic.format == RENDER_FMT_VDPAU_420)
     return;
-#endif
 
   VdpStatus vdp_st;
 
