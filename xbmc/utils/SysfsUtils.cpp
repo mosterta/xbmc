@@ -80,7 +80,7 @@ int SysfsUtils::SetInt(const std::string& path, const int val)
     close(fd);
   }
   if (ret)
-    CLog::Log(LOGERROR, "%s: error writing %s",__FUNCTION__, path.c_str());
+    CLog::Log(LOGERROR, "%s: error writing value %d to %s",__FUNCTION__, val, path.c_str());
 
   return ret;
 }

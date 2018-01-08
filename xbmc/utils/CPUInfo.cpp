@@ -24,6 +24,7 @@
 #include "utils/Temperature.h"
 #include <string>
 #include <string.h>
+#include "utils/log.h"
 
 #if defined(TARGET_DARWIN)
 #include <sys/types.h>
@@ -287,13 +288,13 @@ CCPUInfo::CCPUInfo(void)
 
 
   bool valid = SysfsUtils::GetInt(scalingMinFreqName, m_storedMinFreq, 10);
-  if(valid)
+  if(valid == 0)
   {
     m_storedMinFreq /= 1000;
   }
   
   valid = SysfsUtils::GetInt(scalingMaxFreqName, m_storedMaxFreq, 10);
-  if(valid)
+  if(valid == 0)
   {
     m_storedMaxFreq /= 1000;
   }
