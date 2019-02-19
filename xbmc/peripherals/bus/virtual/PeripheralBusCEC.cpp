@@ -23,6 +23,7 @@
 #include "PeripheralBusCEC.h"
 #include "peripherals/Peripherals.h"
 #include "DynamicDll.h"
+#include "utils/log.h"
 
 #include <libcec/cec.h>
 
@@ -55,15 +56,18 @@ CPeripheralBusCEC::CPeripheralBusCEC(CPeripherals *manager) :
     m_dll(new DllLibCEC),
     m_cecAdapter(NULL)
 {
+  CLog::Log(LOGDEBUG, "CPeripheralBusCEC: constructor");
   m_iRescanTime = 5000;
   if (!m_dll->Load() || !m_dll->IsLoaded())
   {
     delete m_dll;
     m_dll = NULL;
+    CLog::Log(LOGERROR, "CPeripheralBusCEC: libcec load failed");
   }
   else
   {
     m_cecAdapter = m_dll->CECInitialise(&m_configuration);
+    CLog::Log(LOGDEBUG, "CPeripheralBusCEC constructor successful");
   }
 }
 
@@ -108,6 +112,9 @@ bool CPeripheralBusCEC::PerformDeviceScan(PeripheralScanResults &results)
       m_bNeedsPolling = false;
       break;
 #endif
+    case ADAPTERTYPE_LINUX:
+      m_bNeedsPolling = false;
+      break;
     default:
       break;
     }
