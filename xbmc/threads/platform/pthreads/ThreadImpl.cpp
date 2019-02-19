@@ -39,6 +39,7 @@
 #endif
 
 #include <signal.h>
+#define HAVE_PTHREAD_SETNAME_NP 1
 
 void CThread::SpawnThread(unsigned stacksize)
 {
