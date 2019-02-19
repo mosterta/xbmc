@@ -134,9 +134,13 @@ void CVideoReferenceClock::Process()
  #if defined ALLWINNERA10
     fbNum = 0;
  #endif
-    if((std::string("sun4i") != g_cpuInfo.getCPUHardware()) ||
+    if((std::string("sun4i") != g_cpuInfo.getCPUHardware()) && 
        (std::string("sun5i") != g_cpuInfo.getCPUHardware()))
-      m_pVideoSync = new CVideoSyncFb(this, fbNum);
+       m_pVideoSync = new CVideoSyncFb(this, fbNum);
+    else
+       CLog::Log(LOGNOTICE, "Allwinner, but no FB used as VSYNC source");
+#else
+    CLog::Log(LOGNOTICE, "VideoReferenceClock: No Video Sync method used");
 #endif
 
     if (m_pVideoSync)
@@ -166,7 +170,7 @@ void CVideoReferenceClock::Process()
     else
     {
       SingleLock.Leave();
-      CLog::Log(LOGDEBUG, "CVideoReferenceClock: Setup failed, falling back to CurrentHostCounter()");
+      CLog::Log(LOGERROR, "CVideoReferenceClock: Setup failed, falling back to CurrentHostCounter()");
     }
 
     SingleLock.Enter();

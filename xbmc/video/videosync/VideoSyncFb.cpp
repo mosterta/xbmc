@@ -50,7 +50,7 @@ bool CVideoSyncFb::Setup(PUPDATECLOCK func)
      CLog::Log(LOGERROR, "CVideoReferenceClock: setting up Framebuffer failed");
      return false;
   }
-  CLog::Log(LOGDEBUG, "CVideoReferenceClock: setting up Framebuffer");
+  CLog::Log(LOGNOTICE, "CVideoReferenceClock: setting up Framebuffer");
   return true;
 }
 

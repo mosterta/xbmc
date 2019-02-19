@@ -35,6 +35,11 @@ if(CORE_SYSTEM_NAME STREQUAL android)
   list(APPEND HEADERS VideoSyncAndroid.h)
 endif()
 
+if(CORE_SYSTEM_NAME STREQUAL allwinner)
+  list(APPEND SOURCES VideoSyncFb.cpp)
+  list(APPEND HEADERS VideoSyncFb.h)
+endif()
+
 if(IMX_FOUND)
   list(APPEND SOURCES VideoSyncIMX.cpp)
   list(APPEND HEADERS VideoSyncIMX.h)
