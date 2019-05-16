@@ -84,15 +84,19 @@ std::map<EGLenum, const char*> eglErrors =
 
 std::map<EGLint, const char*> eglErrorType =
 {
+//! @todo remove when Raspberry Pi updates their EGL headers
+#if ! defined(ALLWINNERA10)
   X(EGL_DEBUG_MSG_CRITICAL_KHR),
   X(EGL_DEBUG_MSG_ERROR_KHR),
   X(EGL_DEBUG_MSG_WARN_KHR),
   X(EGL_DEBUG_MSG_INFO_KHR),
+#endif
 };
 #undef X
 
 } // namespace
 
+#if ! defined(ALLWINNERA10)
 void EglErrorCallback(EGLenum error,
                       const char* command,
                       EGLint messageType,
@@ -117,6 +121,7 @@ void EglErrorCallback(EGLenum error,
 
   CLog::Log(LOGDEBUG, "EGL Debugging:\nError: {}\nCommand: {}\nType: {}\nMessage: {}", errorStr, command, typeStr, message);
 }
+#endif
 
 std::set<std::string> CEGLUtils::GetClientExtensions()
 {
@@ -171,6 +176,7 @@ void CEGLUtils::Log(int logLevel, const std::string& what)
 CEGLContextUtils::CEGLContextUtils(EGLenum platform, std::string const& platformExtension)
 : m_platform{platform}
 {
+#if ! defined(ALLWINNERA10)
   if (CEGLUtils::HasClientExtension("EGL_KHR_debug"))
   {
     auto eglDebugMessageControl = CEGLUtils::GetRequiredProcAddress<PFNEGLDEBUGMESSAGECONTROLKHRPROC>("eglDebugMessageControlKHR");
@@ -183,6 +189,7 @@ CEGLContextUtils::CEGLContextUtils(EGLenum platform, std::string const& platform
 
     eglDebugMessageControl(EglErrorCallback, eglDebugAttribs);
   }
+#endif
 
   m_platformSupported = CEGLUtils::HasClientExtension("EGL_EXT_platform_base") && CEGLUtils::HasClientExtension(platformExtension);
 }
@@ -391,6 +398,7 @@ bool CEGLContextUtils::CreateContext(CEGLAttributesVec contextAttribs)
 
   EGLConfig eglConfig{m_eglConfig};
 
+#if ! defined(ALLWINNERA10)
   if (CEGLUtils::HasExtension(m_eglDisplay, "EGL_KHR_no_config_context"))
     eglConfig = EGL_NO_CONFIG_KHR;
 
@@ -402,10 +410,12 @@ bool CEGLContextUtils::CreateContext(CEGLAttributesVec contextAttribs)
   {
     contextAttribs.Add({{EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR}});
   }
+#endif
 
   m_eglContext = eglCreateContext(m_eglDisplay, eglConfig,
                                   EGL_NO_CONTEXT, contextAttribs.Get());
 
+#if ! defined(ALLWINNERA10)
   if (CEGLUtils::HasExtension(m_eglDisplay, "EGL_IMG_context_priority"))
   {
     EGLint value{EGL_CONTEXT_PRIORITY_MEDIUM_IMG};
@@ -416,6 +426,7 @@ bool CEGLContextUtils::CreateContext(CEGLAttributesVec contextAttribs)
     if (value != EGL_CONTEXT_PRIORITY_HIGH_IMG)
       CLog::Log(LOGDEBUG, "Failed to obtain a high priority EGL context");
   }
+#endif
 
   if (m_eglContext == EGL_NO_CONTEXT)
   {

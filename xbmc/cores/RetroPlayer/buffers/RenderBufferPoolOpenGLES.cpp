@@ -38,6 +38,7 @@ bool CRenderBufferPoolOpenGLES::ConfigureInternal()
     case AV_PIX_FMT_0RGB32:
     {
       m_pixeltype = GL_UNSIGNED_BYTE;
+#ifdef GL_BGRA_EXT
       if (m_context.IsExtSupported("GL_EXT_texture_format_BGRA8888") ||
           m_context.IsExtSupported("GL_IMG_texture_format_BGRA8888"))
       {
@@ -52,6 +53,7 @@ bool CRenderBufferPoolOpenGLES::ConfigureInternal()
         m_pixelformat = GL_BGRA_EXT;
       }
       else
+#endif
       {
         m_internalformat = GL_RGBA;
         m_pixelformat = GL_RGBA;
