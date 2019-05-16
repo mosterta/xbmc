@@ -30,7 +30,6 @@ CVariant CDBusUtil::GetVariant(const char *destination, const char *object, cons
         result = ParseVariant(&iter);
     }
   }
-
   return result;
 }
 

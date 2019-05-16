@@ -96,6 +96,8 @@
 #include "ServiceBroker.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/SettingsComponent.h"
+static const std::string scalingMinFreqName = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq";
+static const std::string scalingMaxFreqName = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq";
 #endif
 
 #include "utils/StringUtils.h"
@@ -287,6 +289,17 @@ CCPUInfo::CCPUInfo(void)
   else
     m_cpuInfoForFreq = false;
 
+  bool valid = SysfsUtils::GetInt(scalingMinFreqName, m_storedMinFreq, 10);
+  if(valid == 0)
+  {
+    m_storedMinFreq /= 1000;
+  }
+  
+  valid = SysfsUtils::GetInt(scalingMaxFreqName, m_storedMaxFreq, 10);
+  if(valid == 0)
+  {
+    m_storedMaxFreq /= 1000;
+  }
 
   FILE* fCPUInfo = fopen("/proc/cpuinfo", "r");
   m_cpuCount = 0;
@@ -618,6 +631,40 @@ float CCPUInfo::getCPUFrequency()
   return value;
 #endif
 }
+
+bool CCPUInfo::setCPUMinFrequency(int mhz)
+{
+  int newFreq;
+  bool retval = false;
+  if(SysfsUtils::HasRW(scalingMinFreqName))
+  {
+    retval = SysfsUtils::SetInt(scalingMinFreqName, mhz * 1000);
+  }
+  return retval;
+}
+
+bool CCPUInfo::setCPUMaxFrequency(int mhz)
+{
+  int newFreq;
+  bool retval = false;
+
+  if(SysfsUtils::HasRW(scalingMaxFreqName))
+  {
+    retval = SysfsUtils::SetInt(scalingMaxFreqName, mhz * 1000);
+  }
+  return retval;
+}
+
+bool CCPUInfo::restoreCPUMinFrequency()
+{
+  return setCPUMinFrequency(m_storedMinFreq);
+}
+
+bool CCPUInfo::restoreCPUMaxFrequency()
+{
+  return setCPUMaxFrequency(m_storedMaxFreq);
+}
+
 
 bool CCPUInfo::getTemperature(CTemperature& temperature)
 {

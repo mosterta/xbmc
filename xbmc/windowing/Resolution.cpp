@@ -31,6 +31,10 @@ RESOLUTION_INFO::RESOLUTION_INFO(int width, int height, float aspect, const std:
   bFullScreen = true;
   fRefreshRate = 0;
   dwFlags = iSubtitles = 0;
+  Overscan.left = 0;
+  Overscan.top = 0;
+  Overscan.right = width;
+  Overscan.bottom = height;
 }
 
 RESOLUTION_INFO::RESOLUTION_INFO(const RESOLUTION_INFO& res) :

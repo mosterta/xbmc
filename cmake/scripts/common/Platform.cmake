@@ -3,9 +3,13 @@ if(NOT CORE_SYSTEM_NAME)
 endif()
 
 if(CORE_SYSTEM_NAME STREQUAL linux OR CORE_SYSTEM_NAME STREQUAL freebsd)
-  # Set default CORE_PLATFORM_NAME to X11
-  # This is overridden by user setting -DCORE_PLATFORM_NAME=<platform>
-  set(_DEFAULT_PLATFORM X11)
+  if(CORE_PLATFORM_NAME STREQUAL allwinner)
+     set(_DEFAULT_PLATFORM allwinner)
+  else()
+     # Set default CORE_PLATFORM_NAME to X11
+     # This is overridden by user setting -DCORE_PLATFORM_NAME=<platform>
+     set(_DEFAULT_PLATFORM X11)
+  endif()
   option(ENABLE_APP_AUTONAME    "Enable renaming the binary according to windowing?" ON)
 else()
   string(TOLOWER ${CORE_SYSTEM_NAME} _DEFAULT_PLATFORM)

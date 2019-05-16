@@ -77,7 +77,7 @@ int SysfsUtils::SetInt(const std::string& path, const int val)
   return ret;
 }
 
-int SysfsUtils::GetInt(const std::string& path, int& val)
+int SysfsUtils::GetInt(const std::string& path, int& val, const int base)
 {
   int fd = open(path.c_str(), O_RDONLY);
   int ret = 0;
@@ -87,7 +87,7 @@ int SysfsUtils::GetInt(const std::string& path, int& val)
     if (read(fd, bcmd, sizeof(bcmd)) < 0)
       ret = -1;
     else
-      val = strtol(bcmd, NULL, 16);
+      val = strtol(bcmd, NULL, base);
 
     close(fd);
   }

@@ -4,7 +4,7 @@ DEPS= ../../Makefile.include FFMPEG-VERSION Makefile
 
 # set to "yes" to enable patching
 # we don't apply patches until we move to a vanilla ffmpeg tarball
-APPLY_PATCHES=no
+APPLY_PATCHES=yes
 
 # configuration settings
 ffmpg_config = --prefix=$(PREFIX) --extra-version="kodi-$(VERSION)"
@@ -19,7 +19,7 @@ ffmpg_config += --enable-muxer=spdif --enable-muxer=adts
 ffmpg_config += --enable-muxer=asf --enable-muxer=ipod
 ffmpg_config += --enable-encoder=ac3 --enable-encoder=aac
 ffmpg_config += --enable-encoder=wmav2 --enable-protocol=http
-ffmpg_config += --enable-gnutls
+#ffmpg_config += --enable-gnutls
 ffmpg_config += --enable-encoder=png --enable-encoder=mjpeg
 ffmpg_config += $(FFMPEG_CONFIGURE_OPTIONS)
 
@@ -68,14 +68,25 @@ ifeq ($(Configuration), Release)
   ffmpg_config += --disable-debug
 endif
 
+PATCH_APPLIED=$(test -f $(PLATFORM)/.patched)
+
 all: .installed-$(PLATFORM)
 
 $(TARBALLS_LOCATION)/$(ARCHIVE):
 	cd $(TARBALLS_LOCATION); $(RETRIEVE_TOOL) -Ls --create-dirs -f -o $(TARBALLS_LOCATION)/$(ARCHIVE) $(BASE_URL)/archive/$(VERSION).tar.gz
 
-$(PLATFORM): $(TARBALLS_LOCATION)/$(ARCHIVE) $(DEPS)
+.patch-$(PLATFORM): .untar-$(PLATFORM)
+        ifeq ($(APPLY_PATCHES), yes)
+		cd $(PLATFORM); patch -p1 < ../0001-MPEG4-vdpau-$(VERSION).patch
+        endif
+	touch $@
+
+.untar-$(PLATFORM): $(TARBALLS_LOCATION)/$(ARCHIVE) $(DEPS)
 	rm -rf $(PLATFORM); mkdir -p $(PLATFORM)
 	cd $(PLATFORM); $(ARCHIVE_TOOL) $(ARCHIVE_TOOL_FLAGS) $(TARBALLS_LOCATION)/$(ARCHIVE)
+	touch $@
+
+.configure-$(PLATFORM): .patch-$(PLATFORM)
 	cd $(PLATFORM); sed -i".bak" -e "s%pkg_config_default=pkg-config%export PKG_CONFIG_LIBDIR=$(PREFIX)/lib/pkgconfig \&\& pkg_config_default=$(NATIVEPREFIX)/bin/pkg-config%" configure
 	cd $(PLATFORM);\
 	CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" \
@@ -83,8 +94,9 @@ $(PLATFORM): $(TARBALLS_LOCATION)/$(ARCHIVE) $(DEPS)
 ifeq ($(OS), ios)
 	cd $(PLATFORM); sed -i -- 's/HAVE_CLOCK_GETTIME 1/HAVE_CLOCK_GETTIME 0/g' config.h
 endif
+	touch $@
 
-.build-$(PLATFORM): $(PLATFORM)
+.build-$(PLATFORM): .configure-$(PLATFORM)
 	$(MAKE) -C $(PLATFORM)
 	touch $@
 

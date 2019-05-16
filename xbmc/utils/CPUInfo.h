@@ -70,6 +70,10 @@ public:
   int getUsedPercentage();
   int getCPUCount() const { return m_cpuCount; }
   float getCPUFrequency();
+  bool setCPUMinFrequency(int mhz);
+  bool setCPUMaxFrequency(int mhz);
+  bool restoreCPUMinFrequency();
+  bool restoreCPUMaxFrequency();
   bool getTemperature(CTemperature& temperature);
   std::string& getCPUModel() { return m_cpuModel; }
   std::string& getCPUBogoMips() { return m_cpuBogoMips; }
@@ -97,6 +101,10 @@ private:
   FILE* m_fProcStat;
   FILE* m_fProcTemperature;
   FILE* m_fCPUFreq;
+  FILE* m_fCPUMinFreq;
+  FILE* m_fCPUMaxFreq;
+  int m_storedMinFreq;
+  int m_storedMaxFreq;
   bool m_cpuInfoForFreq;
 #if defined(TARGET_DARWIN)
   CLinuxResourceCounter *m_pResourceCounter;

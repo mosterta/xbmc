@@ -1,5 +1,5 @@
 if(X_FOUND)
-  set(USE_X11 1)
+  set(USE_X11 0)
 else()
   set(USE_X11 0)
 endif()

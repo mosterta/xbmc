@@ -10,7 +10,7 @@
 
 #include "threads/Thread.h"
 
-#include <libinput.h>
+#include <libinput/libinput.h>
 #include <libudev.h>
 #include <memory>
 #include <vector>

@@ -23,7 +23,9 @@
 #include <mDnsEmbedded.h>
 #endif //HAS_MDNS_EMBEDDED
 
+#if defined(TARGET_WINDOWS_DESKTOP) 
 extern HWND g_hWnd;
+#endif
 
 void CZeroconfMDNS::Process()
 {
@@ -97,7 +99,7 @@ bool CZeroconfMDNS::doPublishService(const std::string& fcr_identifier,
     }
 #ifdef TARGET_WINDOWS_STORE
     CLog::Log(LOGERROR, "ZeroconfMDNS: WSAAsyncSelect not yet supported for TARGET_WINDOWS_STORE");
-#else
+#elif defined(TARGET_WINDOWS_DESKTOP)
     err = WSAAsyncSelect( (SOCKET) DNSServiceRefSockFD( m_service ), g_hWnd, BONJOUR_EVENT, FD_READ | FD_CLOSE );
     if (err != kDNSServiceErr_NoError)
       CLog::Log(LOGERROR, "ZeroconfMDNS: WSAAsyncSelect failed with error = %ld", (int) err);
@@ -200,7 +202,7 @@ void CZeroconfMDNS::doStop()
     CSingleLock lock(m_data_guard);
 #if defined(TARGET_WINDOWS_STORE)
     CLog::Log(LOGERROR, "ZeroconfMDNS: WSAAsyncSelect not yet supported for TARGET_WINDOWS_STORE");
-#else
+#elif defined(TARGET_WINDOWS_DESKTOP)
     WSAAsyncSelect( (SOCKET) DNSServiceRefSockFD( m_service ), g_hWnd, BONJOUR_EVENT, 0 );
 #endif //TARGET_WINDOWS
 
