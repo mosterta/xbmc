@@ -1484,6 +1484,11 @@ void StringUtils::RemoveCRLF(std::string& strLine)
   StringUtils::TrimRight(strLine, "\n\r");
 }
 
+void StringUtils::RemoveCR(std::string& strLine)
+{
+  StringUtils::TrimRight(strLine, "\n");
+}
+
 std::string StringUtils::SizeToString(int64_t size)
 {
   std::string strLabel;

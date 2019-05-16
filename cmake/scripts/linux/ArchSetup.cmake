@@ -1,6 +1,11 @@
 # we always want to use GNU features if available, so set _GNU_SOURCE
 set(ARCH_DEFINES -DTARGET_POSIX -DTARGET_LINUX -D_GNU_SOURCE)
 set(SYSTEM_DEFINES -D__STDC_CONSTANT_MACROS -D_FILE_OFFSET_BITS=64)
+set(ARCH_DEFINES -D_LINUX -DTARGET_POSIX -DTARGET_LINUX -D_GNU_SOURCE)
+# temp until further cleanup is done
+if(CORE_PLATFORM_NAME_LC STREQUAL allwinner)
+  list(APPEND ARCH_DEFINES -DALLWINNERA10 -DUSE_VIDEO_SYNC_FB)
+endif()
 set(PLATFORM_DIR platform/linux)
 set(PLATFORMDEFS_DIR platform/posix)
 set(CMAKE_SYSTEM_NAME Linux)

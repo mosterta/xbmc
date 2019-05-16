@@ -276,6 +276,9 @@ if(NOT FFMPEG_FOUND)
                                     ${CMAKE_SOURCE_DIR}/tools/depends/target/ffmpeg/CMakeLists.txt
                                     <SOURCE_DIR> &&
                                     ${CMAKE_COMMAND} -E copy
+                                    ${CMAKE_SOURCE_DIR}/tools/depends/target/ffmpeg/0001-MPEG4-vdpau-${FFMPEG_VER}.patch
+                                    <SOURCE_DIR> &&
+                                    ${CMAKE_COMMAND} -E copy
                                     ${CMAKE_SOURCE_DIR}/tools/depends/target/ffmpeg/FindGnuTls.cmake
                                     <SOURCE_DIR>)
 

@@ -1231,9 +1231,9 @@ struct MHD_Daemon* CWebServer::StartMHD(unsigned int flags, int port)
 
   MHD_set_panic_func(&panicHandlerForMHD, nullptr);
 
-  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
-          CSettings::SETTING_SERVICES_WEBSERVERSSL) &&
-      MHD_is_feature_supported(MHD_FEATURE_SSL) == MHD_YES && LoadCert(m_key, m_cert))
+  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_SERVICES_WEBSERVERSSL) &&
+      CWebServer::WebServerSupportsSSL() &&
+      LoadCert(m_key, m_cert))
     // SSL enabled
     return MHD_start_daemon(
         flags |
@@ -1330,7 +1330,7 @@ bool CWebServer::IsStarted()
 
 bool CWebServer::WebServerSupportsSSL()
 {
-  return MHD_is_feature_supported(MHD_FEATURE_SSL) == MHD_YES;
+  return true; //MHD_is_feature_supported(MHD_FEATURE_SSL) == MHD_YES;
 }
 
 void CWebServer::SetCredentials(const std::string& username, const std::string& password)

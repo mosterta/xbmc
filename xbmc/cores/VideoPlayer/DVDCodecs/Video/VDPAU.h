@@ -28,6 +28,17 @@
 
 #include "cores/VideoPlayer/Buffers/VideoBuffer.h"
 #include "cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodec.h"
+
+#if defined(HAS_GLX)
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#else
+#include <EGL/eglplatform_fb.h>
+#include <EGL/egl.h>
+typedef void Display;
+#endif
+#include "threads/CriticalSection.h"
+#include "threads/SharedSection.h"
 #include "cores/VideoSettings.h"
 #include "guilib/DispResource.h"
 #include "threads/CriticalSection.h"
@@ -42,9 +53,6 @@
 #include <map>
 #include <utility>
 #include <vector>
-
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
 
 extern "C" {
 #include <libavutil/avutil.h>
@@ -62,40 +70,40 @@ namespace VDPAU
 
 struct VDPAU_procs
 {
-  VdpGetProcAddress*vdp_get_proc_address;
-  VdpDeviceDestroy*                    vdp_device_destroy;
+  VdpGetProcAddress *                   vdp_get_proc_address;
+  VdpDeviceDestroy *                    vdp_device_destroy;
 
-  VdpVideoSurfaceCreate* vdp_video_surface_create;
-  VdpVideoSurfaceDestroy* vdp_video_surface_destroy;
-  VdpVideoSurfacePutBitsYCbCr* vdp_video_surface_put_bits_y_cb_cr;
-  VdpVideoSurfaceGetBitsYCbCr* vdp_video_surface_get_bits_y_cb_cr;
+  VdpVideoSurfaceCreate *               vdp_video_surface_create;
+  VdpVideoSurfaceDestroy *              vdp_video_surface_destroy;
+  VdpVideoSurfacePutBitsYCbCr *         vdp_video_surface_put_bits_y_cb_cr;
+  VdpVideoSurfaceGetBitsYCbCr *         vdp_video_surface_get_bits_y_cb_cr;
 
-  VdpOutputSurfacePutBitsYCbCr* vdp_output_surface_put_bits_y_cb_cr;
-  VdpOutputSurfacePutBitsNative* vdp_output_surface_put_bits_native;
-  VdpOutputSurfaceCreate* vdp_output_surface_create;
-  VdpOutputSurfaceDestroy* vdp_output_surface_destroy;
-  VdpOutputSurfaceGetBitsNative* vdp_output_surface_get_bits_native;
-  VdpOutputSurfaceRenderOutputSurface* vdp_output_surface_render_output_surface;
-  VdpOutputSurfacePutBitsIndexed* vdp_output_surface_put_bits_indexed;
+  VdpOutputSurfacePutBitsYCbCr *        vdp_output_surface_put_bits_y_cb_cr;
+  VdpOutputSurfacePutBitsNative *       vdp_output_surface_put_bits_native;
+  VdpOutputSurfaceCreate *              vdp_output_surface_create;
+  VdpOutputSurfaceDestroy *             vdp_output_surface_destroy;
+  VdpOutputSurfaceGetBitsNative *       vdp_output_surface_get_bits_native;
+  VdpOutputSurfaceRenderOutputSurface * vdp_output_surface_render_output_surface;
+  VdpOutputSurfacePutBitsIndexed *      vdp_output_surface_put_bits_indexed;
 
-  VdpVideoMixerCreate* vdp_video_mixer_create;
-  VdpVideoMixerSetFeatureEnables* vdp_video_mixer_set_feature_enables;
-  VdpVideoMixerQueryParameterSupport* vdp_video_mixer_query_parameter_support;
-  VdpVideoMixerQueryFeatureSupport* vdp_video_mixer_query_feature_support;
-  VdpVideoMixerDestroy* vdp_video_mixer_destroy;
-  VdpVideoMixerRender* vdp_video_mixer_render;
-  VdpVideoMixerSetAttributeValues* vdp_video_mixer_set_attribute_values;
+  VdpVideoMixerCreate *                 vdp_video_mixer_create;
+  VdpVideoMixerSetFeatureEnables *      vdp_video_mixer_set_feature_enables;
+  VdpVideoMixerQueryParameterSupport *  vdp_video_mixer_query_parameter_support;
+  VdpVideoMixerQueryFeatureSupport *    vdp_video_mixer_query_feature_support;
+  VdpVideoMixerDestroy *                vdp_video_mixer_destroy;
+  VdpVideoMixerRender *                 vdp_video_mixer_render;
+  VdpVideoMixerSetAttributeValues *     vdp_video_mixer_set_attribute_values;
 
-  VdpGenerateCSCMatrix*  vdp_generate_csc_matrix;
+  VdpGenerateCSCMatrix *                vdp_generate_csc_matrix;
 
-  VdpGetErrorString* vdp_get_error_string;
+  VdpGetErrorString *                         vdp_get_error_string;
 
-  VdpDecoderCreate* vdp_decoder_create;
-  VdpDecoderDestroy* vdp_decoder_destroy;
-  VdpDecoderRender* vdp_decoder_render;
-  VdpDecoderQueryCapabilities* vdp_decoder_query_caps;
+  VdpDecoderCreate *             vdp_decoder_create;
+  VdpDecoderDestroy *            vdp_decoder_destroy;
+  VdpDecoderRender *             vdp_decoder_render;
+  VdpDecoderQueryCapabilities *  vdp_decoder_query_caps;
 
-  VdpPreemptionCallbackRegister* vdp_preemption_callback_register;
+  VdpPreemptionCallbackRegister * vdp_preemption_callback_register;
 };
 
 //-----------------------------------------------------------------------------
@@ -114,7 +122,7 @@ public:
   uint16_t decodedPics;
   uint16_t processedPics;
   uint16_t renderPics;
-  uint64_t latency; // time decoder has waited for a frame, ideally there is no latency
+  uint64_t latency;         // time decoder has waited for a frame, ideally there is no latency
   int codecFlags;
   bool canSkipDeint;
   bool draining;
@@ -547,7 +555,7 @@ protected:
   void ReturnRenderPicture(CVdpauRenderPicture *renderPic);
   long ReleasePicReference();
 
-  static void ReadFormatOf( AVCodecID codec
+  static bool ReadFormatOf( AVCodecID codec
                           , VdpDecoderProfile &decoder_profile
                           , VdpChromaType &chroma_type);
 
@@ -570,7 +578,7 @@ protected:
   AVVDPAUContext m_hwContext;
   AVCodecContext* m_avctx = nullptr;
 
-  COutput m_vdpauOutput;
+  COutput *m_vdpauOutput;
   CVdpauBufferStats m_bufferStats;
   CEvent m_inMsgEvent;
   CVdpauRenderPicture *m_presentPicture = nullptr;

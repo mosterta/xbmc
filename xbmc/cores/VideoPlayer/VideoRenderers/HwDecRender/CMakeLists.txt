@@ -17,11 +17,18 @@ if(VAAPI_FOUND)
   endif()
 endif()
 
-if(VDPAU_FOUND)
-  list(APPEND SOURCES RendererVDPAU.cpp
+if(VDPAU_FOUND )
+  if(CORE_SYSTEM_NAME STREQUAL allwinner)
+    list(APPEND SOURCES RendererVDPAUSunxi.cpp
+                      VdpauCedar.cpp)
+    list(APPEND HEADERS RendererVDPAUSunxi.h
+                      VdpauCedar.h)
+  else()
+    list(APPEND SOURCES RendererVDPAU.cpp
                       VdpauGL.cpp)
-  list(APPEND HEADERS RendererVDPAU.h
+    list(APPEND HEADERS RendererVDPAU.h
                       VdpauGL.h)
+  endif()
 endif()
 
 if(CORE_SYSTEM_NAME STREQUAL osx)

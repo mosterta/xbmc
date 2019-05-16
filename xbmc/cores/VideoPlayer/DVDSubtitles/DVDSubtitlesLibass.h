@@ -11,7 +11,9 @@
 #include "DVDResource.h"
 #include "threads/CriticalSection.h"
 
+extern "C" {
 #include <ass/ass.h>
+}
 
 /** Wrapper for Libass **/
 
