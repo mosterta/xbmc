@@ -93,6 +93,7 @@ message(STATUS "FFMPEG_CONF: ${ffmpeg_conf}")
 include(ExternalProject)
 externalproject_add(ffmpeg
                     SOURCE_DIR ${CMAKE_SOURCE_DIR}
+                    PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/0001-MPEG4-vdpau-${FFMPEG_VER}.patch
                     CONFIGURE_COMMAND ${pkgconf} <SOURCE_DIR>/configure
                       --prefix=${CMAKE_INSTALL_PREFIX}
                       --extra-version="kodi-${FFMPEG_VER}"

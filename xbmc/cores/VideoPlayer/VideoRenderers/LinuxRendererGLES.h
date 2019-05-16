@@ -44,6 +44,7 @@ enum RenderMethod
 {
   RENDER_GLSL = 0x01,
   RENDER_CUSTOM = 0x02,
+  RENDER_VDPAU_SUNXI = 0x1000,
 };
 
 enum RenderQuality

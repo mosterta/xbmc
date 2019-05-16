@@ -24,8 +24,9 @@
 #include "platform/win32/WIN32Util.h"
 #endif //TARGET_WINDOWS
 
+#if defined(TARGET_WINDOWS_DESKTOP)
 extern HWND g_hWnd;
-
+#endif
 
 CZeroconfBrowserMDNS::CZeroconfBrowserMDNS()
 {
