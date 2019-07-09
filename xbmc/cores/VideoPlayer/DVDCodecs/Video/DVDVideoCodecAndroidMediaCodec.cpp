@@ -480,6 +480,9 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
       }
       m_mime = "video/x-vnd.on2.vp9";
       m_formatname = "amc-vp9";
+      free(m_hints.extradata);
+      m_hints.extradata = nullptr;
+      m_hints.extrasize = 0;
       break;
     case AV_CODEC_ID_AVS:
     case AV_CODEC_ID_CAVS:
@@ -715,7 +718,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
   if (!ConfigureMediaCodec())
     goto FAIL;
 
-  if (m_codecname.find("OMX", 0, 3) == 0)
+  if (m_codecname.find("OMX.Nvidia", 0, 10) == 0)
     m_invalidPTSValue = AV_NOPTS_VALUE;
   else
     m_invalidPTSValue = 0;
@@ -763,14 +766,14 @@ void CDVDVideoCodecAndroidMediaCodec::Dispose()
   if (!m_opened)
     return;
 
+  // invalidate any inflight outputbuffers
+  FlushInternal();
+
   if (m_videoBufferPool)
   {
     m_videoBufferPool->ResetMediaCodec();
     m_videoBufferPool = nullptr;
   }
-
-  // invalidate any inflight outputbuffers
-  FlushInternal();
 
   m_videobuffer.iFlags = 0;
 
@@ -1051,6 +1054,9 @@ void CDVDVideoCodecAndroidMediaCodec::FlushInternal()
 {
   // invalidate any existing inflight buffers and create
   // new ones to match the number of output buffers
+  if (m_indexInputBuffer >=0 && CJNIBase::GetSDKVersion() >= 26)
+    AMediaCodec_queueInputBuffer(m_codec->codec(), m_indexInputBuffer, 0, 0, 0, AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM);
+
   m_OutputDuration = 0;
   m_lastPTS = -1;
   m_dtsShift = DVD_NOPTS_VALUE;
@@ -1161,8 +1167,7 @@ int CDVDVideoCodecAndroidMediaCodec::GetOutputPicture(void)
       return -1;
     }
 
-    int flags = bufferInfo.flags;
-    if (flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM)
+    if (bufferInfo.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM)
     {
       CLog::Log(LOGDEBUG, "CDVDVideoCodecAndroidMediaCodec:: BUFFER_FLAG_END_OF_STREAM");
       AMediaCodec_releaseOutputBuffer(m_codec->codec(), index, false);
