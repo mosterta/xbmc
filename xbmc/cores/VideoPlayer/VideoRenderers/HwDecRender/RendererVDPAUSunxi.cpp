@@ -22,6 +22,7 @@
 #include "windowing/allwinner/hwlayer/HwLayerManagerAllwinner.h"
 #include "utils/CPUInfo.h"
 
+#include "cores/VideoPlayer/Process/allwinner/ProcessInfoSunxi.h"
 
 CRendererVDPAUSunxi::CRendererVDPAUSunxi()
 {
@@ -45,7 +46,8 @@ CRendererVDPAUSunxi::~CRendererVDPAUSunxi()
 
 CBaseRenderer* CRendererVDPAUSunxi::Create(CVideoBuffer* buffer)
 {
-  if (buffer && dynamic_cast<VDPAU::CVdpauRenderPicture*>(buffer) )
+  if (buffer && 
+      (dynamic_cast<VDPAU::CVdpauRenderPicture*>(buffer) || dynamic_cast<CVideoBufferSunxi*>(buffer)))
   {
 #if 0
     CWinSystemGbm* winSystem = dynamic_cast<CWinSystemGbm*>(CServiceBroker::GetWinSystem());
@@ -61,8 +63,9 @@ CBaseRenderer* CRendererVDPAUSunxi::Create(CVideoBuffer* buffer)
 void CRendererVDPAUSunxi::Register()
 {
   CWinSystemSunxi* winSystem = dynamic_cast<CWinSystemSunxi*>(CServiceBroker::GetWinSystem());
-//  if (winSystem && winSystem->GetDrm()->GetVideoPlane()->plane &&
-//      std::dynamic_pointer_cast<CDRMAtomic>(winSystem->GetDrm()))
+  if (winSystem /* && winSystem->GetDrm()->GetVideoPlane()->plane && */
+//      std::dynamic_pointer_cast<CDRMAtomic>(winSystem->GetDrm())
+     )
   {
     VIDEOPLAYER::CRendererFactory::RegisterRenderer("vdpauAllwinner", CRendererVDPAUSunxi::Create);
     return;
@@ -72,7 +75,10 @@ void CRendererVDPAUSunxi::Register()
 bool CRendererVDPAUSunxi::Configure(const VideoPicture& picture, float fps, unsigned int orientation)
 {
   bool status;
-  
+  void* dev = NULL;
+  void* procFunc = NULL;
+  uint64_t ident = 0;
+
   m_format = picture.videoBuffer->GetFormat();
   m_sourceWidth = picture.iWidth;
   m_sourceHeight = picture.iHeight;
@@ -90,8 +96,15 @@ bool CRendererVDPAUSunxi::Configure(const VideoPicture& picture, float fps, unsi
 
   Flush(false);
 
-  VDPAU::CVdpauRenderPicture *pic = static_cast<VDPAU::CVdpauRenderPicture*>(picture.videoBuffer);
-  status = m_interopState.Init(pic->device, pic->procFunc, pic->ident);
+  VDPAU::CVdpauRenderPicture *buffer = dynamic_cast<VDPAU::CVdpauRenderPicture*>(picture.videoBuffer);
+  if( buffer )
+  {
+    dev = buffer->device;
+    procFunc = buffer->procFunc;
+    ident = buffer->ident;
+  }
+
+  status = m_interopState.Init(dev, procFunc, ident);
   if(! status )
     CLog::Log(LOGERROR, "CRendererVDPAUSunxi:%s error setting property scaler", __FUNCTION__);
 
@@ -176,7 +189,7 @@ bool CRendererVDPAUSunxi::NeedBuffer(int index)
   if (m_iLastRenderBuffer == index)
     return true;
 
-  VDPAU::CVdpauRenderPicture* buffer = dynamic_cast<VDPAU::CVdpauRenderPicture*>(m_buffers[index].videoBuffer);
+  CVideoBuffer* buffer = (m_buffers[index].videoBuffer);
   if (buffer && m_buffers[index].fence != -1)
   {
     CHwLayerManagerAW::HwLayerSyncValue value;
@@ -220,13 +233,10 @@ void CRendererVDPAUSunxi::RenderUpdate(int index, int index2, bool clear, unsign
     return;
   }
 
-  VDPAU::CVdpauRenderPicture* buffer = dynamic_cast<VDPAU::CVdpauRenderPicture*>(m_buffers[index].videoBuffer);
-  if (!buffer)
+  CVideoBuffer* buffer = (m_buffers[index].videoBuffer);
+
+  if(!m_buffers[index].texture.Map(buffer, m_vdpauAdaptor))
     return;
-
-  m_buffers[index].texture.Map(buffer, m_vdpauAdaptor);
-
-  //surf = buffer->surfaceCedar;
 
   if (m_iLastRenderBuffer == -1) 
   {
@@ -265,8 +275,6 @@ void CRendererVDPAUSunxi::RenderUpdate(int index, int index2, bool clear, unsign
       CLog::Log(LOGERROR, "CRendererVDPAUSunxi:%s error calling showlayer", __FUNCTION__);
   }
 
-  //m_vdpauAdaptor.setFrame(surf);
-
   status = g_HwLayer.configure(CHwLayerManagerAW::HwLayerType::Video, m_vdpauAdaptor, 
                                 m_sourceRect, m_destRect);
 
@@ -291,12 +299,21 @@ bool CRendererVDPAUSunxi::RenderCapture(CRenderCapture* capture)
 
 bool CRendererVDPAUSunxi::ConfigChanged(const VideoPicture& picture)
 {
+  void* dev = NULL;
+  void* procFunc = NULL;
+  uint64_t ident = 0;
+
   if (picture.videoBuffer->GetFormat() != m_format)
     return true;
 
   VDPAU::CVdpauRenderPicture* buffer = dynamic_cast<VDPAU::CVdpauRenderPicture*>(picture.videoBuffer);
-
-  if (m_interopState.NeedInit(buffer->device, buffer->procFunc, buffer->ident))
+  if( buffer )
+  {
+    dev = buffer->device;
+    procFunc = buffer->procFunc;
+    ident = buffer->ident;
+  }
+  if (m_interopState.NeedInit(dev, procFunc, ident))
     return true;
 
   return false;

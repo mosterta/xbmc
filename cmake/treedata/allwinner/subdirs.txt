@@ -1,4 +1,5 @@
 xbmc/cores/RetroPlayer/process/sunxi  cores/RetroPlayer/process/sunxi
+xbmc/cores/VideoPlayer/Process/allwinner  cores/VideoPlayer/Process/allwinner
 xbmc/platform/posix                 platform/posix
 xbmc/platform/posix/filesystem      platform/posix/filesystem
 xbmc/platform/posix/utils           platform/posix/utils
