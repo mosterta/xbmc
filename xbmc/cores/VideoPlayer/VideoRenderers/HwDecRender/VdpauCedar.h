@@ -45,7 +45,10 @@ typedef void ( * PFNGLVDPAUMAPSURFACESCEDAR) (int numSurfaces, const vdpauSurfac
 typedef void ( * PFNGLVDPAUUNMAPSURFACESCEDAR) (int numSurfaces, const vdpauSurfaceCedar *surfaces);
 typedef int ( * PFNGLVDPAUGETFRAMEIDCEDAR) (int hLayer, int dispFd);
 typedef void ( * PFGLVDPAUCLOSEVIDEOLAYERCEDAR) (int hLayer, int dispFd);
-typedef int (*PFGLVDPAUGETVIDEOFRAMECCONFIG)(vdpauSurfaceCedar surface,  struct videoFrameConfig *config);
+typedef int (* PFGLVDPAUGETVIDEOFRAMECCONFIG)(vdpauSurfaceCedar surface,  struct videoFrameConfig *config);
+typedef int (* PFGLVDPAUDESTROYSURFACECEDAR) (vdpauSurfaceCedar surface);
+typedef int (* PFGLVDPAUDCREATESURFACECEDAR) (int chroma_type, VdpYCbCrFormat format, int width, int height, vdpauSurfaceCedar *surfaces);
+typedef int (* PFGLVDPAUGETMAPPEDMEMORYCEDAR) (vdpauSurfaceCedar surface, void** addrY, void** addrU, void** addrV);
 
 struct InteropInfoCedar
 {
@@ -60,6 +63,11 @@ struct InteropInfoCedar
   PFNGLVDPAUUNMAPSURFACESCEDAR glVDPAUUnmapSurfacesCedar;
   PFGLVDPAUGETVIDEOFRAMECCONFIG glVDPAUGetVideoFrameConfig;
 //  PFNGLVDPAUGETSURFACEIVCEDAR glVDPAUGetSurfaceivCedar;
+
+  PFGLVDPAUDESTROYSURFACECEDAR glVDPAUDestroySurfaceCedar;
+  PFGLVDPAUDCREATESURFACECEDAR glVDPAUCreateSurfaceCedar;
+  PFGLVDPAUGETMAPPEDMEMORYCEDAR glVDPAUGetMappedMemoryCedar;
+
   void *m_dlVdpauNvHandle;
 };
 
@@ -84,17 +92,19 @@ class CVdpauTextureCedar
 {
 public:
   CVdpauTextureCedar(void);
-  bool Map(VDPAU::CVdpauRenderPicture *pic, CHwLayerAdaptorVdpauAllwinner &hwAdaptor);
+  bool Map(CVideoBuffer *pic, CHwLayerAdaptorVdpauAllwinner &hwAdaptor);
   void Unmap();
   void Init(InteropInfoCedar &interop);
 
 protected:
-  bool MapNV12();
+  bool MapNV12(int surface);
   void UnmapNV12();
-  bool MapRGB();
+  bool MapRGB(int surface);
   void UnmapRGB();
   InteropInfoCedar m_interop;
-  CVdpauRenderPicture *m_vdpauPic = nullptr;
+  CVideoBuffer *m_vdpauPic = nullptr;
+  bool m_isYuv = false;
+
   struct CedarSurface
   {
     vdpauSurfaceCedar glVdpauSurface;

@@ -28,12 +28,13 @@
 #include "system.h"
 
 extern "C" {
-#include <libavutil/opt.h>
-#include <libavutil/mastering_display_metadata.h>
-#include <libavfilter/avfilter.h>
-#include <libavfilter/buffersink.h>
-#include <libavfilter/buffersrc.h>
-#include <libavutil/pixdesc.h>
+#include "libavutil/opt.h"
+#include "libavutil/mastering_display_metadata.h"
+#include "libavfilter/avfilter.h"
+#include "libavfilter/buffersink.h"
+#include "libavfilter/buffersrc.h"
+#include "libavutil/pixdesc.h"
+#include "libavutil/imgutils.h"
 }
 
 #ifndef TARGET_POSIX
@@ -242,6 +243,12 @@ void CDVDVideoCodecFFmpeg::CDropControl::Process(int64_t pts, bool drop)
   }
   m_lastPTS = pts;
 }
+int CDVDVideoCodecFFmpeg::FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int flags)
+{
+  ICallbackHWAccel *cb = static_cast<ICallbackHWAccel*>(avctx->opaque);
+  CDVDVideoCodecFFmpeg* ctx  = dynamic_cast<CDVDVideoCodecFFmpeg*>(cb);
+  return ctx->m_videoBufferPoolSunxi->FFGetBuffer(avctx, pic, flags);
+}
 
 enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx, const AVPixelFormat * fmt)
 {
@@ -263,6 +270,9 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
     pixFmtName = av_get_pix_fmt_name(defaultFmt);
     ctx->m_processInfo.SetVideoPixelFormat(pixFmtName ? pixFmtName : "");
     ctx->m_processInfo.SetSwDeinterlacingMethods();
+    avctx->get_buffer2 = FFGetBuffer; //avcodec_default_get_buffer2;
+    avctx->opaque = cb;
+
     return defaultFmt;
   }
 
@@ -307,7 +317,8 @@ enum AVPixelFormat CDVDVideoCodecFFmpeg::GetFormat(struct AVCodecContext * avctx
 CDVDVideoCodecFFmpeg::CDVDVideoCodecFFmpeg(CProcessInfo &processInfo)
 : CDVDVideoCodec(processInfo), m_postProc(processInfo)
 {
-  m_videoBufferPool = std::make_shared<CVideoBufferPoolFFmpeg>();
+  m_interopState.Init(0,0,0);
+  m_videoBufferPoolSunxi = std::make_shared<CVideoBufferPoolSunxi>(m_interopState.GetInterop());
 
   m_decoderState = STATE_NONE;
 }
@@ -359,6 +370,7 @@ bool CDVDVideoCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
   m_pCodecContext->workaround_bugs = FF_BUG_AUTODETECT;
   m_pCodecContext->get_format = GetFormat;
   m_pCodecContext->codec_tag = hints.codec_tag;
+  m_pCodecContext->get_buffer2 = FFGetBuffer; //avcodec_default_get_buffer2;
 
   // setup threading model
   if (!(hints.codecOptions & CODEC_FORCE_SOFTWARE))
@@ -860,7 +872,7 @@ bool CDVDVideoCodecFFmpeg::SetPictureParams(VideoPicture* pVideoPicture)
     pVideoPicture->videoBuffer->Release();
   pVideoPicture->videoBuffer = nullptr;
 
-  CVideoBufferFFmpeg *buffer = dynamic_cast<CVideoBufferFFmpeg*>(m_videoBufferPool->Get());
+  CVideoBufferSunxi *buffer = dynamic_cast<CVideoBufferSunxi*>(m_videoBufferPoolSunxi->Get());
   buffer->SetRef(m_pFrame);
   pVideoPicture->videoBuffer = buffer;
 
