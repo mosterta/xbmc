@@ -24,7 +24,13 @@ extern "C" {
 #include "libpostproc/postprocess.h"
 }
 
+#include "cores/VideoPlayer/Process/allwinner/ProcessInfoSunxi.h"
+#include "cores/VideoPlayer/VideoRenderers/HwDecRender/VdpauCedar.h"
+
 class CVideoBufferPoolFFmpeg;
+class CVideoBufferRefPoolSunxi;
+class CVideoBufferPoolSunxi;
+class CVideoBufferRefSunxi;
 
 class CDVDVideoCodecFFmpeg : public CDVDVideoCodec, public ICallbackHWAccel
 {
@@ -58,11 +64,13 @@ protected:
 
   bool HasHardware() { return m_pHardware != nullptr; };
   void SetHardware(IHardwareDecoder *hardware);
+  static int FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int flags);
 
   AVFrame* m_pFrame = nullptr;;
   AVFrame* m_pDecodedFrame = nullptr;;
   AVCodecContext* m_pCodecContext = nullptr;;
-  std::shared_ptr<CVideoBufferPoolFFmpeg> m_videoBufferPool;
+//  std::shared_ptr<CVideoBufferPoolFFmpeg> m_videoBufferPool;
+  std::shared_ptr<CVideoBufferPoolSunxi> m_videoBufferPoolSunxi;
 
   std::string m_filters;
   std::string m_filters_next;
@@ -98,6 +106,7 @@ protected:
   double m_DAR = 1.0;
   CDVDStreamInfo m_hints;
   CDVDCodecOptions m_options;
+  VDPAU::CInteropStateCedar m_interopState;
 
   struct CDropControl
   {

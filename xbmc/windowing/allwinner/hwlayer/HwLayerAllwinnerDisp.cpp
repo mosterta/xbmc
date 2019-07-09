@@ -194,10 +194,6 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
   args[3] = 0;
   struct CHwLayerAdaptorVdpauAllwinner::cFrameConfig config;
 
-  addr0 = (__u32)config.addrY;
-  addr1 = (__u32)config.addrU;
-  addr2 = (__u32)config.addrV;
-
   if(! frame.getFrameConfig(config))
   {
     CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2:%s Failure in getting frame configuration!", __FUNCTION__);
@@ -222,6 +218,10 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
       m_layerConfig.info.fb.format = DISP_FORMAT_YUV420_SP_VUVU;
       break;
   }
+
+  addr0 = (__u32)config.addrY;
+  addr1 = (__u32)config.addrU;
+  addr2 = (__u32)config.addrV;
 
   m_layerConfig.info.fb.addr[0] = addr0 ;
   m_layerConfig.info.fb.addr[1] = addr1 ;
@@ -253,9 +253,9 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
   m_layerConfig.info.fb.size[1].height = config.fbSize.height/2;
   m_layerConfig.info.fb.size[2].width = config.fbSize.width/2;
   m_layerConfig.info.fb.size[2].height = config.fbSize.height/2;
-  m_layerConfig.info.fb.align[0] = 32;
-  m_layerConfig.info.fb.align[1] = 16;
-  m_layerConfig.info.fb.align[2] = 16;
+  m_layerConfig.info.fb.align[0] = config.alignY;
+  m_layerConfig.info.fb.align[1] = config.alignU;
+  m_layerConfig.info.fb.align[2] = config.alignV;
   m_layerConfig.info.fb.crop.x = ((long long)(src.x)) << 32;
   m_layerConfig.info.fb.crop.y = ((long long)(src.y)) << 32;
   m_layerConfig.info.fb.crop.width = ((long long)(src.width)) << 32;
