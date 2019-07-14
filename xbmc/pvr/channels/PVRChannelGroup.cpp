@@ -34,13 +34,13 @@
 
 using namespace PVR;
 
-CPVRChannelGroup::CPVRChannelGroup(void)
+CPVRChannelGroup::CPVRChannelGroup()
 {
   OnInit();
 }
 
 CPVRChannelGroup::CPVRChannelGroup(bool bRadio,
-                                   unsigned int iGroupId,
+                                   int iGroupId,
                                    const std::string& strGroupName,
                                    const std::shared_ptr<CPVRChannelGroup>& allChannelsGroup) :
     m_bRadio(bRadio),
@@ -490,17 +490,13 @@ CFileItemPtr CPVRChannelGroup::GetPreviousChannel(const CPVRChannelPtr &channel)
   return retval;
 }
 
-PVR_CHANNEL_GROUP_SORTED_MEMBERS CPVRChannelGroup::GetMembers(void) const
+std::vector<PVRChannelGroupMember> CPVRChannelGroup::GetMembers(Include eFilter /* = Include::ALL */) const
 {
   CSingleLock lock(m_critSection);
-  return m_sortedMembers;
-}
+  if (eFilter == Include::ALL)
+    return m_sortedMembers;
 
-int CPVRChannelGroup::GetMembers(CFileItemList &results, Include eFilter /* = Include::ONLY_VISIBLE */) const
-{
-  int iOrigSize = results.Size();
-  CSingleLock lock(m_critSection);
-
+  std::vector<PVRChannelGroupMember> members;
   for (const auto& member : m_sortedMembers)
   {
     switch (eFilter)
@@ -517,10 +513,10 @@ int CPVRChannelGroup::GetMembers(CFileItemList &results, Include eFilter /* = In
         break;
     }
 
-    results.Add(std::make_shared<CFileItem>(member.channel));
+    members.emplace_back(member);
   }
 
-  return results.Size() - iOrigSize;
+  return members;
 }
 
 void CPVRChannelGroup::GetChannelNumbers(std::vector<std::string>& channelNumbers) const
@@ -773,11 +769,11 @@ bool CPVRChannelGroup::Persist(void)
   CSingleLock lock(m_critSection);
 
   /* only persist if the group has changes and is fully loaded or never has been saved before */
-  if (!HasChanges() || (!m_bLoaded && m_iGroupId != -1))
+  if (!HasChanges() || (!m_bLoaded && m_iGroupId != INVALID_GROUP_ID))
     return bReturn;
 
   // Mark newly created groups as loaded so future updates will also be persisted...
-  if (m_iGroupId == -1)
+  if (m_iGroupId == INVALID_GROUP_ID)
     m_bLoaded = true;
 
   if (database)
@@ -926,7 +922,7 @@ std::vector<std::shared_ptr<CPVREpgInfoTag>> CPVRChannelGroup::GetEPGAll(bool bI
     channel = (*it).channel;
     if (!channel->IsHidden())
     {
-      bool bEmpty = false;
+      bool bEmpty = true;
 
       CPVREpgPtr epg = channel->GetEPG();
       if (epg)

@@ -192,14 +192,12 @@ void CGUIWindowPVRGuideBase::UpdateButtons(void)
 
 bool CGUIWindowPVRGuideBase::Update(const std::string &strDirectory, bool updateFilterPath /* = true */)
 {
-  if (m_vecItemsUpdating)
+  if (m_bUpdating)
   {
     // Prevent concurrent updates. Instead, let the timeline items refresh thread pick it up later.
     m_bRefreshTimelineItems = true;
     return true;
   }
-
-  CUpdateGuard guard(m_vecItemsUpdating);
 
   bool bReturn = CGUIWindowPVRBase::Update(strDirectory, updateFilterPath);
 
@@ -625,7 +623,7 @@ bool CGUIWindowPVRGuideBase::RefreshTimelineItems()
         m_bFirstOpen = false;
 
         // very first open of the window. come up with some data very fast...
-        const std::vector<PVRChannelGroupMember> groupMembers = group->GetMembers();
+        const std::vector<PVRChannelGroupMember> groupMembers = group->GetMembers(CPVRChannelGroup::Include::ONLY_VISIBLE);
         for (const auto& groupMember : groupMembers)
         {
           // fake a channel without epg
