@@ -55,7 +55,7 @@ namespace PVR
 
     void UpdateSummary(void);
 
-    std::string GetStatus() const;
+    std::string GetStatus(bool bRadio) const;
     std::string GetTypeAsString() const;
 
     static const int DEFAULT_PVRRECORD_INSTANTRECORDTIME = -1;
@@ -75,6 +75,12 @@ namespace PVR
      * @return the timer or null if timer could not be created
      */
     static CPVRTimerInfoTagPtr CreateFromEpg(const CPVREpgInfoTagPtr &tag, bool bCreateRule = false);
+
+    /*!
+     * @brief Associate the given epg tag with this timer.
+     * @param tag The epg tag to assign.
+     */
+    void SetEpgInfoTag(const std::shared_ptr<CPVREpgInfoTag>& tag);
 
     /*!
      * @brief get the epg info tag associated with this timer, if any
@@ -180,6 +186,12 @@ namespace PVR
     void SetEndFromUTC(CDateTime &end) { m_StopTime = end; }
     void SetEndFromLocalTime(CDateTime &end) { m_StopTime = end.GetAsUTCDateTime(); }
 
+    /*!
+     * @brief Get the duration of this timer in seconds, excluding padding times.
+     * @return The duration.
+     */
+    int GetDuration() const;
+
     CDateTime FirstDayAsUTC(void) const;
     CDateTime FirstDayAsLocalTime(void) const;
     void SetFirstDayFromLocalTime(CDateTime &firstDay) { m_FirstDay = firstDay.GetAsUTCDateTime(); }
@@ -241,17 +253,6 @@ namespace PVR
     bool UpdateOnClient();
 
     /*!
-     * @brief Associate the given epg tag with this timer; before, clear old timer at associated epg tag, if any.
-     * @param tag The epg tag to assign.
-     */
-    void SetEpgTag(const CPVREpgInfoTagPtr &tag);
-
-    /*!
-     * @brief Clear the epg tag associated with this timer; before, clear this timer at associated epg tag, if any.
-     */
-    void ClearEpgTag(void);
-
-    /*!
      * @brief Update the channel associated with this timer.
      * @return the channel for the timer. Can be empty for epg based repeating timers (e.g. "match any channel" rules)
      */
@@ -310,10 +311,14 @@ namespace PVR
     CDateTime             m_FirstDay;  /*!< if it is a manual timer rule the first date it starts */
     CPVRTimerTypePtr      m_timerType; /*!< the type of this timer */
 
-    unsigned int          m_iActiveChildTimers;   /*!< @brief Number of active timers which have this timer as their m_iParentClientIndex */
-    bool                  m_bHasChildConflictNOK; /*!< @brief Has at least one child timer with status PVR_TIMER_STATE_CONFLICT_NOK */
-    bool                  m_bHasChildRecording;   /*!< @brief Has at least one child timer with status PVR_TIMER_STATE_RECORDING */
-    bool                  m_bHasChildErrors;      /*!< @brief Has at least one child timer with status PVR_TIMER_STATE_ERROR */
+    unsigned int          m_iActiveTVChildTimers;   /*!< @brief Number of active TV timers which have this timer as their m_iParentClientIndex */
+    unsigned int          m_iActiveRadioChildTimers;   /*!< @brief Number of active radio timers which have this timer as their m_iParentClientIndex */
+    bool                  m_bHasTVChildConflictNOK; /*!< @brief Has at least one child TV timer with status PVR_TIMER_STATE_CONFLICT_NOK */
+    bool                  m_bHasRadioChildConflictNOK; /*!< @brief Has at least one child radio timer with status PVR_TIMER_STATE_CONFLICT_NOK */
+    bool                  m_bHasTVChildRecording;   /*!< @brief Has at least one TV child timer with status PVR_TIMER_STATE_RECORDING */
+    bool                  m_bHasRadioChildRecording;   /*!< @brief Has at least one radio child timer with status PVR_TIMER_STATE_RECORDING */
+    bool                  m_bHasTVChildErrors;      /*!< @brief Has at least one child TV timer with status PVR_TIMER_STATE_ERROR */
+    bool                  m_bHasRadioChildErrors;      /*!< @brief Has at least one child radio timer with status PVR_TIMER_STATE_ERROR */
 
     std::string m_strSeriesLink; /*!< series link */
 

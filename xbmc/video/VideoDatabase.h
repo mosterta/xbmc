@@ -808,8 +808,12 @@ public:
   std::string GetItemById(const std::string &itemType, int id);
 
   // partymode
-  unsigned int GetMusicVideoIDs(const std::string& strWhere, std::vector<std::pair<int, int> > &songIDs);
-  bool GetRandomMusicVideo(CFileItem* item, int& idSong, const std::string& strWhere);
+  /*! \brief Gets music video IDs in random order that match the where clause
+  \param strWhere the SQL where clause to apply in the query
+  \param songIDs a vector of <2, id> pairs suited to party mode use
+  \return count of music video IDs found.
+  */
+  unsigned int GetRandomMusicVideoIDs(const std::string& strWhere, std::vector<std::pair<int, int> > &songIDs);
 
   static void VideoContentTypeToString(VIDEODB_CONTENT_TYPE type, std::string& out)
   {
@@ -843,6 +847,14 @@ public:
   bool GetTvShowNamedSeasons(int showId, std::map<int, std::string> &seasons);
   bool GetTvShowSeasonArt(int mediaId, std::map<int, std::map<std::string, std::string> > &seasonArt);
   bool GetArtTypes(const MediaType &mediaType, std::vector<std::string> &artTypes);
+
+  /*! \brief Fetch the distinct types of available-but-unassigned art held in the
+  database for a specific media item.
+  \param mediaId the id in the media table.
+  \param mediaType the type of media, which corresponds to the table the item resides in.
+  \return the types of art e.g. "thumb", "fanart", etc.
+  */
+  std::vector<std::string> GetAvailableArtTypesForItem(int mediaId, const MediaType& mediaType);
 
   int AddTag(const std::string &tag);
   void AddTagToItem(int idItem, int idTag, const std::string &type);

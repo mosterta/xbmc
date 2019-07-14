@@ -12,7 +12,10 @@
 #include <androidjni/UUID.h>
 #include <stdexcept>
 
+#include "filesystem/File.h"
 #include "utils/StringUtils.h"
+#include "utils/log.h"
+#include "utils/Base64.h"
 
 using namespace DRM;
 using namespace XbmcCommons;
@@ -21,9 +24,9 @@ using namespace XbmcCommons;
 class CharVecBuffer : public Buffer
 {
 public:
-  inline CharVecBuffer(const Buffer &buf) : Buffer(buf) {};
+  inline CharVecBuffer(const Buffer& buf) : Buffer(buf) {};
 
-  inline CharVecBuffer(const std::vector<char> &vec)
+  inline CharVecBuffer(const std::vector<char>& vec)
     : Buffer(vec.size())
   {
     memcpy(data(), vec.data(), vec.size());
@@ -41,7 +44,7 @@ void CMediaDrmCryptoSession::Register()
   CCryptoSession::RegisterInterface(CMediaDrmCryptoSession::Create);
 }
 
-CMediaDrmCryptoSession::CMediaDrmCryptoSession(const std::string &UUID, const std::string &cipherAlgo, const std::string &macAlgo)
+CMediaDrmCryptoSession::CMediaDrmCryptoSession(const std::string& UUID, const std::string& cipherAlgo, const std::string& macAlgo)
   : m_mediaDrm(nullptr)
   , m_cryptoSession(nullptr)
   , m_cipherAlgo(cipherAlgo)
@@ -66,11 +69,15 @@ CMediaDrmCryptoSession::CMediaDrmCryptoSession(const std::string &UUID, const st
   if (xbmc_jnienv()->ExceptionCheck())
   {
     xbmc_jnienv()->ExceptionClear();
+    CLog::Log(LOGERROR, "MediaDrm: Failure creating instance");
     throw std::runtime_error("Failure creating MediaDrm");
   }
 
   if (!OpenSession())
+  {
+    CLog::Log(LOGERROR, "MediaDrm: Unable to create a session");
     throw std::runtime_error("Unable to create a session");
+  }
 }
 
 CMediaDrmCryptoSession::~CMediaDrmCryptoSession()
@@ -84,14 +91,14 @@ CMediaDrmCryptoSession::~CMediaDrmCryptoSession()
   delete m_mediaDrm, m_mediaDrm = nullptr;
 }
 
-CCryptoSession* CMediaDrmCryptoSession::Create(const std::string &UUID, const std::string &cipherAlgo, const std::string &macAlgo)
+CCryptoSession* CMediaDrmCryptoSession::Create(const std::string& UUID, const std::string& cipherAlgo, const std::string& macAlgo)
 {
   CMediaDrmCryptoSession *res = nullptr;;
   try
   {
     res = new CMediaDrmCryptoSession(UUID, cipherAlgo, macAlgo);
   }
-  catch (std::runtime_error &e)
+  catch (std::runtime_error& e)
   {
     delete res, res = nullptr;
   }
@@ -101,10 +108,10 @@ CCryptoSession* CMediaDrmCryptoSession::Create(const std::string &UUID, const st
 /*****************/
 
 // Interface methods
-Buffer CMediaDrmCryptoSession::GetKeyRequest(const Buffer &init,
-  const std::string &mimeType,
+Buffer CMediaDrmCryptoSession::GetKeyRequest(const Buffer& init,
+  const std::string& mimeType,
   bool offlineKey,
-  const std::map<std::string, std::string> &parameters)
+  const std::map<std::string, std::string>& parameters)
 {
   if (m_mediaDrm && m_sessionId)
   {
@@ -117,7 +124,7 @@ Buffer CMediaDrmCryptoSession::GetKeyRequest(const Buffer &init,
 }
 
 
-std::string CMediaDrmCryptoSession::GetPropertyString(const std::string &name)
+std::string CMediaDrmCryptoSession::GetPropertyString(const std::string& name)
 {
   if (m_mediaDrm)
     return m_mediaDrm->getPropertyString(name);
@@ -126,7 +133,7 @@ std::string CMediaDrmCryptoSession::GetPropertyString(const std::string &name)
 }
 
 
-std::string CMediaDrmCryptoSession::ProvideKeyResponse(const Buffer &response)
+std::string CMediaDrmCryptoSession::ProvideKeyResponse(const Buffer& response)
 {
   if (m_mediaDrm)
   {
@@ -147,7 +154,7 @@ void CMediaDrmCryptoSession::RemoveKeys()
   }
 }
 
-void CMediaDrmCryptoSession::RestoreKeys(const std::string &keySetId)
+void CMediaDrmCryptoSession::RestoreKeys(const std::string& keySetId)
 {
   if (m_mediaDrm && keySetId != m_keySetId)
   {
@@ -157,14 +164,14 @@ void CMediaDrmCryptoSession::RestoreKeys(const std::string &keySetId)
   }
 }
 
-void CMediaDrmCryptoSession::SetPropertyString(const std::string &name, const std::string &value)
+void CMediaDrmCryptoSession::SetPropertyString(const std::string& name, const std::string& value)
 {
   if (m_mediaDrm)
     m_mediaDrm->setPropertyString(name, value);
 }
 
 // Crypto methods
-Buffer CMediaDrmCryptoSession::Decrypt(const Buffer &cipherKeyId, const Buffer &input, const Buffer &iv)
+Buffer CMediaDrmCryptoSession::Decrypt(const Buffer& cipherKeyId, const Buffer& input, const Buffer& iv)
 {
   if (m_cryptoSession)
     return CharVecBuffer(m_cryptoSession->decrypt(CharVecBuffer(cipherKeyId), CharVecBuffer(input), CharVecBuffer(iv)));
@@ -172,7 +179,7 @@ Buffer CMediaDrmCryptoSession::Decrypt(const Buffer &cipherKeyId, const Buffer &
   return Buffer();
 }
 
-Buffer CMediaDrmCryptoSession::Encrypt(const Buffer &cipherKeyId, const Buffer &input, const Buffer &iv)
+Buffer CMediaDrmCryptoSession::Encrypt(const Buffer& cipherKeyId, const Buffer& input, const Buffer& iv)
 {
   if (m_cryptoSession)
     return CharVecBuffer(m_cryptoSession->encrypt(CharVecBuffer(cipherKeyId), CharVecBuffer(input), CharVecBuffer(iv)));
@@ -180,7 +187,7 @@ Buffer CMediaDrmCryptoSession::Encrypt(const Buffer &cipherKeyId, const Buffer &
   return Buffer();
 }
 
-Buffer CMediaDrmCryptoSession::Sign(const Buffer &macKeyId, const Buffer &message)
+Buffer CMediaDrmCryptoSession::Sign(const Buffer& macKeyId, const Buffer& message)
 {
   if (m_cryptoSession)
     return CharVecBuffer(m_cryptoSession->sign(CharVecBuffer(macKeyId), CharVecBuffer(message)));
@@ -188,7 +195,7 @@ Buffer CMediaDrmCryptoSession::Sign(const Buffer &macKeyId, const Buffer &messag
   return Buffer();
 }
 
-bool CMediaDrmCryptoSession::Verify(const Buffer &macKeyId, const Buffer &message, const Buffer &signature)
+bool CMediaDrmCryptoSession::Verify(const Buffer& macKeyId, const Buffer& message, const Buffer& signature)
 {
   if (m_cryptoSession)
     return m_cryptoSession->verify(CharVecBuffer(macKeyId), CharVecBuffer(message), CharVecBuffer(signature));
@@ -199,18 +206,29 @@ bool CMediaDrmCryptoSession::Verify(const Buffer &macKeyId, const Buffer &messag
 //Private stuff
 bool CMediaDrmCryptoSession::OpenSession()
 {
+  bool provisioned = false;
+TRYAGAIN:
   m_sessionId = new CharVecBuffer(m_mediaDrm->openSession());
   if (xbmc_jnienv()->ExceptionCheck())
   {
-    delete m_sessionId, m_sessionId = nullptr;
     xbmc_jnienv()->ExceptionClear();
-    return false;;
+    if (provisioned || !ProvisionRequest())
+    {
+      delete m_sessionId, m_sessionId = nullptr;
+      return false;
+    }
+    else
+    {
+      provisioned = true;
+      goto TRYAGAIN;
+    }
   }
 
   m_cryptoSession = new CJNIMediaDrmCryptoSession(m_mediaDrm->getCryptoSession(*m_sessionId, m_cipherAlgo, m_macAlgo));
 
   if (xbmc_jnienv()->ExceptionCheck())
   {
+    CLog::Log(LOGERROR, "MediaDrm: getCryptoSession failed");
     xbmc_jnienv()->ExceptionClear();
     return false;
   }
@@ -231,4 +249,62 @@ void CMediaDrmCryptoSession::CloseSession()
     m_hasKeys = false;
     m_keySetId.clear();
   }
+}
+
+bool CMediaDrmCryptoSession::ProvisionRequest()
+{
+  CLog::Log(LOGINFO, "MediaDrm: starting provisioning");
+
+  CJNIMediaDrmProvisionRequest request = m_mediaDrm->getProvisionRequest();
+  if (xbmc_jnienv()->ExceptionCheck())
+  {
+    CLog::Log(LOGERROR, "MediaDrm: getProvisionRequest failed");
+    xbmc_jnienv()->ExceptionClear();
+    return false;
+  }
+
+  std::vector<char> provData = request.getData();
+  std::string url = request.getDefaultUrl();
+
+  CLog::Log(LOGDEBUG, "MediaDrm: Provisioning: size: %lu, url: %s", provData.size(), url.c_str());
+
+  std::string tmp_str("{\"signedRequest\":\"");
+  tmp_str += std::string(provData.data(), provData.size());
+  tmp_str += "\"}";
+
+  std::string encoded;
+  Base64::Encode(tmp_str.data(), tmp_str.size(), encoded);
+
+  XFILE::CFile file;
+  if (!file.CURLCreate(url))
+  {
+    CLog::Log(LOGERROR, "MediaDrm: CURLCreate failed!");
+    return false;
+  }
+
+  file.CURLAddOption(XFILE::CURL_OPTION_PROTOCOL, "Content-Type", "application/json");
+  file.CURLAddOption(XFILE::CURL_OPTION_PROTOCOL, "seekable", "0");
+  file.CURLAddOption(XFILE::CURL_OPTION_PROTOCOL, "postdata", encoded.c_str());
+
+  if (!file.CURLOpen(0))
+  {
+    CLog::Log(LOGERROR, "MediaDrm: Provisioning server returned failure");
+    return false;
+  }
+  provData.clear();
+  char buf[8192];
+  size_t nbRead;
+
+  // read the file
+  while ((nbRead = file.Read(buf, 8192)) > 0)
+    provData.insert(provData.end(), buf, buf + nbRead);
+
+  m_mediaDrm->provideProvisionResponse(provData);
+  if (xbmc_jnienv()->ExceptionCheck())
+  {
+    CLog::Log(LOGERROR, "MediaDrm: provideProvisionResponse failed");
+    xbmc_jnienv()->ExceptionClear();
+    return false;
+  }
+  return true;
 }

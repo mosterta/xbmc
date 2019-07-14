@@ -23,7 +23,7 @@
 #include "pvr/addons/PVRClients.h"
 #include "pvr/channels/PVRChannelGroupsContainer.h"
 #include "pvr/epg/Epg.h"
-#include "pvr/timers/PVRTimers.h"
+#include "pvr/timers/PVRTimersPath.h"
 
 using namespace PVR;
 
@@ -48,15 +48,8 @@ CPVRTimerInfoTag::CPVRTimerInfoTag(bool bRadio /* = false */) :
   const CPVRClientPtr client = CServiceBroker::GetPVRManager().GetClient(m_iClientId);
   if (client && client->GetClientCapabilities().SupportsTimers())
   {
-    // default to manual one-shot timer for given client
-    CPVRTimerTypePtr type(CPVRTimerType::CreateFromAttributes(
-      PVR_TIMER_TYPE_IS_MANUAL, PVR_TIMER_TYPE_IS_REPEATING | PVR_TIMER_TYPE_FORBIDS_NEW_INSTANCES, m_iClientId));
-
-    if (!type)
-    {
-      // last resort. default to first available type from any client.
-      type = CPVRTimerType::GetFirstAvailableType();
-    }
+    // default to first available type for given client
+    CPVRTimerTypePtr type = CPVRTimerType::GetFirstAvailableType(m_iClientId);
 
     if (type)
       SetTimerType(type);
@@ -189,10 +182,14 @@ bool CPVRTimerInfoTag::operator ==(const CPVRTimerInfoTag& right) const
           m_iTimerId            == right.m_iTimerId &&
           m_strSeriesLink       == right.m_strSeriesLink &&
           m_iEpgUid             == right.m_iEpgUid &&
-          m_iActiveChildTimers  == right.m_iActiveChildTimers &&
-          m_bHasChildConflictNOK== right.m_bHasChildConflictNOK &&
-          m_bHasChildRecording  == right.m_bHasChildRecording &&
-          m_bHasChildErrors     == right.m_bHasChildErrors);
+          m_iActiveTVChildTimers == right.m_iActiveTVChildTimers &&
+          m_iActiveRadioChildTimers == right.m_iActiveRadioChildTimers &&
+          m_bHasTVChildConflictNOK == right.m_bHasTVChildConflictNOK &&
+          m_bHasRadioChildConflictNOK == right.m_bHasRadioChildConflictNOK &&
+          m_bHasTVChildRecording == right.m_bHasTVChildRecording &&
+          m_bHasRadioChildRecording == right.m_bHasRadioChildRecording &&
+          m_bHasTVChildErrors == right.m_bHasTVChildErrors &&
+          m_bHasRadioChildErrors == right.m_bHasRadioChildErrors);
 }
 
 /**
@@ -291,13 +288,6 @@ void CPVRTimerInfoTag::Serialize(CVariant &value) const
   value["serieslink"]        = m_strSeriesLink;
 }
 
-void CPVRTimerInfoTag::UpdateEpgInfoTag(void)
-{
-  CSingleLock lock(m_critSection);
-  m_epgTag.reset();
-  GetEpgInfoTag();
-}
-
 void CPVRTimerInfoTag::UpdateSummary(void)
 {
   CSingleLock lock(m_critSection);
@@ -362,7 +352,7 @@ void CPVRTimerInfoTag::SetTimerType(const CPVRTimerTypePtr &type)
 /**
  * Get the status string of this Timer, is used by the GUIInfoManager
  */
-std::string CPVRTimerInfoTag::GetStatus() const
+std::string CPVRTimerInfoTag::GetStatus(bool bRadio) const
 {
   std::string strReturn = g_localizeStrings.Get(305);
   CSingleLock lock(m_critSection);
@@ -381,20 +371,21 @@ std::string CPVRTimerInfoTag::GetStatus() const
   else if (m_state == PVR_TIMER_STATE_DISABLED)
     strReturn = g_localizeStrings.Get(13106);
   else if (m_state == PVR_TIMER_STATE_COMPLETED)
-    if (m_bHasChildRecording)
+    if ((m_bHasTVChildRecording && !bRadio) || (m_bHasRadioChildRecording && bRadio))
       strReturn = g_localizeStrings.Get(19162); // "Recording active"
     else
       strReturn = g_localizeStrings.Get(19256); // "Completed"
   else if (m_state == PVR_TIMER_STATE_SCHEDULED || m_state == PVR_TIMER_STATE_NEW)
   {
-    if (m_bHasChildRecording)
+    if ((m_bHasTVChildRecording && !bRadio) || (m_bHasRadioChildRecording && bRadio))
       strReturn = g_localizeStrings.Get(19162); // "Recording active"
-    else if (m_bHasChildErrors)
+    else if ((m_bHasTVChildErrors && !bRadio) || (m_bHasRadioChildErrors && bRadio))
       strReturn = g_localizeStrings.Get(257);   // "Error"
-    else if (m_bHasChildConflictNOK)
+    else if ((m_bHasTVChildConflictNOK && !bRadio) || (m_bHasRadioChildConflictNOK && bRadio))
       strReturn = g_localizeStrings.Get(19276); // "Conflict error"
-    else if (m_iActiveChildTimers > 0)
-      strReturn = StringUtils::Format(g_localizeStrings.Get(19255).c_str(), m_iActiveChildTimers); // "%d scheduled"
+    else if ((m_iActiveTVChildTimers > 0 && !bRadio) || (m_iActiveRadioChildTimers > 0 && bRadio))
+      strReturn = StringUtils::Format(g_localizeStrings.Get(19255).c_str(),
+                                      bRadio ? m_iActiveRadioChildTimers : m_iActiveTVChildTimers); // "%d scheduled"
   }
 
   return strReturn;
@@ -581,17 +572,34 @@ bool CPVRTimerInfoTag::UpdateChildState(const CPVRTimerInfoTagPtr &childTimer)
   case PVR_TIMER_STATE_NEW:
   case PVR_TIMER_STATE_SCHEDULED:
   case PVR_TIMER_STATE_CONFLICT_OK:
-    m_iActiveChildTimers++;
+    if (childTimer->m_bIsRadio)
+      m_iActiveRadioChildTimers++;
+    else
+      m_iActiveTVChildTimers++;
     break;
   case PVR_TIMER_STATE_RECORDING:
-    m_iActiveChildTimers++;
-    m_bHasChildRecording = true;
+    if (childTimer->m_bIsRadio)
+    {
+      m_iActiveRadioChildTimers++;
+      m_bHasRadioChildRecording = true;
+    }
+    else
+    {
+      m_iActiveTVChildTimers++;
+      m_bHasTVChildRecording = true;
+    }
     break;
   case PVR_TIMER_STATE_CONFLICT_NOK:
-    m_bHasChildConflictNOK = true;
+    if (childTimer->m_bIsRadio)
+      m_bHasRadioChildConflictNOK = true;
+    else
+      m_bHasTVChildConflictNOK = true;
     break;
   case PVR_TIMER_STATE_ERROR:
-    m_bHasChildErrors = true;
+    if (childTimer->m_bIsRadio)
+      m_bHasRadioChildErrors = true;
+    else
+      m_bHasTVChildErrors = true;
     break;
   case PVR_TIMER_STATE_COMPLETED:
   case PVR_TIMER_STATE_ABORTED:
@@ -605,10 +613,14 @@ bool CPVRTimerInfoTag::UpdateChildState(const CPVRTimerInfoTagPtr &childTimer)
 
 void CPVRTimerInfoTag::ResetChildState()
 {
-  m_iActiveChildTimers = 0;
-  m_bHasChildConflictNOK = false;
-  m_bHasChildRecording = false;
-  m_bHasChildErrors = false;
+  m_iActiveTVChildTimers = 0;
+  m_iActiveRadioChildTimers = 0;
+  m_bHasTVChildConflictNOK = false;
+  m_bHasRadioChildConflictNOK = false;
+  m_bHasTVChildRecording = false;
+  m_bHasRadioChildRecording = false;
+  m_bHasTVChildErrors = false;
+  m_bHasRadioChildErrors = false;
 }
 
 bool CPVRTimerInfoTag::UpdateOnClient()
@@ -687,7 +699,7 @@ CPVRTimerInfoTagPtr CPVRTimerInfoTag::CreateInstantTimerTag(const CPVRChannelPtr
     newTimer->SetTimerType(timerType);
 
     if (epgTag)
-      newTimer->SetEpgTag(epgTag);
+      newTimer->SetEpgInfoTag(epgTag);
     else
       newTimer->UpdateEpgInfoTag();
   }
@@ -723,7 +735,7 @@ CPVRTimerInfoTagPtr CPVRTimerInfoTag::CreateFromEpg(const CPVREpgInfoTagPtr &tag
   CPVRTimerInfoTagPtr newTag(new CPVRTimerInfoTag());
 
   /* check if a valid channel is set */
-  CPVRChannelPtr channel = tag->Channel();
+  const std::shared_ptr<CPVRChannel> channel = CServiceBroker::GetPVRManager().ChannelGroups()->GetChannelForEpgTag(tag);
   if (!channel)
   {
     CLog::LogF(LOGERROR, "EPG tag has no channel");
@@ -735,7 +747,10 @@ CPVRTimerInfoTagPtr CPVRTimerInfoTag::CreateFromEpg(const CPVREpgInfoTagPtr &tag
   CDateTime newEnd = tag->EndAsUTC();
   newTag->m_iClientIndex       = PVR_TIMER_NO_CLIENT_INDEX;
   newTag->m_iParentClientIndex = PVR_TIMER_NO_PARENT;
-  newTag->m_strTitle           = tag->Title().empty() ? channel->ChannelName() : tag->Title();
+  if (!CServiceBroker::GetPVRManager().IsParentalLocked(tag))
+    newTag->m_strTitle = tag->Title();
+  if (newTag->m_strTitle.empty())
+    newTag->m_strTitle = channel->ChannelName();
   newTag->m_iClientChannelUid  = channel->UniqueID();
   newTag->m_iClientId          = channel->ClientID();
   newTag->m_bIsRadio           = channel->IsRadio();
@@ -794,7 +809,7 @@ CPVRTimerInfoTagPtr CPVRTimerInfoTag::CreateFromEpg(const CPVREpgInfoTagPtr &tag
 
   newTag->SetTimerType(timerType);
   newTag->UpdateSummary();
-  newTag->SetEpgTag(tag);
+  newTag->SetEpgInfoTag(tag);
 
   /* unused only for reference */
   newTag->m_strFileNameAndPath = CPVRTimersPath::PATH_NEW;
@@ -826,6 +841,14 @@ CDateTime CPVRTimerInfoTag::EndAsLocalTime(void) const
   CDateTime retVal;
   retVal.SetFromUTCDateTime(m_StopTime);
   return retVal;
+}
+
+int CPVRTimerInfoTag::GetDuration() const
+{
+  time_t start, end;
+  m_StartTime.GetAsTime(start);
+  m_StopTime.GetAsTime(end);
+  return end - start > 0 ? end - start : 3600;
 }
 
 CDateTime CPVRTimerInfoTag::FirstDayAsUTC(void) const
@@ -904,6 +927,19 @@ std::string CPVRTimerInfoTag::GetDeletedNotificationText() const
   return StringUtils::Format("%s: '%s'", g_localizeStrings.Get(stringID).c_str(), m_strTitle.c_str());
 }
 
+void CPVRTimerInfoTag::SetEpgInfoTag(const std::shared_ptr<CPVREpgInfoTag>& tag)
+{
+  CSingleLock lock(m_critSection);
+  m_epgTag = tag;
+}
+
+void CPVRTimerInfoTag::UpdateEpgInfoTag()
+{
+  CSingleLock lock(m_critSection);
+  m_epgTag.reset();
+  GetEpgInfoTag();
+}
+
 CPVREpgInfoTagPtr CPVRTimerInfoTag::GetEpgInfoTag(bool bCreate /* = true */) const
 {
   if (!m_epgTag && bCreate)
@@ -931,7 +967,7 @@ CPVREpgInfoTagPtr CPVRTimerInfoTag::GetEpgInfoTag(bool bCreate /* = true */) con
           }
         }
 
-        if (!m_epgTag && m_epTagRefetchTimeout.IsTimePast())
+        if (!IsTimerRule() && !m_epgTag && m_epTagRefetchTimeout.IsTimePast())
         {
           m_epTagRefetchTimeout.Set(30000); // try to fetch missing epg tag from backend at most every 30 secs
 
@@ -945,50 +981,15 @@ CPVREpgInfoTagPtr CPVRTimerInfoTag::GetEpgInfoTag(bool bCreate /* = true */) con
           if (startTime > 0 && endTime > 0)
           {
             // try to fetch missing epg tag from backend
-            const CPVREpgInfoTagPtr epgTag = epg->GetTagBetween(StartAsUTC() - CDateTimeSpan(0, 0, 2, 0), EndAsUTC() + CDateTimeSpan(0, 0, 2, 0), true);
-            if (epgTag)
-            {
-              bool bTagMatches = !IsTimerRule();
-              if (!bTagMatches)
-              {
-                // Check whether the tag actually is an event that belongs to a child of this timer rule
-                const CPVRTimerInfoTagPtr timer = epgTag->Timer();
-                if (timer && (timer->GetTimerRuleId() == m_iClientIndex))
-                {
-                  bTagMatches = true;
-                }
-              }
-
-              if (bTagMatches)
-              {
-                m_epgTag = epgTag;
-                m_iEpgUid = m_epgTag->UniqueBroadcastID();
-              }
-            }
+            m_epgTag = epg->GetTagBetween(StartAsUTC() - CDateTimeSpan(0, 0, 2, 0), EndAsUTC() + CDateTimeSpan(0, 0, 2, 0), true);
+            if (m_epgTag)
+              m_iEpgUid = m_epgTag->UniqueBroadcastID();
           }
         }
       }
     }
   }
   return m_epgTag;
-}
-
-void CPVRTimerInfoTag::SetEpgTag(const CPVREpgInfoTagPtr &tag)
-{
-  CPVREpgInfoTagPtr previousTag;
-  {
-    CSingleLock lock(m_critSection);
-    previousTag = m_epgTag;
-    m_epgTag = tag;
-  }
-
-  if (previousTag)
-    previousTag->ClearTimer();
-}
-
-void CPVRTimerInfoTag::ClearEpgTag(void)
-{
-  SetEpgTag(CPVREpgInfoTagPtr());
 }
 
 bool CPVRTimerInfoTag::HasChannel() const

@@ -8,8 +8,6 @@
 
 #pragma once
 
-#if defined(TARGET_DARWIN_OSX)
-
 #include "threads/Event.h"
 #include <CoreAudio/CoreAudio.h>
 #include <IOKit/audio/IOAudioTypes.h>
@@ -30,7 +28,7 @@ public:
   bool    Open(AudioStreamID streamId);
   void    Close(bool restore = true);
 
-  AudioStreamID GetId() {return m_StreamId;}
+  AudioStreamID GetId() const {return m_StreamId;}
   UInt32  GetDirection();
   static UInt32 GetTerminalType(AudioStreamID id);
   UInt32  GetNumLatencyFrames();
@@ -56,5 +54,3 @@ protected:
   AudioStreamBasicDescription m_OriginalVirtualFormat;
   AudioStreamBasicDescription m_OriginalPhysicalFormat;
 };
-
-#endif

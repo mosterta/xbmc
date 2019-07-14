@@ -450,10 +450,18 @@ public:
   bool GetSongsFullByWhere(const std::string &baseDir, const Filter &filter, CFileItemList& items, const SortDescription &sortDescription = SortDescription(), bool artistData = false);
   bool GetAlbumsByWhere(const std::string &baseDir, const Filter &filter, CFileItemList &items, const SortDescription &sortDescription = SortDescription(), bool countOnly = false);
   bool GetArtistsByWhere(const std::string& strBaseDir, const Filter &filter, CFileItemList& items, const SortDescription &sortDescription = SortDescription(), bool countOnly = false);
-  bool GetRandomSong(CFileItem* item, int& idSong, const Filter &filter);
   int GetSongsCount(const Filter &filter = Filter());
-  unsigned int GetSongIDs(const Filter &filter, std::vector<std::pair<int,int> > &songIDs);
   bool GetFilter(CDbUrl &musicUrl, Filter &filter, SortDescription &sorting) override;
+
+  /////////////////////////////////////////////////
+  // Party Mode
+  /////////////////////////////////////////////////
+  /*! \brief Gets song IDs in random order that match the filter criteria
+  \param filter the criteria to apply in the query
+  \param songIDs a vector of <1, id> pairs suited to party mode use
+  \return count of song ids found.
+  */
+  unsigned int GetRandomSongIDs(const Filter &filter, std::vector<std::pair<int, int> > &songIDs);
 
   /////////////////////////////////////////////////
   // JSON-RPC 
@@ -489,8 +497,10 @@ public:
   /////////////////////////////////////////////////
   // XML
   /////////////////////////////////////////////////
-  void ExportToXML(const CLibExportSettings& settings, CGUIDialogProgress* progressDialog = NULL);
-  void ImportFromXML(const std::string &xmlFile);
+  void ExportToXML(const CLibExportSettings& settings, CGUIDialogProgress* progressDialog = nullptr);
+  bool ExportSongHistory(TiXmlNode* pNode, CGUIDialogProgress* progressDialog = nullptr);
+  void ImportFromXML(const std::string& xmlFile, CGUIDialogProgress* progressDialog = nullptr);
+  bool ImportSongHistory(const std::string& xmlFile, const int total, CGUIDialogProgress* progressDialog = nullptr);
 
   /////////////////////////////////////////////////
   // Properties
@@ -587,6 +597,14 @@ public:
   \return true if art is found, false if no art is found.
   */
   bool GetArtTypes(const MediaType &mediaType, std::vector<std::string> &artTypes);
+
+  /*! \brief Fetch the distinct types of available-but-unassigned art held in the
+  database for a specific media item.
+  \param mediaId the id in the media (artist/album) table.
+  \param mediaType the type of media, which corresponds to the table the item resides in (artist/album).
+  \return the types of art e.g. "thumb", "fanart", etc.
+  */
+  std::vector<std::string> GetAvailableArtTypesForItem(int mediaId, const MediaType& mediaType);
 
   /////////////////////////////////////////////////
   // Tag Scan Version

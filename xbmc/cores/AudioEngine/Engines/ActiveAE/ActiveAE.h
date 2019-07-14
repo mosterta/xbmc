@@ -24,9 +24,9 @@
 
 // ffmpeg
 extern "C" {
-#include "libavformat/avformat.h"
-#include "libavcodec/avcodec.h"
-#include "libavutil/avutil.h"
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/avutil.h>
 }
 
 class IAESink;
@@ -184,7 +184,7 @@ public:
   void GetSyncInfo(CAESyncInfo& info, CActiveAEStream *stream);
   float GetCacheTime(CActiveAEStream *stream);
   float GetCacheTotal();
-  float GetMaxDelay();
+  float GetMaxDelay() const;
   float GetWaterLevel();
   void SetSuspended(bool state);
   void SetCurrentSinkFormat(const AEAudioFormat& SinkFormat);

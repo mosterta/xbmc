@@ -96,13 +96,16 @@ void CWinSystemAndroidGLESContext::SetVSyncImpl(bool enable)
 
 void CWinSystemAndroidGLESContext::PresentRenderImpl(bool rendered)
 {
+  if (!m_nativeWindow)
+  {
+    usleep(10000);
+    return;
+  }
+
   // Ignore EGL_BAD_SURFACE: It seems to happen during/after mode changes, but
   // we can't actually do anything about it
   if (rendered && !m_pGLContext.TrySwapBuffers())
-  {
     CEGLUtils::LogError("eglSwapBuffers failed");
-    throw std::runtime_error("eglSwapBuffers failed");
-  }
   CXBMCApp::get()->WaitVSync(1000);
 }
 

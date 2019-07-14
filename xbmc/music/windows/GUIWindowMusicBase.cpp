@@ -476,7 +476,7 @@ void CGUIWindowMusicBase::AddItemToPlayList(const CFileItemPtr &pItem, CFileItem
         return;
       }
     }
-    else if(pItem->IsInternetStream())
+    else if(pItem->IsInternetStream() && !pItem->IsMusicDb())
     { // just queue the internet stream, it will be expanded on play
       queuedItems.Add(pItem);
     }
@@ -829,7 +829,7 @@ bool CGUIWindowMusicBase::OnPlayMedia(int iItem, const std::string &player)
   {
     CPlayList playlistTemp;
     playlistTemp.Add(pItem);
-    g_partyModeManager.AddUserSongs(playlistTemp, true);
+    g_partyModeManager.AddUserSongs(playlistTemp, !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_MUSICPLAYER_QUEUEBYDEFAULT));
     return true;
   }
   else if (!pItem->IsPlayList() && !pItem->IsInternetStream())

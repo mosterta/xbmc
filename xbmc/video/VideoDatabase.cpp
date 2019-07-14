@@ -4159,6 +4159,9 @@ CVideoInfoTag CVideoDatabase::GetDetailsForMusicVideo(const dbiplus::sql_record*
 {
   CVideoInfoTag details;
 
+  if (record == nullptr)
+    return details;
+
   unsigned int time = XbmcThreads::SystemClockMillis();
   int idMVideo = record->at(0).get_asInt();
 
@@ -4663,6 +4666,117 @@ bool CVideoDatabase::GetArtTypes(const MediaType &mediaType, std::vector<std::st
     CLog::Log(LOGERROR, "%s(%s) failed", __FUNCTION__, mediaType.c_str());
   }
   return false;
+}
+
+namespace
+{
+std::vector<std::string> GetBasicItemAvailableArtTypes(const CVideoInfoTag& tag)
+{
+  std::vector<std::string> result;
+
+  //! @todo artwork: fanart stored separately, doesn't need to be
+  if (tag.m_fanart.GetNumFanarts() && std::find(result.cbegin(), result.cend(), "fanart") == result.cend())
+    result.push_back("fanart");
+
+  // all other images
+  for (const auto& urlEntry : tag.m_strPictureURL.m_url)
+  {
+    std::string artType = urlEntry.m_aspect;
+    if (artType.empty())
+      artType = tag.m_type == MediaTypeEpisode ? "thumb" : "poster";
+    if (urlEntry.m_type == CScraperUrl::URL_TYPE_GENERAL && // exclude season artwork for TV shows
+      !StringUtils::StartsWith(artType, "set.") && // exclude movie set artwork for movies
+      std::find(result.cbegin(), result.cend(), artType) == result.cend())
+    {
+      result.push_back(artType);
+    }
+  }
+  return result;
+}
+
+std::vector<std::string> GetSeasonAvailableArtTypes(int mediaId, CVideoDatabase& db)
+{
+  CVideoInfoTag tag;
+  db.GetSeasonInfo(mediaId, tag);
+
+  std::vector<std::string> result;
+
+  CVideoInfoTag sourceShow;
+  db.GetTvShowInfo("", sourceShow, tag.m_iIdShow);
+  for (const auto& urlEntry : sourceShow.m_strPictureURL.m_url)
+  {
+    std::string artType = urlEntry.m_aspect;
+    if (artType.empty())
+      artType = "poster";
+    if (urlEntry.m_type == CScraperUrl::URL_TYPE_SEASON && urlEntry.m_season == tag.m_iSeason &&
+      std::find(result.cbegin(), result.cend(), artType) == result.cend())
+    {
+      result.push_back(artType);
+    }
+  }
+  return result;
+}
+
+std::vector<std::string> GetMovieSetAvailableArtTypes(int mediaId, CVideoDatabase& db)
+{
+  std::vector<std::string> result;
+  CFileItemList items;
+  std::string baseDir = StringUtils::Format("videodb://movies/sets/%d", mediaId);
+  if (db.GetMoviesNav(baseDir, items))
+  {
+    for (const auto& item : items)
+    {
+      CVideoInfoTag* pTag = item->GetVideoInfoTag();
+      pTag->m_strPictureURL.Parse();
+      //! @todo artwork: fanart stored separately, doesn't need to be
+      pTag->m_fanart.Unpack();
+      if (pTag->m_fanart.GetNumFanarts() &&
+        std::find(result.cbegin(), result.cend(), "fanart") == result.cend())
+      {
+        result.push_back("fanart");
+      }
+
+      // all other images
+      for (const auto& urlEntry : pTag->m_strPictureURL.m_url)
+      {
+        std::string artType = urlEntry.m_aspect;
+        if (artType.empty())
+          artType = "poster";
+        else if (StringUtils::StartsWith(artType, "set."))
+          artType = artType.substr(4);
+
+        if (std::find(result.cbegin(), result.cend(), artType) == result.cend())
+          result.push_back(artType);
+      }
+    }
+  }
+  return result;
+}
+}
+
+std::vector<std::string> CVideoDatabase::GetAvailableArtTypesForItem(int mediaId,
+  const MediaType& mediaType)
+{
+  VIDEODB_CONTENT_TYPE dbType{VIDEODB_CONTENT_UNKNOWN};
+  if (mediaType == MediaTypeTvShow)
+    dbType = VIDEODB_CONTENT_TVSHOWS;
+  else if (mediaType == MediaTypeMovie)
+    dbType = VIDEODB_CONTENT_MOVIES;
+  else if (mediaType == MediaTypeEpisode)
+    dbType = VIDEODB_CONTENT_EPISODES;
+  else if (mediaType == MediaTypeMusicVideo)
+    dbType = VIDEODB_CONTENT_MUSICVIDEOS;
+
+  if (dbType != VIDEODB_CONTENT_UNKNOWN)
+  {
+    CVideoInfoTag tag = GetDetailsByTypeAndId(dbType, mediaId);
+    return GetBasicItemAvailableArtTypes(tag);
+  }
+  if (mediaType == MediaTypeSeason)
+    return GetSeasonAvailableArtTypes(mediaId, *this);
+  if (mediaType == MediaTypeVideoCollection)
+    return GetMovieSetAvailableArtTypes(mediaId, *this);
+  return {};
 }
 
 /// \brief GetStackTimes() obtains any saved video times for the stacked file
@@ -6574,7 +6688,8 @@ bool CVideoDatabase::GetYearsNav(const std::string& strBaseDir, CFileItemList& i
         {
           CDateTime time;
           time.SetFromDateString(dateString);
-          lYear = time.GetYear();
+          if (time.IsValid())
+            lYear = time.GetYear();
         }
         auto it = mapYears.find(lYear);
         if (it == mapYears.end())
@@ -6622,8 +6737,11 @@ bool CVideoDatabase::GetYearsNav(const std::string& strBaseDir, CFileItemList& i
         {
           CDateTime time;
           time.SetFromDateString(strLabel);
-          lYear = time.GetYear();
-          strLabel = StringUtils::Format("%i", lYear);
+          if (time.IsValid())
+          {
+            lYear = time.GetYear();
+            strLabel = StringUtils::Format("%i", lYear);
+          }
         }
         if (lYear == 0)
         {
@@ -8145,7 +8263,7 @@ bool CVideoDatabase::GetMusicVideosByWhere(const std::string &baseDir, const Fil
   return false;
 }
 
-unsigned int CVideoDatabase::GetMusicVideoIDs(const std::string& strWhere, std::vector<std::pair<int,int> > &songIDs)
+unsigned int CVideoDatabase::GetRandomMusicVideoIDs(const std::string& strWhere, std::vector<std::pair<int,int> > &songIDs)
 {
   try
   {
@@ -8155,6 +8273,7 @@ unsigned int CVideoDatabase::GetMusicVideoIDs(const std::string& strWhere, std::
     std::string strSQL = "select distinct idMVideo from musicvideo_view";
     if (!strWhere.empty())
       strSQL += " where " + strWhere;
+    strSQL += PrepareSQL(" ORDER BY RANDOM()");
 
     if (!m_pDS->query(strSQL)) return 0;
     songIDs.clear();
@@ -8177,44 +8296,6 @@ unsigned int CVideoDatabase::GetMusicVideoIDs(const std::string& strWhere, std::
     CLog::Log(LOGERROR, "%s (%s) failed", __FUNCTION__, strWhere.c_str());
   }
   return 0;
-}
-
-bool CVideoDatabase::GetRandomMusicVideo(CFileItem* item, int& idSong, const std::string& strWhere)
-{
-  try
-  {
-    idSong = -1;
-
-    if (NULL == m_pDB.get()) return false;
-    if (NULL == m_pDS.get()) return false;
-
-    std::string strSQL = "select * from musicvideo_view";
-    if (!strWhere.empty())
-      strSQL += " where " + strWhere;
-    strSQL += PrepareSQL(" order by RANDOM() limit 1");
-    CLog::Log(LOGDEBUG, LOGDATABASE, "%s query = %s", __FUNCTION__, strSQL.c_str());
-    // run query
-    if (!m_pDS->query(strSQL))
-      return false;
-    int iRowsFound = m_pDS->num_rows();
-    if (iRowsFound != 1)
-    {
-      m_pDS->close();
-      return false;
-    }
-    *item->GetVideoInfoTag() = GetDetailsForMusicVideo(m_pDS);
-    std::string path = StringUtils::Format("videodb://musicvideos/titles/%i",item->GetVideoInfoTag()->m_iDbId);
-    item->SetPath(path);
-    idSong = m_pDS->fv("idMVideo").get_asInt();
-    item->SetLabel(item->GetVideoInfoTag()->m_strTitle);
-    m_pDS->close();
-    return true;
-  }
-  catch(...)
-  {
-    CLog::Log(LOGERROR, "%s (%s) failed", __FUNCTION__, strWhere.c_str());
-  }
-  return false;
 }
 
 int CVideoDatabase::GetMatchingMusicVideo(const std::string& strArtist, const std::string& strAlbum, const std::string& strTitle)
