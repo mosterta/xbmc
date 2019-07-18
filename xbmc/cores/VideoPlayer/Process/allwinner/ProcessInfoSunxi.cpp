@@ -72,7 +72,7 @@ void CVideoBufferRefSunxi::config(AVCodecContext *avctx, int chromaType, int ycb
     m_width = width;
     m_height = height;
 
-    CLog::Log(LOGERROR, "CVDPAU::FFGetBuffer - reconfig - Video surface=%d destroyed", m_surf);
+    CLog::Log(LOGDEBUG, "CVideoBufferRefSunxi::%s - (re-)config - Video surface=%d destroyed", __FUNCTION__, m_surf);
     m_interop.glVDPAUDestroySurfaceCedar(m_surf);
 
     int vdp_st;
@@ -100,7 +100,7 @@ void CVideoBufferRefSunxi::config(AVCodecContext *avctx, int chromaType, int ycb
     vdp_st = m_interop.glVDPAUCreateSurfaceCedar(chromaType, ycbcrFormat, width, height, &m_surf);
     if (vdp_st != 0)
     {
-      CLog::Log(LOGERROR, "CVDPAU::FFGetBuffer - No Video surface available could be created");
+      CLog::Log(LOGERROR, "CVideoBufferRefSunxi::%s - No Video surface available could be created", __FUNCTION__);
       return ;
     }
   } 
@@ -108,7 +108,7 @@ void CVideoBufferRefSunxi::config(AVCodecContext *avctx, int chromaType, int ycb
 
 void CVideoBufferRefSunxi::createFrame()
 {
-  CLog::Log(LOGERROR, "CVDPAU::FFGetBuffer - Video surface=%d created", m_surf);
+  CLog::Log(LOGDEBUG, "CVideoBufferRefSunxi::%s - Video surface=%d created", __FUNCTION__, m_surf);
     
   if(m_bufRef)
   {
@@ -360,13 +360,13 @@ fail:
 
 void CVideoBufferRefSunxi::FFReleaseBuffer(void *opaque, uint8_t *data)
 {
-  CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
+  CLog::Log(LOGDEBUG, " (CVideoBufferRefSunxi) %s", __FUNCTION__);
   
   CVideoBufferRefSunxi  *bufRef = (CVideoBufferRefSunxi *)opaque;
   
   bufRef->Release();
   bufRef->m_bufRef = NULL;
 
-  CLog::Log(LOGERROR, " (VDPAU) %s releasing videobuf =%d", __FUNCTION__, bufRef->GetId());
+  CLog::Log(LOGDEBUG, " (CVideoBufferRefSunxi) %s releasing videobuf =%d", __FUNCTION__, bufRef->GetId());
 }
 
