@@ -28,6 +28,7 @@
 #include "threads/SystemClock.h"
 #include "EGL/eglplatform_fb.h"
 #include "EGL/egl.h"
+#include "windowing/allwinner/SunxiDispBase.h"
 
 class IDispResource;
 
@@ -72,9 +73,6 @@ protected:
   bool ProbeResolutions(std::vector<RESOLUTION_INFO> &resolutions);
   bool ModeToResolution(std::string mode, RESOLUTION_INFO *res);
 
-  int GetWidth();
-  int GetHeight();
-  int GetRefreshRate();
   bool VLInit();
   void VLExit();
   
@@ -84,4 +82,5 @@ protected:
   int     m_screenid{0};
   std::unique_ptr<OPTIONALS::CLircContainer, OPTIONALS::delete_CLircContainer> m_lirc;
   std::unique_ptr<CLibInputHandler> m_libinput;
+  std::unique_ptr<SunxiDispBase> m_dispBase;
 };

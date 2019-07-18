@@ -329,6 +329,7 @@ CCPUInfo::CCPUInfo(void)
         {
           needle+=2;
           m_cores[nCurrId].m_strVendor = needle;
+          StringUtils::RemoveCR(m_cores[nCurrId].m_strVendor);
           StringUtils::Trim(m_cores[nCurrId].m_strVendor);
         }
       }
@@ -339,6 +340,7 @@ CCPUInfo::CCPUInfo(void)
         {
           needle+=2;
           m_cpuModel = needle;
+          StringUtils::RemoveCR(m_cpuModel);
           m_cores[nCurrId].m_strModel = m_cpuModel;
           StringUtils::Trim(m_cores[nCurrId].m_strModel);
         }
@@ -350,6 +352,7 @@ CCPUInfo::CCPUInfo(void)
         {
           needle+=2;
           m_cpuBogoMips = needle;
+          StringUtils::RemoveCR(m_cpuBogoMips);
           m_cores[nCurrId].m_strBogoMips = m_cpuBogoMips;
           StringUtils::Trim(m_cores[nCurrId].m_strBogoMips);
         }
@@ -361,6 +364,7 @@ CCPUInfo::CCPUInfo(void)
         {
           needle+=2;
           m_cpuHardware = needle;
+          StringUtils::RemoveCR(m_cpuHardware);
           m_cores[nCurrId].m_strHardware = m_cpuHardware;
           StringUtils::Trim(m_cores[nCurrId].m_strHardware);
         }
@@ -372,6 +376,7 @@ CCPUInfo::CCPUInfo(void)
         {
           needle+=2;
           m_cpuRevision = needle;
+          StringUtils::RemoveCR(m_cpuRevision);
           m_cores[nCurrId].m_strRevision = m_cpuRevision;
           StringUtils::Trim(m_cores[nCurrId].m_strRevision);
         }
@@ -383,6 +388,7 @@ CCPUInfo::CCPUInfo(void)
         {
           needle+=2;
           m_cpuSerial = needle;
+          StringUtils::RemoveCR(m_cpuSerial);
           m_cores[nCurrId].m_strSerial = m_cpuSerial;
           StringUtils::Trim(m_cores[nCurrId].m_strSerial);
         }
@@ -394,6 +400,7 @@ CCPUInfo::CCPUInfo(void)
         {
           needle+=2;
           m_cpuModel = needle;
+          StringUtils::RemoveCR(m_cpuModel);
           m_cores[nCurrId].m_strModel = m_cpuModel;
           StringUtils::Trim(m_cores[nCurrId].m_strModel);
         }

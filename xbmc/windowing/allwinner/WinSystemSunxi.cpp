@@ -51,9 +51,11 @@
 #include "EGL/eglplatform.h"
 
 #include <sys/ioctl.h>
-#include "drv_display_sun4i.h"
 
 #include "windowing/allwinner/hwlayer/HwLayerFactory.h"
+#include "windowing/allwinner/SunxiDisp.h"
+#include "windowing/allwinner/SunxiDisp2.h"
+#include "utils/CPUInfo.h"
 
 using namespace KODI;
 
@@ -129,6 +131,10 @@ CWinSystemSunxi::~CWinSystemSunxi()
 bool CWinSystemSunxi::InitWindowSystem()
 {
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
+  if (std::string("sun8i") == g_cpuInfo.getCPUHardware())
+    m_dispBase.reset(new SunxiDisp2(m_hdisp, 0));
+  else
+    m_dispBase.reset(new SunxiDisp(m_hdisp, 0));
 
   VDPAU::CDecoder::Register();
   //CLinuxRendererGLES::Register();
@@ -321,10 +327,10 @@ void CWinSystemSunxi::Unregister(IDispResource *resource)
 
 bool CWinSystemSunxi::GetNativeResolution(RESOLUTION_INFO *res)
 {
-  res->iWidth = GetWidth();
-  res->iHeight= GetHeight();
+  res->iWidth = m_dispBase->GetWidth();
+  res->iHeight= m_dispBase->GetHeight();
+  res->fRefreshRate = m_dispBase->GetRefreshRate();
 
-  res->fRefreshRate = GetRefreshRate();
   res->dwFlags= D3DPRESENTFLAG_PROGRESSIVE | D3DPRESENTFLAG_WIDESCREEN;
   //res->iScreen       = 0;
   res->bFullScreen   = true;
@@ -432,68 +438,6 @@ bool CWinSystemSunxi::FindMatchingResolution(const RESOLUTION_INFO &res, const s
      }
   }
   return false;
-}
-
-int CWinSystemSunxi::GetWidth()
-{
-  unsigned long       args[4];
-  int width;
-  args[0] = m_screenid;
-  args[1] = 0;
-  args[2] = 0;
-  args[3] = 0;
-  width = ioctl(m_hdisp, DISP_CMD_SCN_GET_WIDTH , args);
-  if( width < 0)
-     CLog::Log(LOGWARNING, "%s: failed error=%d, m_screenid=%d",__FUNCTION__, width, m_screenid);
-  return width;
-}
-
-int CWinSystemSunxi::GetHeight()
-{
-  unsigned long       args[4];
-  int height;
-  args[0] = m_screenid;
-  args[1] = 0;
-  args[2] = 0;
-  args[3] = 0;
-  height = ioctl(m_hdisp, DISP_CMD_SCN_GET_HEIGHT, args);
-  if (height < 0)
-     CLog::Log(LOGWARNING, "%s: failed error=%d, m_screenid=%d",__FUNCTION__, height, m_screenid);
-  return height;
-}
-
-int CWinSystemSunxi::GetRefreshRate()
-{
-  unsigned long       args[4];
-  unsigned int        i;
-  int _refreshRate;
-
-  args[0] = m_screenid;
-  args[1] = 0;
-  args[2] = 0;
-  args[3] = 0;
-  i = ioctl(m_hdisp, DISP_CMD_HDMI_GET_MODE, args);
-  switch(i)
-  {
-    case DISP_TV_MOD_720P_50HZ:
-    case DISP_TV_MOD_1080I_50HZ:
-    case DISP_TV_MOD_1080P_50HZ:
-      _refreshRate = 50.0;
-      break;
-    case DISP_TV_MOD_720P_60HZ:
-    case DISP_TV_MOD_1080I_60HZ:
-    case DISP_TV_MOD_1080P_60HZ:
-      _refreshRate = 60.0;
-      break;
-    case DISP_TV_MOD_1080P_24HZ:
-      _refreshRate = 24.0;
-      break;
-    default:
-      CLog::Log(LOGERROR, "A10: display mode %d is unknown. Assume refreh rate 60Hz\n", i);
-      _refreshRate = 60.0;
-      break;
-  }
-  return _refreshRate;
 }
 
 bool CWinSystemSunxi::VLInit()
