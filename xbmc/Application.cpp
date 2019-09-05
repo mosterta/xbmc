@@ -2387,7 +2387,7 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
   if (processGUI && m_renderGUI)
   {
     m_skipGuiRender = false;
-#if defined(TARGET_RASPBERRY_PI)
+#if defined(TARGET_RASPBERRY_PI) || defined(ALLWINNERA10)
     int fps = 0;
 
     // This code reduces rendering fps of the GUI layer when playing videos in fullscreen mode
