@@ -3247,8 +3247,10 @@ void COutput::StateMachine(int signal, Protocol *port, Message *msg)
       }
       else
       {
+#if VDPAU_DEBUG
          CLog::Log(LOGERROR, "COutput::%s - signal(%d) not processed, port=%s", 
                    __FUNCTION__, signal, port->portName.c_str());
+#endif
       }
       break;
 
