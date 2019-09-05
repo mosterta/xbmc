@@ -31,6 +31,7 @@ CRendererVDPAUSunxi::CRendererVDPAUSunxi()
   {
     CLog::Log(LOGERROR, "CRendererVDPAUSunxi:%s initialize failed", __FUNCTION__);
   }
+  m_lastRenderTime = XbmcThreads::SystemClockMillis();
 }
 
 CRendererVDPAUSunxi::~CRendererVDPAUSunxi()
@@ -230,10 +231,14 @@ void CRendererVDPAUSunxi::RenderUpdate(int index, int index2, bool clear, unsign
   if (m_iLastRenderBuffer == index)
   {
     //m_videoLayerBridge->UpdateVideoPlane();
+    XbmcThreads::ThreadSleep(10);
+
     return;
   }
 
   CVideoBuffer* buffer = (m_buffers[index].videoBuffer);
+  if(!buffer)
+    return;
 
   if(!m_buffers[index].texture.Map(buffer, m_vdpauAdaptor))
     return;
@@ -288,6 +293,19 @@ void CRendererVDPAUSunxi::RenderUpdate(int index, int index2, bool clear, unsign
                                        m_buffers[index].fence, top_field);
 
   m_iLastRenderBuffer = index;
+
+    // This code reduces rendering fps of the video layer when playing videos in fullscreen mode
+    // it makes only sense on architectures with multiple layers
+    m_fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
+    int fps = m_fps * 2;
+
+    unsigned int now = XbmcThreads::SystemClockMillis();
+    unsigned int frameTime = now - m_lastRenderTime;
+    if (fps > 0 && frameTime * fps < 1000)
+      XbmcThreads::ThreadSleep(1000/fps - frameTime);
+
+    m_lastRenderTime = now;
+
 }
 
 bool CRendererVDPAUSunxi::RenderCapture(CRenderCapture* capture)

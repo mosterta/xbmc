@@ -63,6 +63,6 @@ private:
   } m_buffers[NUM_BUFFERS];
   
   CHwLayerAdaptorVdpauAllwinner m_vdpauAdaptor;
-  unsigned int m_lastRenderTime;
+  unsigned int m_lastRenderTime = 0;
 
 };
