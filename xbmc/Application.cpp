@@ -2387,7 +2387,7 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
   if (processGUI && m_renderGUI)
   {
     m_skipGuiRender = false;
-#if defined(TARGET_RASPBERRY_PI)
+#if defined(TARGET_RASPBERRY_PI) || defined(ALLWINNERA10)
     int fps = 0;
 
     // This code reduces rendering fps of the GUI layer when playing videos in fullscreen mode
@@ -2671,7 +2671,11 @@ bool CApplication::PlayMedia(CFileItem& item, const std::string &player, int iPl
       smartpl.OpenAndReadName(item.GetURL());
       CPlayList playlist;
       playlist.Add(items);
-      return ProcessAndStartPlaylist(smartpl.GetName(), playlist, (smartpl.GetType() == "songs" || smartpl.GetType() == "albums") ? PLAYLIST_MUSIC:PLAYLIST_VIDEO);
+      int iPlaylist = PLAYLIST_VIDEO;
+      if (smartpl.GetType() == "songs" || smartpl.GetType() == "albums" ||
+          smartpl.GetType() == "artists")
+        iPlaylist = PLAYLIST_MUSIC;
+      return ProcessAndStartPlaylist(smartpl.GetName(), playlist, iPlaylist);
     }
   }
   else if (item.IsPlayList() || item.IsInternetStream())
@@ -3049,8 +3053,9 @@ void CApplication::OnPlayBackStarted(const CFileItem &file)
 {
   CLog::LogF(LOGDEBUG,"CApplication::OnPlayBackStarted");
 
-  // Always update file item stream details
-  m_appPlayer.SetUpdateStreamDetails();
+  // check if VideoPlayer should set file item stream details from its current streams
+  if (file.GetProperty("get_stream_details_from_player").asBoolean())
+    m_appPlayer.SetUpdateStreamDetails();
 
   if (m_stackHelper.IsPlayingISOStack() || m_stackHelper.IsPlayingRegularStack())
     m_itemCurrentFile.reset(new CFileItem(*m_stackHelper.GetRegisteredStack(file)));
@@ -4116,7 +4121,7 @@ void CApplication::ProcessSlow()
   if (CPlatformPosix::TestQuitFlag())
   {
     CLog::Log(LOGNOTICE, "Quitting due to POSIX signal");
-//    CApplicationMessenger::GetInstance().PostMsg(TMSG_QUIT);
+    CApplicationMessenger::GetInstance().PostMsg(TMSG_QUIT);
   }
 #endif
 

@@ -170,9 +170,14 @@ if(XSLT_FOUND)
 endif()
 if(EGL_FOUND AND NOT CORE_SYSTEM_NAME STREQUAL allwinner)
   list(APPEND SOURCES EGLUtils.cpp
-                      EGLFence.cpp)
+  )
   list(APPEND HEADERS EGLUtils.h
-                      EGLFence.h)
+  )
+
+  if(NOT CORE_SYSTEM_NAME STREQUAL allwinner)
+    list(APPEND SOURCES EGLFence.cpp)
+    list(APPEND HEADERS EGLFence.h)
+  endif()
 endif()
 
 # The large map trips the clang optimizer
