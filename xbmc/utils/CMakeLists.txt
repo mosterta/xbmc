@@ -168,7 +168,7 @@ if(XSLT_FOUND)
   list(APPEND SOURCES XSLTUtils.cpp)
   list(APPEND HEADERS XSLTUtils.h)
 endif()
-if(EGL_FOUND)
+if(EGL_FOUND AND NOT CORE_SYSTEM_NAME STREQUAL allwinner)
   list(APPEND SOURCES EGLUtils.cpp
   )
   list(APPEND HEADERS EGLUtils.h
