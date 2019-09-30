@@ -23,6 +23,8 @@
 
 #include <dlfcn.h>
 #include <stdio.h>
+
+typedef int GLsizei;
 #include <libcedarDisplay.h>
 
 #define INTERNAL_YCBCR_FORMAT (0xffff)
