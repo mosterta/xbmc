@@ -24,6 +24,9 @@ CPeripheralBusCEC::~CPeripheralBusCEC(void)
   if (m_cecAdapter)
     CECDestroy(m_cecAdapter);
 }
+#ifndef ADAPTERTYPE_LINUX
+#define ADAPTERTYPE_LINUX 0x400
+#endif
 
 bool CPeripheralBusCEC::PerformDeviceScan(PeripheralScanResults& results)
 {
