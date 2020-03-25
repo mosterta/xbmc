@@ -88,6 +88,8 @@ enum iosPlatform
   iPadPro9_7InchCellular,
   iPad6thGeneration9_7InchWifi,
   iPad6thGeneration9_7InchCellular,
+  iPad7thGeneration10_2InchWifi,
+  iPad7thGeneration10_2InchCellular,
   iPadPro12_9InchWifi,
   iPadPro12_9InchCellular,
   iPadPro2_12_9InchWifi,
@@ -226,6 +228,8 @@ enum iosPlatform getIosPlatform()
     else if (devStr == "iPad7,4") eDev = iPadPro_10_5InchCellular;
     else if (devStr == "iPad7,5") eDev = iPad6thGeneration9_7InchWifi;
     else if (devStr == "iPad7,6") eDev = iPad6thGeneration9_7InchCellular;
+    else if (devStr == "iPad7,11") eDev = iPad7thGeneration10_2InchWifi;
+    else if (devStr == "iPad7,12") eDev = iPad7thGeneration10_2InchCellular;
     else if (devStr == "iPad8,1") eDev = iPadPro11InchWifi;
     else if (devStr == "iPad8,2") eDev = iPadPro11InchWifi;
     else if (devStr == "iPad8,3") eDev = iPadPro11InchCellular;
@@ -462,6 +466,13 @@ bool CDarwinUtils::IsIosSandboxed(void)
       // Some time after ios8, Apple decided to change this yet again
       if (strlen("/var/containers/Bundle/") < path_size &&
         strncmp(given_path, "/var/containers/Bundle/", strlen("/var/containers/Bundle/")) == 0)
+      {
+        ret = 1;
+      }
+
+      // since iOS 13
+      if (strlen("/private/var/containers/Bundle/") < path_size &&
+        strncmp(given_path, "/private/var/containers/Bundle/", strlen("/private/var/containers/Bundle/")) == 0)
       {
         ret = 1;
       }

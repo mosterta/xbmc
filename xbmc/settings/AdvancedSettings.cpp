@@ -1451,6 +1451,7 @@ void CAdvancedSettings::SettingOptionsLoggingComponentsFiller(SettingConstPtr se
   list.push_back(std::make_pair(g_localizeStrings.Get(684), LOGWINDOWING));
   list.push_back(std::make_pair(g_localizeStrings.Get(685), LOGPVR));
   list.push_back(std::make_pair(g_localizeStrings.Get(686), LOGEPG));
+  list.emplace_back(g_localizeStrings.Get(39117), LOGANNOUNCE);
 #ifdef HAS_DBUS
   list.push_back(std::make_pair(g_localizeStrings.Get(674), LOGDBUS));
 #endif
@@ -1484,7 +1485,7 @@ void CAdvancedSettings::SetExtraLogLevel(const std::vector<CVariant> &components
 void CAdvancedSettings::SetExtraArtwork(const TiXmlElement* arttypes, std::vector<std::string>& artworkMap)
 {
   if (!arttypes)
-    return
+    return;
   artworkMap.clear();
   const TiXmlNode* arttype = arttypes->FirstChild("arttype");
   while (arttype)

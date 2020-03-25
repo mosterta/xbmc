@@ -406,8 +406,9 @@ void CProfileManager::FinalizeLoadProfile()
   // Restart context menu manager
   contextMenuManager.Init();
 
-  // restart PVR services
-  pvrManager.Init();
+  // Restart PVR services if we are not just loading the master profile for the login screen
+  if (m_profileLoadedForLogin || m_currentProfile != 0 || m_lastUsedProfile == 0)
+    pvrManager.Init();
 
   favouritesManager.ReInit(GetProfileUserDataFolder());
 
@@ -428,7 +429,7 @@ void CProfileManager::FinalizeLoadProfile()
   // if the user interfaces has been fully initialized let everyone know
   if (uiInitializationFinished)
   {
-    CGUIMessage msg(GUI_MSG_NOTIFY_ALL, 0, 0, GUI_MSG_UI_READY);
+    CGUIMessage msg(GUI_MSG_NOTIFY_ALL, WINDOW_SETTINGS_PROFILES, 0, GUI_MSG_UI_READY);
     CServiceBroker::GetGUI()->GetWindowManager().SendThreadMessage(msg);
   }
 }
@@ -444,6 +445,9 @@ void CProfileManager::LogOff()
 
   if (CVideoLibraryQueue::GetInstance().IsRunning())
     CVideoLibraryQueue::GetInstance().CancelAllJobs();
+
+  // Stop PVR services
+  CServiceBroker::GetPVRManager().Stop();
 
   networkManager.NetworkMessage(CNetwork::SERVICES_DOWN, 1);
 
