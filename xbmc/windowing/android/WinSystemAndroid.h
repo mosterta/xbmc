@@ -35,7 +35,9 @@ public:
   bool DestroyWindow() override;
   void UpdateResolutions() override;
 
-  void SetHDMIState(bool connected);
+  void InitiateModeChange();
+  bool IsHdmiModeTriggered() const { return m_HdmiModeTriggered; };
+  void SetHdmiState(bool connected);
 
   void UpdateDisplayModes();
 
@@ -65,14 +67,6 @@ protected:
 
   RENDER_STEREO_MODE m_stereo_mode;
 
-  enum RESETSTATE
-  {
-    RESET_NOTWAITING,
-    RESET_WAITTIMER,
-    RESET_WAITEVENT
-  };
-
-  RESETSTATE m_dispResetState;
   CTimer *m_dispResetTimer;
 
   CCriticalSection m_resourceSection;
@@ -80,5 +74,6 @@ protected:
   CDecoderFilterManager *m_decoderFilterManager;
 
 private:
+  bool m_HdmiModeTriggered = false;
   void UpdateResolutions(bool bUpdateDesktopRes);
 };

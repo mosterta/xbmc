@@ -328,7 +328,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
      }
   }
 
-  if (m_format.m_dataFormat == AE_FMT_RAW && !CXBMCApp::IsHeadsetPlugged())
+  if (m_format.m_dataFormat == AE_FMT_RAW)
   {
     m_passthrough = true;
     m_encoding = AEStreamFormatToATFormat(m_format.m_streamInfo.m_type);
@@ -872,11 +872,7 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   m_info.m_displayNameExtra = "audiotrack";
 
   UpdateAvailablePCMCapabilities();
-
-  if (!CXBMCApp::IsHeadsetPlugged())
-  {
-    UpdateAvailablePassthroughCapabilities();
-  }
+  UpdateAvailablePassthroughCapabilities();
   list.push_back(m_info);
 }
 
@@ -886,6 +882,17 @@ void CAESinkAUDIOTRACK::UpdateAvailablePassthroughCapabilities()
   m_info.m_wantsIECPassthrough = false;
   m_info.m_dataFormats.push_back(AE_FMT_RAW);
   m_info.m_streamTypes.clear();
+
+  // if hardware is amlogic but aml_present is false, means permissions are wrong in FW, we run on broken v23 firmware which should not have
+  // been sold to customers. Just add AC3 and return early
+  if (!aml_present() && (StringUtils::StartsWithNoCase(CJNIBuild::HARDWARE, "amlogic") &&
+                         CJNIAudioManager::GetSDKVersion() == 23))
+  {
+    m_info.m_streamTypes.push_back(CAEStreamInfo::STREAM_TYPE_AC3);
+    CLog::Log(LOGNOTICE, "AMLogic v23 broken FW workaround in place - only AC3 supported");
+    return;
+  }
+
   if (CJNIAudioFormat::ENCODING_AC3 != -1)
   {
     if (VerifySinkConfiguration(48000, CJNIAudioFormat::CHANNEL_OUT_STEREO, CJNIAudioFormat::ENCODING_AC3))

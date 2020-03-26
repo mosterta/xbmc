@@ -94,7 +94,6 @@ CFileCache::CFileCache(const unsigned int flags)
   , m_writeRate(0)
   , m_writeRateActual(0)
   , m_forwardCacheSize(0)
-  , m_forward(0)
   , m_bFilling(false)
   , m_bLowSpeedDetected(false)
   , m_fileSize(0)
@@ -109,7 +108,6 @@ CFileCache::CFileCache(CCacheStrategy *pCache, bool bDeleteCache /* = true */)
   , m_writeRate(0)
   , m_writeRateActual(0)
   , m_forwardCacheSize(0)
-  , m_forward(0)
   , m_bFilling(false)
   , m_bLowSpeedDetected(false)
 {
@@ -226,7 +224,6 @@ bool CFileCache::Open(const CURL& url)
   m_writePos = 0;
   m_writeRate = 1024 * 1024;
   m_writeRateActual = 0;
-  m_forward = 0;
   m_bFilling = true;
   m_bLowSpeedDetected = false;
   m_seekEvent.Reset();
@@ -290,7 +287,6 @@ void CFileCache::Process()
         m_nSeekResult = m_seekPos;
         if (bCompleteReset)
         {
-          m_forward = 0;
           m_bFilling = true;
           m_bLowSpeedDetected = false;
         }
@@ -370,6 +366,8 @@ void CFileCache::Process()
     {
       CLog::Log(LOGDEBUG, "CFileCache::Process - Source read returned a fatal error! Will wait for buffer to empty.");
 
+      m_pCache->EndOfInput();
+
       while (m_pCache->WaitForData(0, 0) > 0)
       {
         if (m_seekEvent.WaitMSec(100))
@@ -417,11 +415,11 @@ void CFileCache::Process()
     // avoid uncertainty at start of caching
     m_writeRateActual = average.Rate(m_writePos, 1000);
 
-    // Update forward cache size
-    m_forward = m_pCache->WaitForData(0, 0);
-
     // NOTE: Hysteresis (20-80%) for filling-logic
-    const float level = (m_forwardCacheSize == 0) ? 0.0 : (float) m_forward / m_forwardCacheSize;
+    const int64_t forward = m_pCache->WaitForData(0, 0);
+    const float level =
+        (m_forwardCacheSize == 0) ? 0.0 : static_cast<float>(forward / m_forwardCacheSize);
+
     if (level > 0.8f)
     {
      /* NOTE: We can only reliably test for low speed condition, when the cache is *really*
@@ -538,10 +536,11 @@ int64_t CFileCache::Seek(int64_t iFilePosition, int iWhence)
     m_seekPos = std::min(iTarget, std::max((int64_t)0, m_fileSize - m_chunkSize));
 
     m_seekEvent.Set();
-    if (!m_seekEnded.Wait())
+    while (!m_seekEnded.WaitMSec(100))
     {
-      CLog::Log(LOGWARNING,"%s - seek to %" PRId64" failed.", __FUNCTION__, m_seekPos);
-      return -1;
+      // SeekEnded will never be set if FileCache thread is not running
+      if (!CThread::IsRunning())
+        return -1;
     }
 
     /* wait for any remaining data */
@@ -606,7 +605,7 @@ int CFileCache::IoControl(EIoControl request, void* param)
   if (request == IOCTRL_CACHE_STATUS)
   {
     SCacheStatus* status = (SCacheStatus*)param;
-    status->forward = m_forward;
+    status->forward = m_pCache->WaitForData(0, 0);
     status->maxrate = m_writeRate;
     status->currate = m_writeRateActual;
     status->lowspeed = m_bLowSpeedDetected;

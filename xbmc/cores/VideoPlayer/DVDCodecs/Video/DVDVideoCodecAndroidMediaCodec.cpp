@@ -498,8 +498,16 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
       }
       break;
     case AV_CODEC_ID_HEVC:
-      m_mime = "video/hevc";
-      m_formatname = "amc-h265";
+      if (m_hints.codec_tag == MKTAG('d', 'v', 'h', 'e'))
+      {
+        m_mime = "video/dolby-vision";
+        m_formatname = "amc-dvhe";
+      }
+      else
+      {
+        m_mime = "video/hevc";
+        m_formatname = "amc-hevc";
+      }
       // check for hevc-hvcC and convert to h265-annex-b
       if (m_hints.extradata && !m_hints.cryptoSession)
       {
@@ -1142,6 +1150,8 @@ bool CDVDVideoCodecAndroidMediaCodec::ConfigureMediaCodec(void)
   AMediaFormat_setString(mediaformat, AMEDIAFORMAT_KEY_MIME, m_mime.c_str());
   AMediaFormat_setInt32(mediaformat, AMEDIAFORMAT_KEY_WIDTH, m_hints.width);
   AMediaFormat_setInt32(mediaformat, AMEDIAFORMAT_KEY_HEIGHT, m_hints.height);
+  AMediaFormat_setInt32(mediaformat, AMEDIAFORMAT_KEY_MAX_WIDTH, m_hints.width);
+  AMediaFormat_setInt32(mediaformat, AMEDIAFORMAT_KEY_MAX_HEIGHT, m_hints.height);
   AMediaFormat_setInt32(mediaformat, AMEDIAFORMAT_KEY_MAX_INPUT_SIZE, 0);
 
   if (CJNIBase::GetSDKVersion() >= 23 && m_render_surface)
