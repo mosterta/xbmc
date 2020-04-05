@@ -20,6 +20,9 @@
 
 
 #include "HwLayerAdaptorVdpau.h"
+#if not defined (GLsizei)
+typedef int GLsizei;
+#endif
 
 #include <dlfcn.h>
 #include <stdio.h>

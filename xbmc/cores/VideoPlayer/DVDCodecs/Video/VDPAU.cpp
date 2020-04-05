@@ -257,6 +257,7 @@ void CVDPAUContext::QueryProcs()
   VDP_PROC(VDP_FUNC_ID_DECODER_DESTROY                     , m_vdpProcs.vdp_decoder_destroy);
   VDP_PROC(VDP_FUNC_ID_DECODER_RENDER                      , m_vdpProcs.vdp_decoder_render);
   VDP_PROC(VDP_FUNC_ID_DECODER_QUERY_CAPABILITIES          , m_vdpProcs.vdp_decoder_query_caps);
+  VDP_PROC(VDP_FUNC_ID_DECODER_GET_PARAMETERS              , m_vdpProcs.vdp_decoder_get_parameters);
 #undef VDP_PROC
 }
 
@@ -967,6 +968,22 @@ bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)
   if (CheckStatus(vdp_st, __LINE__))
     return false;
 
+  uint32_t adaptedSurfaceWidth;
+  uint32_t adaptedSurfaceHeight;
+  VdpDecoderProfile adaptedProfile;
+  vdp_st = m_vdpauConfig.context->GetProcs().vdp_decoder_get_parameters(m_vdpauConfig.vdpDecoder,
+                                           &adaptedProfile,
+                                           &adaptedSurfaceWidth,
+                                           &adaptedSurfaceHeight);
+  if (CheckStatus(vdp_st, __LINE__))
+    return false;
+  if(adaptedSurfaceWidth != m_vdpauConfig.surfaceWidth || adaptedSurfaceHeight != m_vdpauConfig.surfaceHeight)
+  {
+    CLog::Log(LOGNOTICE, " (VDPAU) adapted surfaceWidth:%i",adaptedSurfaceWidth);
+    CLog::Log(LOGNOTICE, " (VDPAU) adapted surfaceHeight:%i",adaptedSurfaceHeight);
+    m_vdpauConfig.surfaceWidth = adaptedSurfaceWidth;
+    m_vdpauConfig.surfaceHeight = adaptedSurfaceHeight;
+  }
   // initialize output
   CSingleLock lock(CServiceBroker::GetWinSystem()->GetGfxContext());
   m_vdpauConfig.stats = &m_bufferStats;
