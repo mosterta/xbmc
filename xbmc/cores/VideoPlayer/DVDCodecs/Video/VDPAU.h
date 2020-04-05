@@ -97,6 +97,7 @@ struct VDPAU_procs
   VdpDecoderDestroy *            vdp_decoder_destroy;
   VdpDecoderRender *             vdp_decoder_render;
   VdpDecoderQueryCapabilities *  vdp_decoder_query_caps;
+  VdpDecoderGetParameters *      vdp_decoder_get_parameters;
 
   VdpPreemptionCallbackRegister * vdp_preemption_callback_register;
 };
