@@ -102,8 +102,8 @@ bool CHwLayerAdaptorVdpauAllwinner::getFrameConfig(struct cFrameConfig &config)
   config.alignY = frame_config.align[0];
   config.alignU = frame_config.align[1];
   config.alignV = frame_config.align[2];
-  config.fbSize.height = frame_config.height;
-  config.fbSize.width = frame_config.width;
+  config.fbSize.height = frame_config.stride_height;
+  config.fbSize.width = frame_config.stride_width;
 
   return status == VDP_STATUS_OK;
 }
