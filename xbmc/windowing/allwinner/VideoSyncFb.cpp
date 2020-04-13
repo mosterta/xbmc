@@ -35,6 +35,28 @@
 
 using namespace std;
 
+static int timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y)
+{
+  /* Perform the carry for the later subtraction by updating y. */
+  if (x->tv_usec < y->tv_usec) {
+    int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+    y->tv_usec -= 1000000 * nsec;
+    y->tv_sec += nsec;
+  }
+  if (x->tv_usec - y->tv_usec > 1000000) {
+    int nsec = (y->tv_usec - x->tv_usec) / 1000000;
+    y->tv_usec += 1000000 * nsec;
+    y->tv_sec -= nsec;
+  }
+  /* Compute the time remaining to wait.
+  tv_usec is certainly positive. */
+  result->tv_sec = x->tv_sec - y->tv_sec;
+  result->tv_usec = x->tv_usec - y->tv_usec;
+
+  /* Return 1 if result is negative. */
+  return x->tv_sec < y->tv_sec;
+}
+
 CVideoSyncFb::CVideoSyncFb(void *clock, int fbNum) : CVideoSync(clock), m_fbNum(fbNum)
 {
 }
@@ -59,14 +81,24 @@ void CVideoSyncFb::Run(CEvent& stopEvent)
 {
   /* This shouldn't be very busy and timing is important so increase priority */
   CThread::GetCurrentThread()->SetPriority(CThread::GetCurrentThread()->GetPriority()+1);
+  struct timeval curr;
+  struct timeval last;
+  struct timeval diff;
+  
+  gettimeofday(&last, NULL);
+  int fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
 
   while (!stopEvent.Signaled() && !m_abort)
   {
     if(ioctl(m_fd_fb, FBIO_WAITFORVSYNC) < 0)
       CLog::Log(LOGERROR, "CVideoReferenceClock: ioctl FBIO_WAITFORVSYNC errno=%d", errno);
 
+    gettimeofday(&curr, NULL);
+    timeval_subtract(&diff, &curr, &last);
+    diff.tv_usec += (1000000 / fps / 2);
     uint64_t now = CurrentHostCounter();
-    UpdateClock(1, now, m_refClock);
+    UpdateClock(diff.tv_usec / (1000000 / fps), now, m_refClock);
+    last = curr;
   }
 }
 
