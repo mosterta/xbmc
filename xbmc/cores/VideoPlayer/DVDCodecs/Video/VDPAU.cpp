@@ -981,8 +981,8 @@ bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)
   {
     CLog::Log(LOGNOTICE, " (VDPAU) adapted surfaceWidth:%i",adaptedSurfaceWidth);
     CLog::Log(LOGNOTICE, " (VDPAU) adapted surfaceHeight:%i",adaptedSurfaceHeight);
-    m_vdpauConfig.surfaceWidth = adaptedSurfaceWidth;
-    m_vdpauConfig.surfaceHeight = adaptedSurfaceHeight;
+    //m_vdpauConfig.surfaceWidth = adaptedSurfaceWidth;
+    //m_vdpauConfig.surfaceHeight = adaptedSurfaceHeight;
   }
   // initialize output
   CSingleLock lock(CServiceBroker::GetWinSystem()->GetGfxContext());

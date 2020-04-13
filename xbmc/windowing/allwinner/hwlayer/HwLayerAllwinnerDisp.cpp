@@ -246,7 +246,11 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
     (uint32_t)(dstRect.x2 - dstRect.x1), (uint32_t)(dstRect.y2 - dstRect.y1) };
 
   calcCroppedValues(&src, &scn, CServiceBroker::GetWinSystem()->GetGfxContext().GetWidth());
-    
+  
+  //CLog::Log(LOGDEBUG, "CHwLayerAllwinnerDisp2: fbsize.width=%d fbsize.height=%d\n", config.fbSize.width, config.fbSize.height);
+  //CLog::Log(LOGDEBUG, "CHwLayerAllwinnerDisp2: src.x=%d y=%d width=%d height=%d\n", src.x, src.y, src.width, src.height);
+  //CLog::Log(LOGDEBUG, "CHwLayerAllwinnerDisp2: scn.x=%d y=%d width=%d height=%d\n", scn.x, scn.y, scn.width, scn.height);
+
   m_layerConfig.info.fb.size[0].width = config.fbSize.width;
   m_layerConfig.info.fb.size[0].height = config.fbSize.height;
   m_layerConfig.info.fb.size[1].width = config.fbSize.width/2;
@@ -413,7 +417,7 @@ bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, 
 
   struct CHwLayerAdaptorVdpauAllwinner::cFrameConfig config;
   frame.getFrameConfig(config);
-  
+
   memset(&hwc, 0, sizeof(hwc));
   hwc.layer_num[0] = 1;
   hwc.layer_active[0] = 1;
