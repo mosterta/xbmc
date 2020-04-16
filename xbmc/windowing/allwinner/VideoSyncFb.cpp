@@ -90,6 +90,7 @@ void CVideoSyncFb::Run(CEvent& stopEvent)
 
   while (!stopEvent.Signaled() && !m_abort)
   {
+    fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
     if(ioctl(m_fd_fb, FBIO_WAITFORVSYNC) < 0)
       CLog::Log(LOGERROR, "CVideoReferenceClock: ioctl FBIO_WAITFORVSYNC errno=%d", errno);
 
