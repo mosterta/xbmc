@@ -32,7 +32,7 @@ int SunxiDisp::GetRefreshRate()
 {
   unsigned long       args[4];
   unsigned int        i;
-  int _refreshRate;
+  int _refreshRate = 50;
 
   args[0] = m_screenid;
   args[1] = 0;
