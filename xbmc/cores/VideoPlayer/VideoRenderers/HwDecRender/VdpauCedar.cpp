@@ -123,7 +123,7 @@ void CVdpauTextureCedar::Init(InteropInfoCedar &interop)
 
 bool CVdpauTextureCedar::Map(CVideoBuffer /*CVdpauRenderPicture*/ *pic, CHwLayerAdaptorVdpauAllwinner &hwAdaptor)
 {
-  int surface = -1;
+  int surface = VDP_INVALID_HANDLE;
   bool success = true;
 
   if (m_vdpauPic)
@@ -151,6 +151,7 @@ bool CVdpauTextureCedar::Map(CVideoBuffer /*CVdpauRenderPicture*/ *pic, CHwLayer
     {
       switch(bufSunxi->GetFormat())
       {
+      case AV_PIX_FMT_VDPAU:
       case AV_PIX_FMT_YUV420P:
       case AV_PIX_FMT_YUYV422:
       case AV_PIX_FMT_YUV422P:
@@ -169,11 +170,16 @@ bool CVdpauTextureCedar::Map(CVideoBuffer /*CVdpauRenderPicture*/ *pic, CHwLayer
   }
   if(success)
   {
-    if (m_isYuv)
-      success = MapNV12(surface);
+    if(surface != VDP_INVALID_HANDLE)
+    {
+      if (m_isYuv )
+        success = MapNV12(surface);
+      else
+        success = MapRGB(surface);
+    }
     else
-      success = MapRGB(surface);
-  
+      success = false;
+
     if (success)
     {
       hwAdaptor.setFrame(m_glSurface.glVdpauSurface);

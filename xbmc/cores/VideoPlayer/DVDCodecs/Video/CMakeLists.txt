@@ -1,3 +1,5 @@
+add_compile_options(-g)
+
 set(SOURCES AddonVideoCodec.cpp
             DVDVideoCodec.cpp
             DVDVideoCodecFFmpeg.cpp)
@@ -24,8 +26,13 @@ if(CORE_SYSTEM_NAME STREQUAL windows OR CORE_SYSTEM_NAME STREQUAL windowsstore)
 endif()
 
 if(VDPAU_FOUND)
-  list(APPEND SOURCES VDPAU.cpp)
-  list(APPEND HEADERS VDPAU.h)
+  if(CORE_SYSTEM_NAME STREQUAL allwinner)
+    list(APPEND SOURCES VDPAU_Sunxi.cpp)
+    list(APPEND HEADERS VDPAU_Sunxi.h)
+  else()
+    list(APPEND SOURCES VDPAU.cpp)
+    list(APPEND HEADERS VDPAU.h)
+  endif()
 endif()
 
 if(VAAPI_FOUND)

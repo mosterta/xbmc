@@ -32,8 +32,11 @@ typedef int (*PFGLVDPAUGETVIDEOFRAMECCONFIG)(vdpauSurfaceCedar surface,  struct 
 class CHwLayerAdaptorVdpauAllwinner
 {
   public:
-    typedef typename VDPAU::CVdpauRenderPicture RENDERPICTURE;
     struct cFbSize {
+      int  width;
+      int height;
+    };
+    struct cFbStride {
       int  width;
       int height;
     };
@@ -52,6 +55,7 @@ class CHwLayerAdaptorVdpauAllwinner
       uint8_t alignU;
       uint8_t alignV;
       struct cFbSize fbSize;
+      struct cFbStride fbStride;
       FrameFormat dataFormat;
     };
     CHwLayerAdaptorVdpauAllwinner();
