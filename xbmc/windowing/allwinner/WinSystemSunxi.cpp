@@ -48,8 +48,9 @@
 
 #include <linux/fb.h>
 
-#include <EGL/egl.h>
+#define EGL_CAST(type, value) (static_cast<type>(value))
 #include "EGL/eglplatform.h"
+#include <EGL/egl.h>
 
 #include <sys/ioctl.h>
 
