@@ -46,7 +46,7 @@ public:
   bool Supports(ESCALINGMETHOD method) override;
 
 protected:
-  void ManageRenderArea() override;
+//   void ManageRenderArea() override;
 
 private:
   bool m_bConfigured = false;

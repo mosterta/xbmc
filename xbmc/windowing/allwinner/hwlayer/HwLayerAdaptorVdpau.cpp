@@ -20,6 +20,8 @@
 
 
 #include "HwLayerAdaptorVdpau.h"
+#include "utils/log.h"
+
 #if not defined (GLsizei)
 typedef int GLsizei;
 #endif
@@ -69,6 +71,8 @@ bool CHwLayerAdaptorVdpauAllwinner::getFrameConfig(struct cFrameConfig &config)
 {
   int format;
   struct videoFrameConfig frame_config;
+  CLog::Log(LOGDEBUG, "CHwLayerAdaptorVdpauAllwinner:%s surface:%d", __FUNCTION__, m_surface);
+
   int status = glVDPAUGetVideoFrameConfig(m_surface, &frame_config); 
   
   if(status != VDP_STATUS_OK)
@@ -102,9 +106,10 @@ bool CHwLayerAdaptorVdpauAllwinner::getFrameConfig(struct cFrameConfig &config)
   config.alignY = frame_config.align[0];
   config.alignU = frame_config.align[1];
   config.alignV = frame_config.align[2];
-  config.fbSize.height = frame_config.stride_height;
-  config.fbSize.width = frame_config.stride_width;
-
+  config.fbSize.height = frame_config.video_height;
+  config.fbSize.width = frame_config.video_width;
+  config.fbStride.height = frame_config.stride_height;
+  config.fbStride.width = frame_config.stride_width;
   return status == VDP_STATUS_OK;
 }
 
@@ -112,4 +117,3 @@ void CHwLayerAdaptorVdpauAllwinner::setFrame(vdpauSurfaceCedar frame)
 {
   m_surface = frame;
 }
-

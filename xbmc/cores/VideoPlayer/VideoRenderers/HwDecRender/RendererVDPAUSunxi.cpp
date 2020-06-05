@@ -43,6 +43,7 @@ CRendererVDPAUSunxi::~CRendererVDPAUSunxi()
 
   Flush(false);
   //g_cpuInfo.restoreCPUMinFrequency();
+  CLog::Log(LOGDEBUG, "CRendererVDPAUSunxi:%s end", __FUNCTION__);
 }
 
 CBaseRenderer* CRendererVDPAUSunxi::Create(CVideoBuffer* buffer)
@@ -132,19 +133,19 @@ bool CRendererVDPAUSunxi::Configure(const VideoPicture& picture, float fps, unsi
   return true;
 }
 
-void CRendererVDPAUSunxi::ManageRenderArea()
-{
-  CBaseRenderer::ManageRenderArea();
-
-  RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo();
-  if (info.iScreenWidth != info.iWidth)
-  {
-    CalcNormalRenderRect(0, 0, info.iScreenWidth, info.iScreenHeight,
-                         GetAspectRatio() * CDisplaySettings::GetInstance().GetPixelRatio(),
-                         CDisplaySettings::GetInstance().GetZoomAmount(),
-                         CDisplaySettings::GetInstance().GetVerticalShift());
-  }
-}
+// void CRendererVDPAUSunxi::ManageRenderArea()
+// {
+//   CBaseRenderer::ManageRenderArea();
+// 
+//   RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo();
+//   if (info.iScreenWidth != info.iWidth)
+//   {
+//     CalcNormalRenderRect(0, 0, info.iScreenWidth, info.iScreenHeight,
+//                          GetAspectRatio() * CDisplaySettings::GetInstance().GetPixelRatio(),
+//                          CDisplaySettings::GetInstance().GetZoomAmount(),
+//                          CDisplaySettings::GetInstance().GetVerticalShift());
+//   }
+// }
 
 void CRendererVDPAUSunxi::AddVideoPicture(const VideoPicture& picture, int index)
 {
@@ -160,6 +161,8 @@ void CRendererVDPAUSunxi::AddVideoPicture(const VideoPicture& picture, int index
 
 bool CRendererVDPAUSunxi::Flush(bool saveBuffers)
 {
+  CLog::Log(LOGDEBUG, "CRendererVDPAUSunxi:%s saveBuffers=%d", __FUNCTION__, saveBuffers);
+
   if (!saveBuffers)
     for (int i = 0; i < NUM_BUFFERS; i++)
       ReleaseBuffer(i);
@@ -240,6 +243,8 @@ void CRendererVDPAUSunxi::RenderUpdate(int index, int index2, bool clear, unsign
   if(!buffer)
     return;
 
+  ManageRenderArea();
+
   if(!m_buffers[index].texture.Map(buffer, m_vdpauAdaptor))
     return;
 
@@ -267,12 +272,12 @@ void CRendererVDPAUSunxi::RenderUpdate(int index, int index2, bool clear, unsign
     }
 
     status = g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, cs_prop);
-    
+
     CHwLayerManagerAW::CPropertyValue ilace(CHwLayerManagerAW::PropertyKey::InterlaceMode, 0);
     if (flags & (RENDER_FLAG_TOP|RENDER_FLAG_BOT))
       ilace.setValue(CHwLayerManagerAW::Interlace::IlaceOn);
     else
-      ilace.setValue(CHwLayerManagerAW::Interlace::IlaceOff) ;
+      ilace.setValue(CHwLayerManagerAW::Interlace::IlaceOff);
 
     status = g_HwLayer.setProperty(CHwLayerManagerAW::HwLayerType::Video, ilace);
     status = g_HwLayer.showLayer(CHwLayerManagerAW::HwLayerType::Video);
@@ -294,7 +299,7 @@ void CRendererVDPAUSunxi::RenderUpdate(int index, int index2, bool clear, unsign
 
   m_iLastRenderBuffer = index;
 
-    // This code reduces rendering fps of the video layer when playing videos in fullscreen mode
+/*    // This code reduces rendering fps of the video layer when playing videos in fullscreen mode
     // it makes only sense on architectures with multiple layers
     m_fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
     int fps = m_fps * 2;
@@ -305,7 +310,7 @@ void CRendererVDPAUSunxi::RenderUpdate(int index, int index2, bool clear, unsign
       XbmcThreads::ThreadSleep(1000/fps - frameTime);
 
     m_lastRenderTime = now;
-
+*/
 }
 
 bool CRendererVDPAUSunxi::RenderCapture(CRenderCapture* capture)
@@ -349,5 +354,5 @@ bool CRendererVDPAUSunxi::Supports(ERENDERFEATURE feature)
 
 bool CRendererVDPAUSunxi::Supports(ESCALINGMETHOD method)
 {
-  return false;
+    return false;
 }

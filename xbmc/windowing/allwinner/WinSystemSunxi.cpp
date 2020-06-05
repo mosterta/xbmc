@@ -30,6 +30,7 @@
 #include "cores/RetroPlayer/rendering/VideoRenderers/RPRendererOpenGLES.h"
 #include "cores/VideoPlayer/VideoRenderers/LinuxRendererGLES.h"
 #include "cores/VideoPlayer/VideoRenderers/HwDecRender/RendererVDPAUSunxi.h"
+#include "cores/VideoPlayer/DVDCodecs/Video/VDPAU_Sunxi.h"
 // AESink Factory
 #include "cores/AudioEngine/AESinkFactory.h"
 #include "cores/AudioEngine/Sinks/AESinkALSA.h"
@@ -136,7 +137,8 @@ bool CWinSystemSunxi::InitWindowSystem()
   else
     m_dispBase.reset(new SunxiDisp(m_hdisp, 0));
 
-  VDPAU::CDecoder::Register();
+  CProcessInfoSunxi::Register();
+  VDPAUSunxi::CDecoder::Register();
   //CLinuxRendererGLES::Register();
   RETRO::CRPProcessInfoSunxi::Register();
   RETRO::CRPProcessInfoSunxi::RegisterRendererFactory(new RETRO::CRendererFactoryOpenGLES);
@@ -401,7 +403,8 @@ bool CWinSystemSunxi::ModeToResolution(std::string mode, RESOLUTION_INFO *res)
   int h = atoi(split.GetMatch(2).c_str());
   std::string p = split.GetMatch(3);
   int r = atoi(split.GetMatch(4).c_str());
-  
+  if(r == 0)
+    r = 50;
   res->iWidth = w;
   res->iHeight= h;
   res->iScreenWidth = w;
