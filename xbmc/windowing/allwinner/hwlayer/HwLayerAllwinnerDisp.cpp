@@ -181,6 +181,7 @@ bool CHwLayerAllwinnerDisp2::calcCroppedValues(cdRect_t *src, cdRect_t *scn, int
 
 bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRect &srcRect, CRect &dstRect)
 {
+  CLog::Log(LOGDEBUG, " (CHwLayerAllwinnerDisp2) %s", __FUNCTION__);
   bool status = true;
   unsigned long args[4];
   __u32 addr0, addr1, addr2;
@@ -239,17 +240,13 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
       m_layerConfig.info.fb.color_space = DISP_BT709;
       break;
   }
-  
+
   cdRect_t src = { (int32_t)srcRect.x1, (int32_t)srcRect.y1, 
     (uint32_t)(srcRect.x2 - srcRect.x1), (uint32_t)(srcRect.y2 - srcRect.y1) };
   cdRect_t scn = { (int32_t)dstRect.x1, (int32_t)dstRect.y1, 
     (uint32_t)(dstRect.x2 - dstRect.x1), (uint32_t)(dstRect.y2 - dstRect.y1) };
 
   calcCroppedValues(&src, &scn, CServiceBroker::GetWinSystem()->GetGfxContext().GetWidth());
-  
-  //CLog::Log(LOGDEBUG, "CHwLayerAllwinnerDisp2: fbsize.width=%d fbsize.height=%d\n", config.fbSize.width, config.fbSize.height);
-  //CLog::Log(LOGDEBUG, "CHwLayerAllwinnerDisp2: src.x=%d y=%d width=%d height=%d\n", src.x, src.y, src.width, src.height);
-  //CLog::Log(LOGDEBUG, "CHwLayerAllwinnerDisp2: scn.x=%d y=%d width=%d height=%d\n", scn.x, scn.y, scn.width, scn.height);
 
   m_layerConfig.info.fb.size[0].width = config.fbSize.width;
   m_layerConfig.info.fb.size[0].height = config.fbSize.height;
@@ -266,7 +263,7 @@ bool CHwLayerAllwinnerDisp2::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRe
   m_layerConfig.info.fb.crop.height = ((long long)(src.height)) << 32;
   m_layerConfig.info.screen_win.x = scn.x;
   m_layerConfig.info.screen_win.y = scn.y;
-  m_layerConfig.info.screen_win.width = (scn.width);
+  m_layerConfig.info.screen_win.width = (scn.width);  
   m_layerConfig.info.screen_win.height = (scn.height);
   m_layerConfig.info.fb.flags = DISP_BF_NORMAL;
   m_layerConfig.info.b_trd_out = 0;
@@ -395,6 +392,7 @@ typedef struct
 
 bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, int &fence, int top_field)
 {
+  CLog::Log(LOGDEBUG, " (CHwLayerAllwinnerDisp2) %s", __FUNCTION__);
   bool status = true;
   int ret;
   setup_dispc_data_t hwc;
@@ -421,6 +419,7 @@ bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, 
   memset(&hwc, 0, sizeof(hwc));
   hwc.layer_num[0] = 1;
   hwc.layer_active[0] = 1;
+  hwc.ehancemode[0] = 1;
   hwc.returnfenceFd = dispFenceFd;
   m_layerConfig.info.fb.size[0].width = config.fbSize.width;
   m_layerConfig.info.fb.size[0].height = config.fbSize.height;
@@ -431,18 +430,30 @@ bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, 
   m_layerConfig.info.fb.align[0] = config.alignY;
   m_layerConfig.info.fb.align[1] = config.alignU;
   m_layerConfig.info.fb.align[2] = config.alignV;
-  hwc.layer_info[0][0] = m_layerConfig;
-  hwc.layer_info[0][0].info.fb.addr[0] = (__u32)config.addrY ;
-  hwc.layer_info[0][0].info.fb.addr[1] = (__u32)config.addrU ;
-  hwc.layer_info[0][0].info.fb.addr[2] = (__u32)config.addrV ;
+  m_layerConfig.info.fb.addr[0] = (__u32)config.addrY ;
+  m_layerConfig.info.fb.addr[1] = (__u32)config.addrU ;
+  m_layerConfig.info.fb.addr[2] = (__u32)config.addrV ;
   if(m_interlaceMode.value == CPropertyValue::IlaceOff)
-    hwc.layer_info[0][0].info.fb.scan = DISP_SCAN_PROGRESSIVE;
+    m_layerConfig.info.fb.scan = DISP_SCAN_PROGRESSIVE;
   else
   {
     if (top_field)
-      hwc.layer_info[0][0].info.fb.scan = DISP_SCAN_INTERLACED_EVEN_FLD_FIRST;
+      m_layerConfig.info.fb.scan = DISP_SCAN_INTERLACED_ODD_FLD_FIRST;
     else
-      hwc.layer_info[0][0].info.fb.scan = DISP_SCAN_INTERLACED_ODD_FLD_FIRST;
+      m_layerConfig.info.fb.scan = DISP_SCAN_INTERLACED_EVEN_FLD_FIRST;
+  }
+  hwc.layer_info[0][0] = m_layerConfig;
+
+  args[0] = m_config.m_screenId;
+  args[1] = (unsigned long)&m_layerConfig;
+  args[2] = 1;
+  args[3] = 0;
+
+  int error = ioctl(m_config.m_dispFd, DISP_LAYER_SET_CONFIG, args);
+  if(error < 0)
+  {
+    CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: set layer config failed\n");
+    status = false;
   }
 
   args[0] =  m_config.m_screenId;
@@ -450,8 +461,7 @@ bool CHwLayerAllwinnerDisp2::displayFrame(CHwLayerAdaptorVdpauAllwinner &frame, 
   args[2] =  0;
   args[3] =  0;
 
-  //ioctl(m_config.m_fbFd, FBIO_WAITFORVSYNC, 0);
-  int error = ioctl(m_config.m_dispFd, DISP_HWC_COMMIT, args);
+  error = ioctl(m_config.m_dispFd, DISP_HWC_COMMIT, args);
   if(error < 0)
   {
     CLog::Log(LOGERROR, "CHwLayerAllwinnerDisp2: set video framebuffer failed\n");

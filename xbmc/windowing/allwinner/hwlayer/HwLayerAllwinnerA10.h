@@ -28,6 +28,14 @@
 #include "DVDCodecs/Video/VDPAU.h"
 #include "HwLayerAllwinnerDefs.h"
 
+typedef struct cdRect
+{
+  int32_t       x;
+  int32_t       y;
+  uint32_t       width;
+  uint32_t       height;
+} cdRect_t;
+
 class CHwLayerAllwinnerA10 : public CHwLayerAllwinnerBase
 {
   public:
@@ -60,7 +68,8 @@ class CHwLayerAllwinnerA10 : public CHwLayerAllwinnerBase
    bool setAlphaValue(int alphaValue);
    bool setColorKeyEnable(int ckEnable);
    bool setScalerType(ScalerType scaler);
-   
+   bool calcCroppedValues(cdRect_t *src, cdRect_t *scn, int screen_width);
+
    CHwLayerConfigAllwinner m_config;
    HwLayerType m_layerType;
    int m_layerId;

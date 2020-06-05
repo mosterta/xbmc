@@ -21,6 +21,7 @@
 #include "HwLayerAllwinnerA10.h"
 #include "HwLayerAdaptorVdpau.h"
 #include "utils/log.h"
+#include "windowing/GraphicContext.h"
 
 typedef unsigned char 		__u8;
 typedef unsigned short int 	__u16;
@@ -203,17 +204,24 @@ bool CHwLayerAllwinnerA10::configure(CHwLayerAdaptorVdpauAllwinner &frame, CRect
       layer_info.fb.cs_mode = DISP_BT709;
       break;
   }
-      
+
+  cdRect_t src = { (int32_t)srcRect.x1, (int32_t)srcRect.y1, 
+          (uint32_t)(srcRect.x2 - srcRect.x1), (uint32_t)(srcRect.y2 - srcRect.y1) };
+  cdRect_t scn = { (int32_t)dstRect.x1, (int32_t)dstRect.y1, 
+          (uint32_t)(dstRect.x2 - dstRect.x1), (uint32_t)(dstRect.y2 - dstRect.y1) };
+
+  calcCroppedValues(&src, &scn, CServiceBroker::GetWinSystem()->GetGfxContext().GetWidth());
+
   layer_info.fb.size.width = config.fbSize.width;
   layer_info.fb.size.height = config.fbSize.height;
-  layer_info.src_win.x = srcRect.x1;
-  layer_info.src_win.y = srcRect.y1;
-  layer_info.src_win.width = srcRect.x2 - srcRect.x1;
-  layer_info.src_win.height = srcRect.y2 - srcRect.y1;
-  layer_info.scn_win.x = dstRect.x1;
-  layer_info.scn_win.y = dstRect.y1;
-  layer_info.scn_win.width = dstRect.x2 - dstRect.x1;
-  layer_info.scn_win.height = dstRect.y2 - dstRect.y1;
+  layer_info.src_win.x = src.x;
+  layer_info.src_win.y = src.y;
+  layer_info.src_win.width = src.width;
+  layer_info.src_win.height = src.height;
+  layer_info.scn_win.x = scn.x;
+  layer_info.scn_win.y = scn.y;
+  layer_info.scn_win.width = scn.width;
+  layer_info.scn_win.height = scn.height;
   layer_info.ck_enable = m_alphaEnable.value;
 
   if (layer_info.scn_win.y < 0)
@@ -556,4 +564,32 @@ bool CHwLayerAllwinnerA10::setScalerType(ScalerType scaler)
 };
 
 
+bool CHwLayerAllwinnerA10::calcCroppedValues(cdRect_t *src, cdRect_t *scn, int screen_width)
+{
+  if (scn->y < 0)
+  {
+    int scn_clip = -scn->y;
+    int src_clip = scn_clip * src->height / scn->height;
+    scn->y = 0;
+    scn->height -= scn_clip;
+    src->y += src_clip;
+    src->height -= src_clip;
+  }
+  if (scn->x < 0)
+  {
+    int scn_clip = -scn->x;
+    int src_clip = scn_clip * src->width / scn->width;
+    scn->x = 0;
+    scn->width -= scn_clip;
+    src->x += src_clip;
+    src->width -= src_clip;
+  }
+  if (scn->x + scn->width > screen_width)
+  {
+    int scn_clip = scn->x + scn->width - screen_width;
+    int src_clip = scn_clip * src->width / scn->width;
+    scn->width -= scn_clip;
+    src->width -= src_clip;
+  }
+}
 
