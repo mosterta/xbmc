@@ -981,8 +981,8 @@ bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)
   {
     CLog::Log(LOGNOTICE, " (VDPAU) adapted surfaceWidth:%i",adaptedSurfaceWidth);
     CLog::Log(LOGNOTICE, " (VDPAU) adapted surfaceHeight:%i",adaptedSurfaceHeight);
-    //m_vdpauConfig.surfaceWidth = adaptedSurfaceWidth;
-    //m_vdpauConfig.surfaceHeight = adaptedSurfaceHeight;
+    m_vdpauConfig.surfaceWidth = adaptedSurfaceWidth;
+    m_vdpauConfig.surfaceHeight = adaptedSurfaceHeight;
   }
   // initialize output
   CSingleLock lock(CServiceBroker::GetWinSystem()->GetGfxContext());
@@ -2597,8 +2597,6 @@ void CMixer::Init()
 
 #if ! defined(ALLWINNERA10)
   m_config.processInfo->SetDeinterlacingMethodDefault(EINTERLACEMETHOD::VS_INTERLACEMETHOD_VDPAU_TEMPORAL);
-#else
- m_config.processInfo->SetDeinterlacingMethodDefault(EINTERLACEMETHOD::VS_INTERLACEMETHOD_RENDER_BOB);
 #endif
 }
 
@@ -2689,6 +2687,9 @@ void CMixer::InitCycle()
   bool interlaced = m_mixerInput[1].DVDPic.iFlags & DVP_FLAG_INTERLACED;
   m_SeenInterlaceFlag |= interlaced;
 
+//   if(method == VS_INTERLACEMETHOD_AUTO)
+//     method = VS_INTERLACEMETHOD_RENDER_BOB;
+
   if (!(flags & DVD_CODEC_CTRL_NO_POSTPROC) &&
       interlaced &&
       method != VS_INTERLACEMETHOD_NONE)
@@ -2741,8 +2742,9 @@ void CMixer::InitCycle()
     m_mixersteps = 1;
     m_mixerfield = VDP_VIDEO_MIXER_PICTURE_STRUCTURE_FRAME;
 
-    if (m_config.useInteropYuv)
+    if (m_config.useInteropYuv) {
       m_mixerInput[1].isYuv = true;
+    }
     else
     {
       m_mixerInput[1].DVDPic.iFlags &= ~(DVP_FLAG_TOP_FIELD_FIRST |
@@ -2758,6 +2760,7 @@ void CMixer::InitCycle()
   if (!m_mixerInput[1].isYuv)
   {
     m_processPicture.outputSurface = m_outputSurfaces.front();
+
     m_mixerInput[1].DVDPic.iWidth = m_config.outWidth;
     m_mixerInput[1].DVDPic.iHeight = m_config.outHeight;
     if (m_SeenInterlaceFlag)
