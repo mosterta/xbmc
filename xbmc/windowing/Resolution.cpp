@@ -19,6 +19,10 @@
 
 #include <cstdlib>
 
+EdgeInsets::EdgeInsets(float l, float t, float r, float b) : left(l), top(t), right(r), bottom(b)
+{
+}
+
 RESOLUTION_INFO::RESOLUTION_INFO(int width, int height, float aspect, const std::string &mode) :
   strMode(mode)
 {
@@ -37,11 +41,12 @@ RESOLUTION_INFO::RESOLUTION_INFO(int width, int height, float aspect, const std:
   Overscan.bottom = height;
 }
 
-RESOLUTION_INFO::RESOLUTION_INFO(const RESOLUTION_INFO& res) :
-  Overscan(res.Overscan),
-  strMode(res.strMode),
-  strOutput(res.strOutput),
-  strId(res.strId)
+RESOLUTION_INFO::RESOLUTION_INFO(const RESOLUTION_INFO& res)
+  : Overscan(res.Overscan),
+    guiInsets(res.guiInsets),
+    strMode(res.strMode),
+    strOutput(res.strOutput),
+    strId(res.strId)
 {
   bFullScreen = res.bFullScreen;
   iWidth = res.iWidth; iHeight = res.iHeight;
