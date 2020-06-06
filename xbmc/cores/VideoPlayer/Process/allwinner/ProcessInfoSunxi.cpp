@@ -132,7 +132,11 @@ void CVideoBufferRefSunxi::config(AVCodecContext *avctx, int chromaType, int ycb
         for (int i = 0; i < 4; i++)
           unaligned |= m_linesize[i] % stride_align[i];
       } while (unaligned);
+
+      m_surf = 0xdeadbeaf;
     }
+    else
+      m_surf = 0;
 
     vdp_st = m_interop.glVDPAUCreateSurfaceCedar(chromaType, ycbcrFormat, width, height, &m_surf);
     if (vdp_st != 0)
@@ -165,6 +169,7 @@ void CVideoBufferRefSunxi::map(uint8_t *buf[], int linesize[])
   {
     m_interop.glVDPAUGetMappedMemoryCedar(m_surf, (void**)&buf[0], (void**)&buf[1], (void**)&buf[2]);
   }
+  memcpy(linesize, m_linesize, sizeof(m_linesize));
 }
 
 void CVideoBufferRefSunxi::Unref()
