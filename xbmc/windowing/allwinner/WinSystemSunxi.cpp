@@ -201,12 +201,15 @@ bool CWinSystemSunxi::CreateNewWindow(const std::string& name,
   m_stereo_mode = stereo_mode;
   m_bFullScreen = fullScreen;
 
+  if(m_nativeWindow)
+    delete m_nativeWindow;
   mali_native_window *nativeWindow = new mali_native_window;
   nativeWindow->width = res.iWidth;
   nativeWindow->height = res.iHeight;
   m_nativeWindow = static_cast<EGLNativeWindowType>(nativeWindow);
 
-  //aml_set_native_resolution(res, m_framebuffer_name, stereo_mode);
+  SetDisplayResolution(res, "fb0");
+  SetFramebufferResolution(res, "fb0");
 
   if (!m_delayDispReset)
   {
@@ -219,6 +222,57 @@ bool CWinSystemSunxi::CreateNewWindow(const std::string& name,
   }
 
   return true;
+}
+
+bool CWinSystemSunxi::SetDisplayResolution(const RESOLUTION_INFO &res, std::string framebuffer_name)
+{
+  std::string mode = res.strId.c_str();
+  mode += "\n";
+  std::string cur_mode;
+
+  SysfsUtils::GetString("/sys/class/graphics/" + framebuffer_name + "/mode", cur_mode);
+  CLog::Log(LOGWARNING, "CWinSystemSunxi::%s: current resolution '%s'",__FUNCTION__, cur_mode);
+
+  if (cur_mode == mode)
+  {
+    // Don't set the same mode as current
+    return true;
+  }
+
+  CLog::Log(LOGWARNING, "CWinSystemSunxi::%s: changing to resolution '%s'",__FUNCTION__, mode);
+
+  SysfsUtils::SetString("/sys/class/graphics/" + framebuffer_name + "/mode", mode.c_str());
+
+  return true;
+}
+
+void CWinSystemSunxi::SetFramebufferResolution(const RESOLUTION_INFO &res, std::string framebuffer_name)
+{
+  SetFramebufferResolution(res.iWidth, res.iHeight, framebuffer_name);
+}
+
+void CWinSystemSunxi::SetFramebufferResolution(int width, int height, std::string framebuffer_name)
+{
+  int fd0;
+  std::string framebuffer = "/dev/" + framebuffer_name;
+
+  if ((fd0 = open(framebuffer.c_str(), O_RDWR)) >= 0)
+  {
+    struct fb_var_screeninfo vinfo;
+    if (ioctl(fd0, FBIOGET_VSCREENINFO, &vinfo) == 0)
+    {
+      CLog::Log(LOGWARNING, "CWinSystemSunxi::%s: FBIOGET_VSCREENINFO to width:%d, height:%d",__FUNCTION__, width, height);
+      vinfo.xres = width;
+      vinfo.yres = height;
+      vinfo.xres_virtual = 1920;
+      vinfo.yres_virtual = 2160;
+      vinfo.bits_per_pixel = 32;
+      vinfo.activate = FB_ACTIVATE_ALL;
+      if(ioctl(fd0, FBIOPUT_VSCREENINFO, &vinfo)<0)
+        CLog::Log(LOGWARNING, "CWinSystemSunxi::%s: FBIOSET_VSCREENINFO failed",__FUNCTION__);
+    }
+    close(fd0);
+  }
 }
 
 bool CWinSystemSunxi::DestroyWindow()

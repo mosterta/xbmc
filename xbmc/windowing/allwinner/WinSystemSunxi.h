@@ -52,6 +52,8 @@ public:
   bool Show(bool show = true) override;
   virtual void Register(IDispResource *resource);
   virtual void Unregister(IDispResource *resource);
+  bool CanDoWindowed() override { return false; }
+
 protected:
   std::string m_framebuffer_name;
   EGLDisplay m_nativeDisplay;
@@ -72,6 +74,9 @@ protected:
   bool GetNativeResolution(RESOLUTION_INFO *res);
   bool ProbeResolutions(std::vector<RESOLUTION_INFO> &resolutions);
   bool ModeToResolution(std::string mode, RESOLUTION_INFO *res);
+  bool SetDisplayResolution(const RESOLUTION_INFO &res, std::string framebuffer_name);
+  void SetFramebufferResolution(const RESOLUTION_INFO &res, std::string framebuffer_name);
+  void SetFramebufferResolution(int width, int height, std::string framebuffer_name);
 
   bool VLInit();
   void VLExit();
