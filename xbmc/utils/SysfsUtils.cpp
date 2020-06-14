@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <errno.h>
 
 #ifdef TARGET_WINDOWS_STORE
 #include <io.h>
@@ -22,7 +23,7 @@
 
 int SysfsUtils::SetString(const std::string& path, const std::string& valstr)
 {
-  int fd = open(path.c_str(), O_RDWR, 0644);
+  int fd = open(path.c_str(), O_WRONLY, 0644);
   int ret = 0;
   if (fd >= 0)
   {
@@ -31,7 +32,7 @@ int SysfsUtils::SetString(const std::string& path, const std::string& valstr)
     close(fd);
   }
   if (ret)
-    CLog::Log(LOGERROR, "%s: error writing %s",__FUNCTION__, path.c_str());
+    CLog::Log(LOGERROR, "%s: error writing %s, errno=%s",__FUNCTION__, path.c_str(), strerror(errno));
 
   return ret;
 }
@@ -54,14 +55,14 @@ int SysfsUtils::GetString(const std::string& path, std::string& valstr)
     return 0;
   }
 
-  CLog::Log(LOGERROR, "%s: error reading %s",__FUNCTION__, path.c_str());
+  CLog::Log(LOGERROR, "%s: error reading %s, errno=%s",__FUNCTION__, path.c_str(), strerror(errno));
   valstr = "fail";
   return -1;
 }
 
 int SysfsUtils::SetInt(const std::string& path, const int val)
 {
-  int fd = open(path.c_str(), O_RDWR, 0644);
+  int fd = open(path.c_str(), O_WRONLY, 0644);
   int ret = 0;
   if (fd >= 0)
   {
@@ -72,7 +73,7 @@ int SysfsUtils::SetInt(const std::string& path, const int val)
     close(fd);
   }
   if (ret)
-    CLog::Log(LOGERROR, "%s: error writing %s",__FUNCTION__, path.c_str());
+    CLog::Log(LOGERROR, "%s: error writing %s, errno=%s",__FUNCTION__, path.c_str(), strerror(errno));
 
   return ret;
 }
@@ -92,7 +93,7 @@ int SysfsUtils::GetInt(const std::string& path, int& val, const int base)
     close(fd);
   }
   if (ret)
-    CLog::Log(LOGERROR, "%s: error reading %s",__FUNCTION__, path.c_str());
+    CLog::Log(LOGERROR, "%s: error reading %s, errno=%s",__FUNCTION__, path.c_str(), strerror(errno));
 
   return ret;
 }
