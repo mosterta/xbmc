@@ -151,7 +151,8 @@ void CVideoBufferRefSunxi::config(AVCodecContext *avctx, int chromaType, int ycb
 void CVideoBufferRefSunxi::createBuffer()
 {
   CLog::Log(LOGDEBUG, "CVideoBufferRefSunxi::%s - create buffer ref surface, surface:%d", __FUNCTION__, m_surf);
-  m_bufRef = av_buffer_create((uint8_t*)m_surf, 0, FFReleaseBuffer, this, 0);
+  if(!m_bufRef)
+    m_bufRef = av_buffer_create((uint8_t*)m_surf, 0, FFReleaseBuffer, this, 0);
   if (!m_bufRef) 
   {
     m_interop.glVDPAUDestroySurfaceCedar(m_surf);
@@ -298,7 +299,7 @@ void CVideoBufferSunxi::Unref()
 
 uint8_t* CVideoBufferSunxi::GetMemPtr() 
 { 
-  return m_pFrame->data[0]; 
+  return m_pFrame->buf[0]->data; 
 };
 
 CVideoBufferPoolSunxi::CVideoBufferPoolSunxi(VDPAU::InteropInfoCedar &interop) :
@@ -432,8 +433,6 @@ int CVideoBufferPoolSunxi::FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int 
   uint8_t *buf[4];
   int linesize[4];
   bufRef->map(buf, linesize);
-
-  memset(pic->data, 0, sizeof(pic->data));
 
   for(int i=0; i < 4; ++i)
   {
