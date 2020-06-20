@@ -213,7 +213,7 @@ CVideoBufferRefSunxi* CVideoBufferRefPoolSunxi::Get(AVCodecContext *avctx, int c
     int id = m_all.size();
     buf = new CVideoBufferRefSunxi(avctx, m_interop, chromaType, ycbcrFormat, width, height, id, format);
     assert(buf);
-    
+
     m_all.push_back(buf);
     m_used.push_back(id);
     CLog::Log(LOGDEBUG, " (CVideoBufferRefPoolSunxi) %s create new buffer %d", __FUNCTION__, id);
