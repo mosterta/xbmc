@@ -22,7 +22,7 @@ class CVideoBufferRefSunxi : public CVideoBuffer
 {
   public:
     CVideoBufferRefSunxi(AVCodecContext *avctx, VDPAU::InteropInfoCedar &interop, int chromaType, int ycbcrFormat, int width, int height, int id, int format);
-    ~CVideoBufferRefSunxi();
+    ~CVideoBufferRefSunxi() override;
     void config(AVCodecContext *avctx, int chromaType, int ycbcrFormat, int width, int height);
     void map(uint8_t *buf[], int linesize[]);
     VDPAU::InteropInfoCedar& getInterop() { return m_interop; };
@@ -50,8 +50,8 @@ class CVideoBufferRefPoolSunxi : public IVideoBufferPool
 {
   public:
     CVideoBufferRefPoolSunxi(VDPAU::InteropInfoCedar &interop);
-    ~CVideoBufferRefPoolSunxi();
-    void Return(int id);
+    ~CVideoBufferRefPoolSunxi() override;
+    void Return(int id) override;
     CVideoBufferRefSunxi* Get(AVCodecContext *avctx, int chromaType, int ycbcrFormat, int width, int height, int format);
     //std::shared_ptr<IRenderBufferPool> GetPtr() { return shared_from_this(); }
     CVideoBufferRefSunxi* Get() override { return nullptr;};
