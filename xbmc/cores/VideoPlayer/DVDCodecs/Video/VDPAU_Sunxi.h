@@ -236,7 +236,6 @@ protected:
   bool ConfigVDPAU(AVCodecContext *avctx, int ref_frames);
   bool CheckStatus(VdpStatus vdp_st, int line);
   void FiniVDPAUOutput();
-  void SetPictureParams(VideoPicture* pVideoPicture);
   static int FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int flags);
 
   static bool ReadFormatOf( AVCodecID codec
@@ -261,7 +260,7 @@ protected:
   CEvent m_DisplayEvent;
   int m_ErrorCount;
 
-  std::queue<AVFrame*> m_decodedPics;
+  std::queue<CVideoBufferSunxi*> m_decodedPics;
   bool m_vdpauConfigured;
   CVdpauConfig m_vdpauConfig;
   AVVDPAUContext m_hwContext;
@@ -271,7 +270,7 @@ protected:
   VDPAU::CInteropStateCedar m_interopState;
 
   std::shared_ptr<CVideoBufferPoolSunxi> m_videoBufferPool;
-  AVFrame *m_pFrame;
+//   AVFrame *m_pFrame;
 
   int m_codecControl;
   CProcessInfo& m_processInfo;

@@ -302,6 +302,45 @@ uint8_t* CVideoBufferSunxi::GetMemPtr()
   return m_pFrame->buf[0]->data; 
 };
 
+void CVideoBufferSunxi::SetPictureParams(VideoPicture* pVideoPicture)
+{
+  pVideoPicture->iWidth = m_pFrame->width;
+  pVideoPicture->iHeight = m_pFrame->height;
+
+  double aspect_ratio = 0;
+  AVRational pixel_aspect = m_pFrame->sample_aspect_ratio;
+  if (pixel_aspect.num)
+    aspect_ratio = av_q2d(pixel_aspect) * pVideoPicture->iWidth / pVideoPicture->iHeight;
+
+  if (aspect_ratio <= 0.0)
+    aspect_ratio = (float)pVideoPicture->iWidth / (float)pVideoPicture->iHeight;
+
+  pVideoPicture->iDisplayWidth = ((int)lrint(pVideoPicture->iHeight * aspect_ratio)) & -3;
+  pVideoPicture->iDisplayHeight = pVideoPicture->iHeight;
+  if (pVideoPicture->iDisplayWidth > pVideoPicture->iWidth)
+  {
+    pVideoPicture->iDisplayWidth = pVideoPicture->iWidth;
+    pVideoPicture->iDisplayHeight = ((int)lrint(pVideoPicture->iWidth / aspect_ratio)) & -3;
+  }
+
+  pVideoPicture->color_range = m_pFrame->color_range == AVCOL_RANGE_JPEG ? 1 : 0;
+  pVideoPicture->color_primaries = m_pFrame->color_primaries;
+  pVideoPicture->color_transfer = m_pFrame->color_trc;
+  pVideoPicture->color_space = m_pFrame->colorspace;
+
+  pVideoPicture->iRepeatPicture = 0;
+  pVideoPicture->iFlags = 0;
+  pVideoPicture->iFlags |= m_pFrame->interlaced_frame ? DVP_FLAG_INTERLACED : 0;
+  pVideoPicture->iFlags |= m_pFrame->top_field_first ? DVP_FLAG_TOP_FIELD_FIRST: 0;
+  pVideoPicture->iFlags |= m_pFrame->data[0] ? 0 : DVP_FLAG_DROPPED;
+
+  int64_t pts = m_pFrame->pts;
+  if (pts == AV_NOPTS_VALUE)
+    pts = m_pFrame->best_effort_timestamp;
+  pVideoPicture->pts = (pts == AV_NOPTS_VALUE) ? DVD_NOPTS_VALUE : (double)pts * DVD_TIME_BASE / AV_TIME_BASE;
+  pVideoPicture->dts = DVD_NOPTS_VALUE;
+}
+
 CVideoBufferPoolSunxi::CVideoBufferPoolSunxi(VDPAU::InteropInfoCedar &interop) :
     m_interop(interop), m_videoBufferRefPoolSunxi(std::make_shared<CVideoBufferRefPoolSunxi>(interop))
 {

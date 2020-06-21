@@ -76,6 +76,7 @@ class CVideoBufferSunxi : public CVideoBuffer
     void SetRef(AVFrame *frame);
     void GetRef(AVFrame *frame);
     void Unref();
+    void SetPictureParams(VideoPicture* pVideoPicture);
 
   protected:
     AVFrame* m_pFrame;
