@@ -69,9 +69,6 @@ struct VDPAU_procs
   VdpGetProcAddress *                   vdp_get_proc_address;
   VdpDeviceDestroy *                    vdp_device_destroy;
 
-  VdpVideoSurfaceCreate *               vdp_video_surface_create;
-  VdpVideoSurfaceDestroy *              vdp_video_surface_destroy;
-
   VdpGetErrorString *                         vdp_get_error_string;
 
   VdpDecoderCreate *             vdp_decoder_create;
