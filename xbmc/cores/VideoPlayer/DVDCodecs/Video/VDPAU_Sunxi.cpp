@@ -195,8 +195,6 @@ void CVDPAUContext::QueryProcs()
 
   VDP_PROC(VDP_FUNC_ID_GET_ERROR_STRING                    , m_vdpProcs.vdp_get_error_string);
   VDP_PROC(VDP_FUNC_ID_DEVICE_DESTROY                      , m_vdpProcs.vdp_device_destroy);
-  VDP_PROC(VDP_FUNC_ID_VIDEO_SURFACE_CREATE                , m_vdpProcs.vdp_video_surface_create);
-  VDP_PROC(VDP_FUNC_ID_VIDEO_SURFACE_DESTROY               , m_vdpProcs.vdp_video_surface_destroy);
   VDP_PROC(VDP_FUNC_ID_DECODER_CREATE                      , m_vdpProcs.vdp_decoder_create);
   VDP_PROC(VDP_FUNC_ID_DECODER_DESTROY                     , m_vdpProcs.vdp_decoder_destroy);
   VDP_PROC(VDP_FUNC_ID_DECODER_RENDER                      , m_vdpProcs.vdp_decoder_render);
