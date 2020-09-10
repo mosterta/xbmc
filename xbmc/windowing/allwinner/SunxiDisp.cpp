@@ -55,8 +55,8 @@ int SunxiDisp::GetRefreshRate()
       _refreshRate = 24.0;
       break;
     default:
-      CLog::Log(LOGERROR, "A10: display mode %d is unknown. Assume refreh rate 60Hz\n", i);
-      _refreshRate = 60.0;
+      CLog::Log(LOGERROR, "A10: display mode %d is unknown. Assume refreh rate 50Hz\n", i);
+      _refreshRate = 50.0;
       break;
   }
   return _refreshRate;
