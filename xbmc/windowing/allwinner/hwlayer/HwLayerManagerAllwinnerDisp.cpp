@@ -23,6 +23,7 @@
 
 #include "utils/log.h"
 #include "utils/CPUInfo.h"
+#include "ServiceBroker.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -106,7 +107,7 @@ bool CHwLayerManagerAllwinnerDisp::setup()
   createLayer(HwLayerType::GUI);
   
   //Allwinner A10 needs to use 2 scaler layer, display backend does not work properly
-  if (std::string("sun4i") == g_cpuInfo.getCPUHardware())
+  if (std::string("sun4i") == CServiceBroker::GetCPUInfo()->GetCPUHardware())
   {
     CPropertyValue prop(PropertyKey::ScalerType, (int)ScalerType::Type_Scale);
     setProperty(HwLayerType::GUI, prop);
@@ -148,8 +149,8 @@ bool CHwLayerManagerAllwinnerDisp::setup()
 
   //if not a A10, but A20 and hopefully later hardware as well,
   //alpha blending is switched off, since HW does alpha blending automatically
-  if((std::string("sun4i") != g_cpuInfo.getCPUHardware()) ||
-     (std::string("sun5i") != g_cpuInfo.getCPUHardware()))
+  if((std::string("sun4i") != CServiceBroker::GetCPUInfo()->GetCPUHardware()) ||
+     (std::string("sun5i") != CServiceBroker::GetCPUInfo()->GetCPUHardware()))
   {
     CPropertyValue prop(PropertyKey::AlphaEnable, 0);
     setProperty(HwLayerType::GUI, prop);
@@ -189,7 +190,7 @@ bool CHwLayerManagerAllwinnerDisp::createLayer(HwLayerType type)
     config.m_dispFd = m_dispFd;
     config.m_fbFd = m_fbFd;
     
-    std::string hardware = g_cpuInfo.getCPUHardware();
+    std::string hardware = CServiceBroker::GetCPUInfo()->GetCPUHardware();
     if(hardware == std::string("sun4i") || 
        hardware == std::string("sun5i") ||
        hardware == std::string("sun7i"))

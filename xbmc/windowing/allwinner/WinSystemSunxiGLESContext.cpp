@@ -22,6 +22,14 @@
 #include "WinSystemSunxiGLESContext.h"
 #include "utils/log.h"
 #include "threads/SingleLock.h"
+#include "windowing/WindowSystemFactory.h"
+
+using namespace KODI::WINDOWING::SUNXI;
+
+void CWinSystemSunxiGLESContext::Register()
+{
+  CWindowSystemFactory::RegisterWindowSystem(CreateWinSystem, "sunxi");
+}
 
 std::unique_ptr<CWinSystemBase> CWinSystemBase::CreateWinSystem()
 {

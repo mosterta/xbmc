@@ -23,6 +23,9 @@
 #if defined(HAVE_GBM)
 #include "windowing/gbm/WinSystemGbmGLESContext.h"
 #endif
+#if defined(ALLWINNERA10)
+#include "windowing/allwinner/WinSystemSunxiGLESContext.h"
+#endif
 #endif
 
 #if defined(HAS_GL)
@@ -61,6 +64,9 @@ bool CPlatformLinux::Init()
 #endif
 #if defined(HAVE_GBM)
   KODI::WINDOWING::GBM::CWinSystemGbmGLESContext::Register();
+#endif
+#if defined(ALLWINNERA10)
+  KODI::WINDOWING::SUNXI::CWinSystemSunxiGLESContext::Register();
 #endif
 #endif
 

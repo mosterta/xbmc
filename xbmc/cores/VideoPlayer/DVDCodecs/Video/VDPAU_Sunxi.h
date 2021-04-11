@@ -27,7 +27,6 @@
  */
 
 #include "cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodec.h"
-#include "cores/VideoPlayer/Process/VideoBuffer.h"
 #if defined(HAS_GLX)
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>

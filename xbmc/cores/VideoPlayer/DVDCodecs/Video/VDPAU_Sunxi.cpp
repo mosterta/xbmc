@@ -15,7 +15,6 @@
 #include "cores/VideoPlayer/DVDCodecs/DVDFactoryCodec.h"
 #include "cores/VideoPlayer/Process/ProcessInfo.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderManager.h"
-#include "cores/VideoPlayer/Interface/Addon/TimingConstants.h"
 #include "rendering/RenderSystem.h"
 #include "cores/VideoPlayer/Process/allwinner/ProcessInfoSunxi.h"
 #include "settings/lib/Setting.h"
@@ -80,7 +79,7 @@ void CVDPAUContext::Release()
 
 void CVDPAUContext::Close()
 {
-  CLog::Log(LOGNOTICE, "VDPAU::Close - closing decoder context");
+  CLog::Log(LOGINFO, "VDPAU::Close - closing decoder context");
   DestroyContext();
 }
 
@@ -155,7 +154,7 @@ bool CVDPAUContext::LoadSymbols()
 
 bool CVDPAUContext::CreateContext()
 {
-  CLog::Log(LOGNOTICE,"VDPAU::CreateContext - creating decoder context");
+  CLog::Log(LOGINFO,"VDPAU::CreateContext - creating decoder context");
 
   int screen=0;
   CSingleLock lock(CServiceBroker::GetWinSystem()->GetGfxContext());
@@ -167,7 +166,7 @@ bool CVDPAUContext::CreateContext()
                                    &m_vdpDevice,
                                    &m_vdpProcs.vdp_get_proc_address);
 
-  CLog::Log(LOGNOTICE,"vdp_device = 0x%08x vdp_st = 0x%08x",m_vdpDevice,vdp_st);
+  CLog::Log(LOGINFO,"vdp_device = 0x%08x vdp_st = 0x%08x",m_vdpDevice,vdp_st);
   if (vdp_st != VDP_STATUS_OK)
   {
     CLog::Log(LOGERROR,"(VDPAU) unable to init VDPAU - vdp_st = 0x%x.  Falling back.",vdp_st);
@@ -220,9 +219,9 @@ void CVDPAUContext::DestroyContext()
 void CVDPAUContext::SpewHardwareAvailable()  //Copyright (c) 2008 Wladimir J. van der Laan  -- VDPInfo
 {
   VdpStatus rv;
-  CLog::Log(LOGNOTICE,"VDPAU Decoder capabilities:");
-  CLog::Log(LOGNOTICE,"name          level macbs width height");
-  CLog::Log(LOGNOTICE,"------------------------------------");
+  CLog::Log(LOGINFO,"VDPAU Decoder capabilities:");
+  CLog::Log(LOGINFO,"name          level macbs width height");
+  CLog::Log(LOGINFO,"------------------------------------");
   for(const CDecoder::Desc& decoder_profile : decoder_profiles)
   {
     VdpBool is_supported = false;
@@ -231,7 +230,7 @@ void CVDPAUContext::SpewHardwareAvailable()  //Copyright (c) 2008 Wladimir J. va
                                 &is_supported, &max_level, &max_macroblocks, &max_width, &max_height);
     if(rv == VDP_STATUS_OK && is_supported)
     {
-      CLog::Log(LOGNOTICE,"%-16s %2i %5i %5i %5i\n", decoder_profile.name,
+      CLog::Log(LOGINFO,"%-16s %2i %5i %5i %5i\n", decoder_profile.name,
                 max_level, max_macroblocks, max_width, max_height);
     }
   }
@@ -297,7 +296,7 @@ bool CDecoder::Open(AVCodecContext* avctx, AVCodecContext* mainctx, const enum A
 #if 0
   if (!CServiceBroker::GetRenderSystem()->IsExtSupported("GL_NV_vdpau_interop"))
   {
-    CLog::Log(LOGNOTICE, "VDPAU::Open: required extension GL_NV_vdpau_interop not found");
+    CLog::Log(LOGINFO, "VDPAU::Open: required extension GL_NV_vdpau_interop not found");
     return false;
   }
 #endif
@@ -389,7 +388,7 @@ CDecoder::~CDecoder()
 
 void CDecoder::Close()
 {
-  CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
+  CLog::Log(LOGINFO, " (VDPAU) %s", __FUNCTION__);
 
   CServiceBroker::GetWinSystem()->Unregister(this);
 
@@ -415,7 +414,7 @@ long CDecoder::Release()
   if (m_vdpauConfigured == true)
   {
     CSingleLock lock(m_DecoderSection);
-    CLog::Log(LOGNOTICE,"CVDPAU::Release pre-cleanup");
+    CLog::Log(LOGINFO,"CVDPAU::Release pre-cleanup");
     while(! m_decodedPics.empty())
     {
       auto elem = m_decodedPics.front();
@@ -442,7 +441,7 @@ void CDecoder::SetWidthHeight(int width, int height)
 
 void CDecoder::OnLostDisplay()
 {
-  CLog::Log(LOGNOTICE,"CVDPAUSunxi::OnLostDisplay event");
+  CLog::Log(LOGINFO,"CVDPAUSunxi::OnLostDisplay event");
 
   int count = CServiceBroker::GetWinSystem()->GetGfxContext().exit();
 
@@ -461,7 +460,7 @@ void CDecoder::OnLostDisplay()
 
 void CDecoder::OnResetDisplay()
 {
-  CLog::Log(LOGNOTICE,"CVDPAUSunxi::OnResetDevice event");
+  CLog::Log(LOGINFO,"CVDPAUSunxi::OnResetDevice event");
 
   int count = CServiceBroker::GetWinSystem()->GetGfxContext().exit();
 
@@ -486,7 +485,7 @@ CDVDVideoCodec::VCReturn CDecoder::Check(AVCodecContext* avctx)
 
   if (state == VDPAU_LOST)
   {
-    CLog::Log(LOGNOTICE,"CVDPAU::Check waiting for display reset event");
+    CLog::Log(LOGINFO,"CVDPAU::Check waiting for display reset event");
     if (!m_DisplayEvent.WaitMSec(4000))
     {
       CLog::Log(LOGERROR, "CVDPAU::Check - device didn't reset in reasonable time");
@@ -535,7 +534,7 @@ void CDecoder::FiniVDPAUOutput()
   if (!m_vdpauConfigured)
     return;
 
-  CLog::Log(LOGNOTICE, " (VDPAU) %s", __FUNCTION__);
+  CLog::Log(LOGINFO, " (VDPAU) %s", __FUNCTION__);
 
   // uninit output
   m_vdpauConfigured = false;
@@ -613,8 +612,8 @@ bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)
 
   SetWidthHeight(avctx->width,avctx->height);
 
-  CLog::Log(LOGNOTICE, " (VDPAU) screenWidth:%i vidWidth:%i surfaceWidth:%i",m_vdpauConfig.outWidth,m_vdpauConfig.vidWidth,m_vdpauConfig.surfaceWidth);
-  CLog::Log(LOGNOTICE, " (VDPAU) screenHeight:%i vidHeight:%i surfaceHeight:%i",m_vdpauConfig.outHeight,m_vdpauConfig.vidHeight,m_vdpauConfig.surfaceHeight);
+  CLog::Log(LOGINFO, " (VDPAU) screenWidth:%i vidWidth:%i surfaceWidth:%i",m_vdpauConfig.outWidth,m_vdpauConfig.vidWidth,m_vdpauConfig.surfaceWidth);
+  CLog::Log(LOGINFO, " (VDPAU) screenHeight:%i vidHeight:%i surfaceHeight:%i",m_vdpauConfig.outHeight,m_vdpauConfig.vidHeight,m_vdpauConfig.surfaceHeight);
 
   ReadFormatOf(avctx->codec_id, vdp_decoder_profile, m_vdpauConfig.vdpChromaType);
 
@@ -653,8 +652,8 @@ bool CDecoder::ConfigVDPAU(AVCodecContext* avctx, int ref_frames)
     return false;
   if(adaptedSurfaceWidth != m_vdpauConfig.surfaceWidth || adaptedSurfaceHeight != m_vdpauConfig.surfaceHeight)
   {
-    CLog::Log(LOGNOTICE, " (VDPAU) adapted surfaceWidth:%i",adaptedSurfaceWidth);
-    CLog::Log(LOGNOTICE, " (VDPAU) adapted surfaceHeight:%i",adaptedSurfaceHeight);
+    CLog::Log(LOGINFO, " (VDPAU) adapted surfaceWidth:%i",adaptedSurfaceWidth);
+    CLog::Log(LOGINFO, " (VDPAU) adapted surfaceHeight:%i",adaptedSurfaceHeight);
     m_vdpauConfig.surfaceWidth = adaptedSurfaceWidth;
     m_vdpauConfig.surfaceHeight = adaptedSurfaceHeight;
   }
@@ -804,7 +803,7 @@ bool CDecoder::GetPicture(AVCodecContext* avctx, VideoPicture* picture)
 
 void CDecoder::Reset()
 {
-  CLog::Log(LOGNOTICE, " (VDPAUSunxi) Reseet");
+  CLog::Log(LOGINFO, " (VDPAUSunxi) Reseet");
   CSingleLock lock(m_DecoderSection);
 
   if (!m_vdpauConfigured)

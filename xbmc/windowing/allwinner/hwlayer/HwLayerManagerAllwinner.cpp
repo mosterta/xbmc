@@ -24,6 +24,7 @@
 
 #include "utils/log.h"
 #include "utils/CPUInfo.h"
+#include "ServiceBroker.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -43,7 +44,7 @@ CHwLayerManagerAllwinner::~CHwLayerManagerAllwinner()
 
 bool CHwLayerManagerAllwinner::initialize(CHwLayerManagerConfigAllwinner & config)
 {
-  std::string hardware = g_cpuInfo.getCPUHardware();
+  std::string hardware = CServiceBroker::GetCPUInfo()->GetCPUHardware();
   if(hardware == std::string("sun4i") || 
      hardware == std::string("sun5i") ||
      hardware == std::string("sun7i"))
