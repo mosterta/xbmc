@@ -40,6 +40,20 @@ public:
     return value;
   }
 
+  template<typename T>
+  void Set(T value)
+  {
+     std::ofstream file(m_path);
+
+     file << value;
+
+     if(file.bad())
+     {
+        CLog::LogF(LOGERROR, "error writing to '{}'", m_path);
+        throw std::runtime_error("error writing to " + m_path);
+     }
+  }
+
 private:
   std::string m_path;
 };

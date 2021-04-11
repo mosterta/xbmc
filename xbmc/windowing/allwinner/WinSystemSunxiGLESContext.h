@@ -25,11 +25,19 @@
 #include "utils/GlobalsHandling.h"
 #include "WinSystemSunxi.h"
 
+namespace KODI
+{
+namespace WINDOWING
+{
+namespace SUNXI
+{
 class CWinSystemSunxiGLESContext : public CWinSystemSunxi, public CRenderSystemGLES
 {
 public:
   CWinSystemSunxiGLESContext() = default;
   virtual ~CWinSystemSunxiGLESContext() = default;
+
+  static void Register();
 
   CRenderSystemBase *GetRenderSystem() override { return this; }
   bool InitWindowSystem() override;
@@ -55,3 +63,6 @@ private:
 
 };
 
+}
+}
+}

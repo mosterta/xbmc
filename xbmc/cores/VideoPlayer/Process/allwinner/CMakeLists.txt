@@ -1,7 +1,4 @@
-if(CORE_PLATFORM_NAME_LC STREQUAL allwinner)
-  set(SOURCES ProcessInfoSunxi.cpp)
+list(APPEND SOURCES ProcessInfoSunxi.cpp)
+list(APPEND HEADERS ProcessInfoSunxi.h)
 
-  set(HEADERS ProcessInfoSunxi.h)
-
-  core_add_library(processSunxi)
-endif()
+core_add_library(processSunxi)

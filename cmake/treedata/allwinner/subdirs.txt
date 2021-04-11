@@ -2,6 +2,7 @@ xbmc/cores/RetroPlayer/process/sunxi  cores/RetroPlayer/process/sunxi
 xbmc/cores/VideoPlayer/Process/allwinner  cores/VideoPlayer/Process/allwinner
 xbmc/platform/posix                 platform/posix
 xbmc/platform/posix/filesystem      platform/posix/filesystem
+xbmc/platform/posix/network         platform/posix/network
 xbmc/platform/posix/utils           platform/posix/utils
 xbmc/platform/linux                 platform/linux
 xbmc/platform/linux/input           platform/linux/input
@@ -12,4 +13,5 @@ xbmc/platform/linux/storage         platform/linux/storage
 xbmc/input/touch                    input/touch
 xbmc/input/touch/generic            input/touch/generic
 xbmc/windowing/linux                windowing/linux
+xbmc/windowing/allwinner            windowing/allwinner
 

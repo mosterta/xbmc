@@ -40,11 +40,11 @@
 #include "settings/DisplaySettings.h"
 #include "guilib/DispResource.h"
 #include "utils/log.h"
-#include "utils/SysfsUtils.h"
 #include "threads/SingleLock.h"
 //#include "../WinEventsLinux.h"
 #include "utils/StringUtils.h"
 #include "utils/RegExp.h"
+#include "platform/linux/SysfsPath.h"
 
 #include <linux/fb.h>
 
@@ -95,12 +95,12 @@ CWinSystemSunxi::CWinSystemSunxi() :
   fd = open("/sys/class/graphics/fb0/mode", O_RDWR);
   if (fd >= 0)
   {
-     CLog::Log(LOGNOTICE, "%s - graphics sysfs is writable\n", __FUNCTION__);
+     CLog::Log(LOGINFO, "%s - graphics sysfs is writable\n", __FUNCTION__);
      m_readonly = false;
   }
   else
   {
-     CLog::Log(LOGNOTICE, "%s - graphics sysfs is read-only\n", __FUNCTION__);
+     CLog::Log(LOGINFO, "%s - graphics sysfs is read-only\n", __FUNCTION__);
      m_readonly = true;
   }
   close(fd);
@@ -132,7 +132,7 @@ CWinSystemSunxi::~CWinSystemSunxi()
 bool CWinSystemSunxi::InitWindowSystem()
 {
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
-  if (std::string("sun8i") == g_cpuInfo.getCPUHardware())
+  if (std::string("sun8i") == CServiceBroker::GetCPUInfo()->GetCPUHardware())
     m_dispBase.reset(new SunxiDisp2(m_hdisp, 0));
   else
     m_dispBase.reset(new SunxiDisp(m_hdisp, 0));
@@ -230,7 +230,9 @@ bool CWinSystemSunxi::SetDisplayResolution(const RESOLUTION_INFO &res, std::stri
   mode += "\n";
   std::string cur_mode;
 
-  SysfsUtils::GetString("/sys/class/graphics/" + framebuffer_name + "/mode", cur_mode);
+  CSysfsPath fbMode{"/sys/class/graphics/" + framebuffer_name + "/mode"};
+  if(fbMode.Exists())
+     cur_mode = fbMode.Get<std::string>();
   CLog::Log(LOGWARNING, "CWinSystemSunxi::%s: current resolution '%s'",__FUNCTION__, cur_mode);
 
   if (cur_mode == mode)
@@ -241,7 +243,7 @@ bool CWinSystemSunxi::SetDisplayResolution(const RESOLUTION_INFO &res, std::stri
 
   CLog::Log(LOGWARNING, "CWinSystemSunxi::%s: changing to resolution '%s'",__FUNCTION__, mode);
 
-  SysfsUtils::SetString("/sys/class/graphics/" + framebuffer_name + "/mode", mode.c_str());
+  fbMode.Set<std::string>(mode.c_str());
 
   return true;
 }
@@ -319,7 +321,7 @@ void CWinSystemSunxi::UpdateResolutions()
     CServiceBroker::GetWinSystem()->GetGfxContext().ResetOverscan(resolutions[i]);
     CDisplaySettings::GetInstance().GetResolutionInfo(res_index) = resolutions[i];
 
-    CLog::Log(LOGNOTICE, "Found resolution %d x %d with %d x %d%s @ %f Hz\n",
+    CLog::Log(LOGINFO, "Found resolution %d x %d with %d x %d%s @ %f Hz\n",
       resolutions[i].iWidth,
       resolutions[i].iHeight,
       resolutions[i].iScreenWidth,
@@ -343,7 +345,7 @@ void CWinSystemSunxi::UpdateResolutions()
   // swap desktop index for desktop res if available
   if (ResDesktop != RES_INVALID)
   {
-    CLog::Log(LOGNOTICE, "Found (%dx%d%s@%f) at %d, setting to RES_DESKTOP at %d",
+    CLog::Log(LOGINFO, "Found (%dx%d%s@%f) at %d, setting to RES_DESKTOP at %d",
       resDesktop.iWidth, resDesktop.iHeight,
       resDesktop.dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "",
       resDesktop.fRefreshRate,
@@ -363,7 +365,9 @@ bool CWinSystemSunxi::Hide()
 bool CWinSystemSunxi::Show(bool show)
 {
   std::string blank_framebuffer = "/sys/class/graphics/" + m_framebuffer_name + "/blank";
-  SysfsUtils::SetInt(blank_framebuffer.c_str(), show ? 0 : 1);
+  CSysfsPath fbBlank{blank_framebuffer};
+  if(fbBlank.Exists())
+     fbBlank.Set<int>(show ? 0 : 1);
   return true;
 }
 
@@ -401,7 +405,7 @@ bool CWinSystemSunxi::GetNativeResolution(RESOLUTION_INFO *res)
   res->Overscan.right = res->iWidth;
   res->Overscan.bottom = res->iHeight;
 
-  CLog::Log(LOGNOTICE,"Current resolution: %s\n",res->strMode.c_str());
+  CLog::Log(LOGINFO,"Current resolution: %s\n",res->strMode.c_str());
   return true;
 }
 
@@ -411,7 +415,9 @@ bool CWinSystemSunxi::ProbeResolutions(std::vector<RESOLUTION_INFO> &resolutions
      return false;
       
   std::string valstr;
-  SysfsUtils::GetString("/sys/class/graphics/fb0/modes", valstr);
+  CSysfsPath fbModes{"/sys/class/graphics/fb0/modes"};
+  if(fbModes.Exists())
+     valstr = fbModes.Get<std::string>();
   std::vector<std::string> probe_str = StringUtils::Split(valstr, "\n");
       
   // lexical order puts the modes list into our preferred

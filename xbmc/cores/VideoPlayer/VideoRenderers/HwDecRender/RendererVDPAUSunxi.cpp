@@ -234,7 +234,7 @@ void CRendererVDPAUSunxi::RenderUpdate(int index, int index2, bool clear, unsign
   if (m_iLastRenderBuffer == index)
   {
     //m_videoLayerBridge->UpdateVideoPlane();
-    XbmcThreads::ThreadSleep(10);
+    KODI::TIME::Sleep(10);
 
     return;
   }
