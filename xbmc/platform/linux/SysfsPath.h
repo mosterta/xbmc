@@ -40,6 +40,22 @@ public:
     return value;
   }
 
+  std::string GetBuf()
+  {
+	std::ostringstream buf; 
+	std::ifstream file(m_path);
+
+	buf << file.rdbuf(); 
+	
+	if (file.bad())
+	{
+		CLog::LogF(LOGERROR, "error reading from '{}'", m_path);
+		throw std::runtime_error("error reading from " + m_path);
+	}
+
+	return buf.str();
+  }
+
   template<typename T>
   void Set(T value)
   {
