@@ -233,7 +233,7 @@ bool CWinSystemSunxi::SetDisplayResolution(const RESOLUTION_INFO &res, std::stri
   CSysfsPath fbMode{"/sys/class/graphics/" + framebuffer_name + "/mode"};
   if(fbMode.Exists())
      cur_mode = fbMode.Get<std::string>();
-  CLog::Log(LOGWARNING, "CWinSystemSunxi::%s: current resolution '%s'",__FUNCTION__, cur_mode);
+  CLog::Log(LOGINFO, "CWinSystemSunxi::%s: current resolution '%s'",__FUNCTION__, cur_mode);
 
   if (cur_mode == mode)
   {
@@ -241,7 +241,7 @@ bool CWinSystemSunxi::SetDisplayResolution(const RESOLUTION_INFO &res, std::stri
     return true;
   }
 
-  CLog::Log(LOGWARNING, "CWinSystemSunxi::%s: changing to resolution '%s'",__FUNCTION__, mode);
+  CLog::Log(LOGINFO, "CWinSystemSunxi::%s: changing to resolution '%s'",__FUNCTION__, mode);
 
   fbMode.Set<std::string>(mode.c_str());
 
@@ -263,7 +263,7 @@ void CWinSystemSunxi::SetFramebufferResolution(int width, int height, std::strin
     struct fb_var_screeninfo vinfo;
     if (ioctl(fd0, FBIOGET_VSCREENINFO, &vinfo) == 0)
     {
-      CLog::Log(LOGWARNING, "CWinSystemSunxi::%s: FBIOGET_VSCREENINFO to width:%d, height:%d",__FUNCTION__, width, height);
+      CLog::Log(LOGINFO, "CWinSystemSunxi::%s: FBIOGET_VSCREENINFO to width:%d, height:%d",__FUNCTION__, width, height);
       vinfo.xres = width;
       vinfo.yres = height;
       vinfo.xres_virtual = 1920;
@@ -417,7 +417,7 @@ bool CWinSystemSunxi::ProbeResolutions(std::vector<RESOLUTION_INFO> &resolutions
   std::string valstr;
   CSysfsPath fbModes{"/sys/class/graphics/fb0/modes"};
   if(fbModes.Exists())
-     valstr = fbModes.Get<std::string>();
+     valstr = fbModes.GetBuf();
   std::vector<std::string> probe_str = StringUtils::Split(valstr, "\n");
       
   // lexical order puts the modes list into our preferred
