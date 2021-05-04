@@ -230,7 +230,7 @@ void CVDPAUContext::SpewHardwareAvailable()  //Copyright (c) 2008 Wladimir J. va
                                 &is_supported, &max_level, &max_macroblocks, &max_width, &max_height);
     if(rv == VDP_STATUS_OK && is_supported)
     {
-      CLog::Log(LOGINFO,"%-16s %2i %5i %5i %5i\n", decoder_profile.name,
+      CLog::Log(LOGINFO,"%-16s %2i %5i %5i %5i", decoder_profile.name,
                 max_level, max_macroblocks, max_width, max_height);
     }
   }
