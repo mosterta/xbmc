@@ -17,6 +17,7 @@ CPeripheralBusCEC::CPeripheralBusCEC(CPeripherals& manager)
   : CPeripheralBus("PeripBusCEC", manager, PERIPHERAL_BUS_CEC)
 {
   m_cecAdapter = CECInitialise(&m_configuration);
+  m_iRescanTime = 300000;
 }
 
 CPeripheralBusCEC::~CPeripheralBusCEC(void)
