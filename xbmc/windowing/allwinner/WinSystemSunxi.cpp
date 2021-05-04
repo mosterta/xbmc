@@ -321,7 +321,7 @@ void CWinSystemSunxi::UpdateResolutions()
     CServiceBroker::GetWinSystem()->GetGfxContext().ResetOverscan(resolutions[i]);
     CDisplaySettings::GetInstance().GetResolutionInfo(res_index) = resolutions[i];
 
-    CLog::Log(LOGINFO, "Found resolution %d x %d with %d x %d%s @ %f Hz\n",
+    CLog::Log(LOGINFO, "Found resolution %d x %d with %d x %d%s @ %f Hz",
       resolutions[i].iWidth,
       resolutions[i].iHeight,
       resolutions[i].iScreenWidth,
