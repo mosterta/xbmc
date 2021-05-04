@@ -2490,7 +2490,7 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
   {
     m_skipGuiRender = false;
 
-    /*! @todo look into the possibility to use this for GBM
+    /*! @todo look into the possibility to use this for GBM */
     int fps = 0;
 
     // This code reduces rendering fps of the GUI layer when playing videos in fullscreen mode
@@ -2502,7 +2502,6 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
     unsigned int frameTime = now - m_lastRenderTime;
     if (fps > 0 && frameTime * fps < 1000)
       m_skipGuiRender = true;
-    */
 
     if (CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_guiSmartRedraw && m_guiRefreshTimer.IsTimePast())
     {
