@@ -50,7 +50,6 @@ void CVideoBufferRefSunxi::config(AVCodecContext *avctx, int chromaType, int ycb
     int w = width;
     int h = height;
 
-
     if(avctx->pix_fmt != AV_PIX_FMT_VDPAU)
     {
       avcodec_align_dimensions2(avctx, &w, &h, stride_align);
@@ -63,7 +62,7 @@ void CVideoBufferRefSunxi::config(AVCodecContext *avctx, int chromaType, int ycb
         // increase alignment of w for next try (rhs gives the lowest bit set in w)
         w += w & ~(w - 1);
 
-        unaligned = 0;
+	unaligned = 0;
         for (int i = 0; i < 4; i++)
           unaligned |= m_linesize[i] % stride_align[i];
       } while (unaligned);
@@ -190,7 +189,10 @@ CVideoBufferSunxi::CVideoBufferSunxi(IVideoBufferPool &pool, VDPAU::InteropInfoC
 
 CVideoBufferSunxi::~CVideoBufferSunxi()
 {
+<<<<<<< HEAD
   Unref();
+=======
+>>>>>>> 7d18672cbd7bd72837a316da03374c0341e51303
   av_frame_free(&m_pFrame);
 }
 
@@ -402,7 +404,10 @@ int CVideoBufferPoolSunxi::FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int 
   pic->extended_data = pic->data;
 
   memset(pic->buf, 0, sizeof(pic->buf));
+<<<<<<< HEAD
 
+=======
+>>>>>>> 7d18672cbd7bd72837a316da03374c0341e51303
   CVideoBufferRefSunxi *bufRef = bufPool->Get(avctx, chromaType, ycbcrFormat, pic->width, pic->height, pic->format);
   assert(bufRef);
   pic->buf[0] = bufRef->getBufRef();
