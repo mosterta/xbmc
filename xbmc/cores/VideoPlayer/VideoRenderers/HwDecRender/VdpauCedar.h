@@ -47,7 +47,7 @@ typedef int ( * PFNGLVDPAUGETFRAMEIDCEDAR) (int hLayer, int dispFd);
 typedef void ( * PFGLVDPAUCLOSEVIDEOLAYERCEDAR) (int hLayer, int dispFd);
 typedef int (* PFGLVDPAUGETVIDEOFRAMECCONFIG)(vdpauSurfaceCedar surface,  struct videoFrameConfig *config);
 typedef int (* PFGLVDPAUDESTROYSURFACECEDAR) (vdpauSurfaceCedar surface);
-typedef int (* PFGLVDPAUDCREATESURFACECEDAR) (int chroma_type, VdpYCbCrFormat format, int width, int height, vdpauSurfaceCedar *surfaces);
+typedef int (* PFGLVDPAUDCREATESURFACECEDAR) (int chroma_type, VdpYCbCrFormat format, int width, int height, unsigned char align[3], vdpauSurfaceCedar *surfaces);
 typedef int (* PFGLVDPAUGETMAPPEDMEMORYCEDAR) (vdpauSurfaceCedar surface, void** addrY, void** addrU, void** addrV);
 
 struct InteropInfoCedar

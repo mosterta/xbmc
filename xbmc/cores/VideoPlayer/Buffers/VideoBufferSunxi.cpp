@@ -44,15 +44,16 @@ void CVideoBufferRefSunxi::config(AVCodecContext *avctx, int chromaType, int ycb
     }
 
     int vdp_st;
-    int stride_align[8];
+    int stride_align[8] = {0};
+    unsigned char align[3] = {0};
     int unaligned;
     int w = width;
     int h = height;
 
-    avcodec_align_dimensions2(avctx, &w, &h, stride_align);
 
     if(avctx->pix_fmt != AV_PIX_FMT_VDPAU)
     {
+      avcodec_align_dimensions2(avctx, &w, &h, stride_align);
       do {
         // NOTE: do not align linesizes individually, this breaks e.g. assumptions
         // that linesize[0] == 2*linesize[1] in the MPEG-encoder for 4:2:2
@@ -61,18 +62,21 @@ void CVideoBufferRefSunxi::config(AVCodecContext *avctx, int chromaType, int ycb
           return ;
         // increase alignment of w for next try (rhs gives the lowest bit set in w)
         w += w & ~(w - 1);
-  
+
         unaligned = 0;
         for (int i = 0; i < 4; i++)
           unaligned |= m_linesize[i] % stride_align[i];
       } while (unaligned);
 
       m_surf = 0xdeadbeaf;
+      align[0] = m_linesize[0]-width+stride_align[0];
+      align[1] = stride_align[1];
+      align[2] = stride_align[2];
     }
     else
       m_surf = 0;
 
-    vdp_st = m_interop.glVDPAUCreateSurfaceCedar(chromaType, ycbcrFormat, width, height, &m_surf);
+    vdp_st = m_interop.glVDPAUCreateSurfaceCedar(chromaType, ycbcrFormat, width, height, align, &m_surf);
     if (vdp_st != 0)
     {
       CLog::Log(LOGERROR, "CVideoBufferRefSunxi::%s - No Video surface available could be created", __FUNCTION__);
@@ -398,6 +402,7 @@ int CVideoBufferPoolSunxi::FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int 
   pic->extended_data = pic->data;
 
   memset(pic->buf, 0, sizeof(pic->buf));
+
   CVideoBufferRefSunxi *bufRef = bufPool->Get(avctx, chromaType, ycbcrFormat, pic->width, pic->height, pic->format);
   assert(bufRef);
   pic->buf[0] = bufRef->getBufRef();

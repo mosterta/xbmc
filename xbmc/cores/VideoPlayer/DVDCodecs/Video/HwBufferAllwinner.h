@@ -82,7 +82,7 @@ typedef void (GL_APIENTRYP PFNGLVDPAUUNMAPSURFACESCEDAR) (GLsizei numSurfaces, c
 typedef int (GL_APIENTRYP PFNGLVDPAUGETFRAMEIDCEDAR) (int hLayer, int dispFd);
 typedef void (GL_APIENTRYP PFGLVDPAUCLOSEVIDEOLAYERCEDAR) (int hLayer, int dispFd);
 typedef VdpStatus (GL_APIENTRYP PFGLVDPAUDESTROYSURFACECEDAR) (vdpauSurfaceCedar surface);
-typedef VdpStatus (GL_APIENTRYP PFGLVDPAUDCREATESURFACECEDAR) (int chroma_type, VdpYCbCrFormat format, int width, int height, vdpauSurfaceCedar *surfaces);
+typedef VdpStatus (GL_APIENTRYP PFGLVDPAUDCREATESURFACECEDAR) (int chroma_type, VdpYCbCrFormat format, int width, int height, uint8_t align[3], vdpauSurfaceCedar *surfaces);
 typedef VdpStatus (GL_APIENTRYP PFGLVDPAUGETMAPPEDMEMORYCEDAR) (vdpauSurfaceCedar surface, void** addrY, void** addrU, void** addrV);
 #endif
 
