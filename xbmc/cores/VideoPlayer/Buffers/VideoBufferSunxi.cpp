@@ -186,6 +186,7 @@ CVideoBufferSunxi::CVideoBufferSunxi(IVideoBufferPool &pool, VDPAU::InteropInfoC
 
 CVideoBufferSunxi::~CVideoBufferSunxi()
 {
+  Unref();
   av_frame_free(&m_pFrame);
 }
 
