@@ -432,7 +432,7 @@ bool CWinSystemSunxi::ProbeResolutions(std::vector<RESOLUTION_INFO> &resolutions
      if(!StringUtils::StartsWith(probe_str[i], "D:") && !StringUtils::StartsWith(probe_str[i], "U:") &&
         !StringUtils::StartsWith(probe_str[i], "V:"))
          continue;
-    
+     CLog::Log(LOGINFO, "Processing mode string %s\n", probe_str[i]); 
      if(ModeToResolution(probe_str[i], &res))
         if(!FindMatchingResolution(res, resolutions))
            resolutions.push_back(res);

@@ -189,10 +189,7 @@ CVideoBufferSunxi::CVideoBufferSunxi(IVideoBufferPool &pool, VDPAU::InteropInfoC
 
 CVideoBufferSunxi::~CVideoBufferSunxi()
 {
-<<<<<<< HEAD
   Unref();
-=======
->>>>>>> 7d18672cbd7bd72837a316da03374c0341e51303
   av_frame_free(&m_pFrame);
 }
 
@@ -404,10 +401,6 @@ int CVideoBufferPoolSunxi::FFGetBuffer(AVCodecContext *avctx, AVFrame *pic, int 
   pic->extended_data = pic->data;
 
   memset(pic->buf, 0, sizeof(pic->buf));
-<<<<<<< HEAD
-
-=======
->>>>>>> 7d18672cbd7bd72837a316da03374c0341e51303
   CVideoBufferRefSunxi *bufRef = bufPool->Get(avctx, chromaType, ycbcrFormat, pic->width, pic->height, pic->format);
   assert(bufRef);
   pic->buf[0] = bufRef->getBufRef();
