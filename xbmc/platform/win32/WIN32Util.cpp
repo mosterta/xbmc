@@ -283,18 +283,27 @@ bool CWIN32Util::XBMCShellExecute(const std::string &strPath, bool bWaitForScrip
 std::string CWIN32Util::GetResInfoString()
 {
 #ifdef TARGET_WINDOWS_STORE
-  auto displayInfo = DisplayInformation::GetForCurrentView();
-
-  return StringUtils::Format("Desktop Resolution: %dx%d"
-    , displayInfo.ScreenWidthInRawPixels()
-    , displayInfo.ScreenHeightInRawPixels()
-  );
+  auto hdmiInfo = HdmiDisplayInformation::GetForCurrentView();
+  if (hdmiInfo) // Xbox
+  {
+    auto mode = hdmiInfo.GetCurrentDisplayMode();
+    return StringUtils::Format(
+        "Desktop Resolution: {}x{} {}Bit at {:.2f}Hz", mode.ResolutionWidthInRawPixels(),
+        mode.ResolutionHeightInRawPixels(), mode.BitsPerPixel(), mode.RefreshRate());
+  }
+  else // Windows 10 UWP
+  {
+    auto info = DisplayInformation::GetForCurrentView();
+    return StringUtils::Format("Desktop Resolution: {}x{}", info.ScreenWidthInRawPixels(),
+                               info.ScreenHeightInRawPixels());
+  }
 #else
-  DEVMODE devmode;
-  ZeroMemory(&devmode, sizeof(devmode));
+  DEVMODE devmode = {};
   devmode.dmSize = sizeof(devmode);
   EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &devmode);
-  return StringUtils::Format("Desktop Resolution: %dx%d %dBit at %dHz",devmode.dmPelsWidth,devmode.dmPelsHeight,devmode.dmBitsPerPel,devmode.dmDisplayFrequency);
+  return StringUtils::Format("Desktop Resolution: {}x{} {}Bit at {}Hz", devmode.dmPelsWidth,
+                             devmode.dmPelsHeight, devmode.dmBitsPerPel,
+                             devmode.dmDisplayFrequency);
 #endif
 }
 
@@ -1253,48 +1262,7 @@ HDR_STATUS CWIN32Util::ToggleWindowsHDR(DXGI_MODE_DESC& modeDesc)
   HDR_STATUS status = HDR_STATUS::HDR_TOGGLE_FAILED;
 
 #ifdef TARGET_WINDOWS_STORE
-  auto hdmiDisplayInfo = HdmiDisplayInformation::GetForCurrentView();
-
-  if (hdmiDisplayInfo == nullptr)
-    return status;
-
-  auto current = hdmiDisplayInfo.GetCurrentDisplayMode();
-
-  auto newColorSp = (current.ColorSpace() == HdmiDisplayColorSpace::BT2020)
-                        ? HdmiDisplayColorSpace::BT709
-                        : HdmiDisplayColorSpace::BT2020;
-
-  auto modes = hdmiDisplayInfo.GetSupportedDisplayModes();
-
-  // Browse over all modes available like the current (resolution and refresh)
-  // but reciprocals HDR (color space and transfer).
-  // NOTE: transfer for HDR is here "fake HDR" (EotfSdr) to be
-  // able render SRD content with HDR ON, same as Windows HDR switch does.
-  // GUI-skin is SDR. The real HDR mode is activated later when playback begins.
-  for (const auto& mode : modes)
-  {
-    if (mode.ColorSpace() == newColorSp &&
-        mode.ResolutionHeightInRawPixels() == current.ResolutionHeightInRawPixels() &&
-        mode.ResolutionWidthInRawPixels() == current.ResolutionWidthInRawPixels() &&
-        mode.StereoEnabled() == false && fabs(mode.RefreshRate() - current.RefreshRate()) < 0.0001)
-    {
-      if (current.ColorSpace() == HdmiDisplayColorSpace::BT2020) // HDR is ON
-      {
-        CLog::LogF(LOGINFO, "Toggle Windows HDR Off (ON => OFF).");
-        if (Wait(hdmiDisplayInfo.RequestSetCurrentDisplayModeAsync(mode,
-                                                                   HdmiDisplayHdrOption::None)))
-          status = HDR_STATUS::HDR_OFF;
-      }
-      else // HDR is OFF
-      {
-        CLog::LogF(LOGINFO, "Toggle Windows HDR On (OFF => ON).");
-        if (Wait(hdmiDisplayInfo.RequestSetCurrentDisplayModeAsync(mode,
-                                                                   HdmiDisplayHdrOption::EotfSdr)))
-          status = HDR_STATUS::HDR_ON;
-      }
-      break;
-    }
-  }
+  // Not supported - not implemented yet
 #else
   uint32_t pathCount = 0;
   uint32_t modeCount = 0;
@@ -1515,7 +1483,7 @@ HDR_STATUS CWIN32Util::GetWindowsHDRStatus()
   {
     status = advancedColorEnabled ? HDR_STATUS::HDR_ON : HDR_STATUS::HDR_OFF;
     if (CServiceBroker::IsServiceManagerUp())
-      CLog::LogF(LOGDEBUG, "Display HDR capable and current HDR status is {}",
+      CLog::LogF(LOGDEBUG, "Display is HDR capable and current HDR status is {}",
                  advancedColorEnabled ? "ON" : "OFF");
   }
 

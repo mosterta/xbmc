@@ -161,6 +161,7 @@ void CPVREpgInfoTag::Serialize(CVariant& value) const
   value["plotoutline"] = m_strPlotOutline;
   value["plot"] = m_strPlot;
   value["originaltitle"] = m_strOriginalTitle;
+  value["thumbnail"] = m_strIconPath;
   value["cast"] = DeTokenize(m_cast);
   value["director"] = DeTokenize(m_directors);
   value["writer"] = DeTokenize(m_writers);
@@ -177,6 +178,7 @@ void CPVREpgInfoTag::Serialize(CVariant& value) const
   value["episodename"] = m_strEpisodeName;
   value["episodenum"] = m_iEpisodeNumber;
   value["episodepart"] = m_iEpisodePart;
+  value["seasonnum"] = m_iSeriesNumber;
   value["isactive"] = IsActive();
   value["wasactive"] = WasActive();
   value["isseries"] = IsSeries();

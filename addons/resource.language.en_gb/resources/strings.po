@@ -10465,12 +10465,13 @@ msgctxt "#19215"
 msgid "Reminders"
 msgstr ""
 
-#. used by several skins
+#. label for 'all channels' value for 'channels' selector control in pvr radio guide search dialog
+#: xbmc/pvr/dialogs/GUIDialogPVRGuideSearch.cpp
 msgctxt "#19216"
 msgid "All radio channels"
 msgstr ""
 
-#. label for 'all channels' value for 'channels' selector control in pvr guide search dialog
+#. label for 'all channels' value for 'channels' selector control in pvr TV guide search dialog
 #: xbmc/pvr/dialogs/GUIDialogPVRGuideSearch.cpp
 msgctxt "#19217"
 msgid "All TV channels"
@@ -19414,7 +19415,7 @@ msgstr ""
 #. Description of setting with label #227 "Load audio CD information from online service"
 #: system/settings/settings.xml
 msgctxt "#36284"
-msgid "Read the information belonging to an audio CD, like song title and artist, from the Internet database freedb.org."
+msgid "Read the information belonging to an audio CD, like song title and artist, from the Internet database gnudb.org."
 msgstr ""
 
 #. Description of setting label #20000 "Saved music folder"

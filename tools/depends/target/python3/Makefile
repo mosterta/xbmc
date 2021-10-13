@@ -23,6 +23,10 @@ ifeq ($(OS), darwin_embedded)
                   ac_cv_func_getgroups=no
 endif
 
+ifeq ($(OS), linux)
+  EXTRA_CONFIGURE=ac_cv_pthread=yes
+endif
+
 # configuration settings
 CONFIGURE=./configure --prefix=$(PREFIX) \
   --disable-shared \
@@ -55,6 +59,10 @@ ifeq ($(OS),android)
 	cd $(PLATFORM); sed -ie 's|_locale -DPy_BUILD_CORE_BUILTIN _localemodule.c  # -lintl|#_locale -DPy_BUILD_CORE_BUILTIN _localemodule.c  # -lintl|' Modules/Setup
 else
 	cd $(PLATFORM); sed -ie 's|_locale -DPy_BUILD_CORE_BUILTIN _localemodule.c  # -lintl|_locale -DPy_BUILD_CORE_BUILTIN _localemodule.c   -lintl $(LINK_ICONV)|' Modules/Setup
+endif
+ifeq ($(OS),linux)
+	# _posixshmem module requires librt for linux for SHM_OPEN/SHM_UNLINK
+	cd $(PLATFORM); sed -ie 's|# -lrt # _posixshmem|-lrt # _posixshmem|' Modules/Setup
 endif
 ifeq ($(OS),osx)
 	echo "_scproxy \$$(srcdir)/Modules/_scproxy.c -framework SystemConfiguration -framework CoreFoundation" >> $(PLATFORM)/Modules/Setup

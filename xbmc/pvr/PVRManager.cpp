@@ -613,6 +613,9 @@ void CPVRManager::OnWake()
   /* start job to search for missing channel icons */
   TriggerSearchMissingChannelIcons();
 
+  /* try to play channel on startup */
+  TriggerPlayChannelOnStartup();
+
   /* trigger PVR data updates */
   TriggerChannelGroupsUpdate();
   TriggerChannelsUpdate();
@@ -807,26 +810,22 @@ void CPVRManager::TriggerChannelGroupsUpdate()
 
 void CPVRManager::TriggerSearchMissingChannelIcons()
 {
-  if (IsStarted())
-  {
-    CJobManager::GetInstance().Submit([this] {
-      CPVRGUIChannelIconUpdater updater({ChannelGroups()->GetGroupAllTV(), ChannelGroups()->GetGroupAllRadio()}, true);
-      updater.SearchAndUpdateMissingChannelIcons();
-      return true;
-    });
-  }
+  m_pendingUpdates->Append("pvr-search-missing-channel-icons", [this]() {
+    CPVRGUIChannelIconUpdater updater(
+        {ChannelGroups()->GetGroupAllTV(), ChannelGroups()->GetGroupAllRadio()}, true);
+    updater.SearchAndUpdateMissingChannelIcons();
+    return true;
+  });
 }
 
 void CPVRManager::TriggerSearchMissingChannelIcons(const std::shared_ptr<CPVRChannelGroup>& group)
 {
-  if (IsStarted())
-  {
-    CJobManager::GetInstance().Submit([group] {
-      CPVRGUIChannelIconUpdater updater({group}, false);
-      updater.SearchAndUpdateMissingChannelIcons();
-      return true;
-    });
-  }
+  m_pendingUpdates->Append("pvr-search-missing-channel-icons-" + std::to_string(group->GroupID()),
+                           [group]() {
+                             CPVRGUIChannelIconUpdater updater({group}, false);
+                             updater.SearchAndUpdateMissingChannelIcons();
+                             return true;
+                           });
 }
 
 void CPVRManager::ConnectionStateChange(CPVRClient* client,
@@ -836,6 +835,10 @@ void CPVRManager::ConnectionStateChange(CPVRClient* client,
 {
   CJobManager::GetInstance().Submit([this, client, connectString, state, message] {
     Clients()->ConnectionStateChange(client, connectString, state, message);
+
+    if (state == PVR_CONNECTION_STATE_CONNECTED)
+      Start(); // start over
+
     return true;
   });
 }
