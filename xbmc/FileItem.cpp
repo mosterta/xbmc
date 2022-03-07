@@ -40,8 +40,10 @@
 #include "pvr/recordings/PVRRecording.h"
 #include "pvr/timers/PVRTimerInfoTag.h"
 #include "settings/AdvancedSettings.h"
+#include "settings/SettingUtils.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
+#include "settings/lib/Setting.h"
 #include "threads/SingleLock.h"
 #include "utils/Archive.h"
 #include "utils/Crc32.h"
@@ -1048,7 +1050,8 @@ bool CFileItem::IsFileFolder(EFileFolderType types) const
   }
 
   if (CServiceBroker::IsBinaryAddonCacheUp() &&
-      IsType(CServiceBroker::GetFileExtensionProvider().GetFileFolderExtensions().c_str()))
+      IsType(CServiceBroker::GetFileExtensionProvider().GetFileFolderExtensions().c_str()) &&
+      CServiceBroker::GetFileExtensionProvider().CanOperateExtension(m_strPath))
     return true;
 
   if(types & EFILEFOLDER_TYPE_ONBROWSE)
@@ -3261,6 +3264,27 @@ bool CFileItem::SkipLocalArt() const
        || IsLiveTV()
        || IsPVRRecording()
        || IsDVD());
+}
+
+std::string CFileItem::GetThumbHideIfUnwatched(const CFileItem* item) const
+{
+  const std::shared_ptr<CSettingList> setting(std::dynamic_pointer_cast<CSettingList>(
+      CServiceBroker::GetSettingsComponent()->GetSettings()->GetSetting(
+          CSettings::SETTING_VIDEOLIBRARY_SHOWUNWATCHEDPLOTS)));
+  if (setting && item->HasVideoInfoTag() && item->GetVideoInfoTag()->m_type == MediaTypeEpisode &&
+      item->GetVideoInfoTag()->GetPlayCount() == 0 &&
+      !CSettingUtils::FindIntInList(setting,
+                                    CSettings::VIDEOLIBRARY_THUMB_SHOW_UNWATCHED_EPISODE) &&
+      item->HasArt("thumb"))
+  {
+    const std::string fanArt = item->GetArt("fanart");
+    if (fanArt.empty())
+      return "OverlaySpoiler.png";
+    else
+      return fanArt;
+  }
+
+  return item->GetArt("thumb");
 }
 
 std::string CFileItem::FindLocalArt(const std::string &artFile, bool useFolder) const
