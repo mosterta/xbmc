@@ -12,6 +12,7 @@
 #include "cores/AudioEngine/Utils/AEDeviceInfo.h"
 #include "cores/AudioEngine/Utils/AEUtil.h"
 #include "utils/StringUtils.h"
+#include "utils/SystemInfo.h"
 #include "utils/TimeUtils.h"
 #include "utils/XTimeUtils.h"
 #include "utils/log.h"
@@ -399,6 +400,8 @@ void CAESinkWASAPI::EnumerateDevicesEx(AEDeviceInfoList &deviceInfoList, bool fo
   WAVEFORMATEXTENSIBLE wfxex = {0};
   HRESULT              hr;
 
+  const bool onlyPT = (CSysInfo::GetWindowsDeviceFamily() == CSysInfo::WindowsDeviceFamily::Xbox);
+
   for(RendererDetail& details : CAESinkFactoryWin::GetRendererDetails())
   {
     deviceInfo.m_channels.Reset();
@@ -633,18 +636,20 @@ void CAESinkWASAPI::EnumerateDevicesEx(AEDeviceInfoList &deviceInfoList, bool fo
 
     /* Store the device info */
     deviceInfo.m_wantsIECPassthrough = true;
+    deviceInfo.m_onlyPassthrough = onlyPT;
 
     if (!deviceInfo.m_streamTypes.empty())
       deviceInfo.m_dataFormats.push_back(AE_FMT_RAW);
 
     deviceInfoList.push_back(deviceInfo);
 
-    if(details.bDefault)
+    if (details.bDefault)
     {
       deviceInfo.m_deviceName = std::string("default");
       deviceInfo.m_displayName = std::string("default");
       deviceInfo.m_displayNameExtra = std::string("");
       deviceInfo.m_wantsIECPassthrough = true;
+      deviceInfo.m_onlyPassthrough = onlyPT;
       deviceInfoList.push_back(deviceInfo);
     }
 
@@ -737,7 +742,7 @@ bool CAESinkWASAPI::InitializeExclusive(AEAudioFormat &format)
   else if (format.m_dataFormat == AE_FMT_RAW) //No sense in trying other formats for passthrough.
     return false;
 
-  CLog::LogF(LOGDEBUG, LOGAUDIO,
+  CLog::LogFC(LOGDEBUG, LOGAUDIO,
              "IsFormatSupported failed (%s) - trying to find a compatible format",
              WASAPIErrToStr(hr));
 
@@ -909,7 +914,7 @@ initialize:
     CLog::Log(LOGDEBUG, "  Enc. Channels   : %d", wfxex_iec61937.dwEncodedChannelCount);
     CLog::Log(LOGDEBUG, "  Enc. Samples/Sec: %d", wfxex_iec61937.dwEncodedSamplesPerSec);
     CLog::Log(LOGDEBUG, "  Channel Mask    : %d", wfxex.dwChannelMask);
-    CLog::Log(LOGDEBUG, "  Periodicty      : %I64d", audioSinkBufferDurationMsec);
+    CLog::Log(LOGDEBUG, "  Periodicty      : {}", audioSinkBufferDurationMsec);
     return false;
   }
 
