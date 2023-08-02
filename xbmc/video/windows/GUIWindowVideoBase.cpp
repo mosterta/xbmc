@@ -646,6 +646,10 @@ bool CGUIWindowVideoBase::OnSelect(int iItem)
 bool CGUIWindowVideoBase::OnFileAction(int iItem, int action, const std::string& player)
 {
   CFileItemPtr item = m_vecItems->Get(iItem);
+  if (!item)
+  {
+    return false;
+  }
 
   // Reset the current start offset. The actual resume
   // option is set in the switch, based on the action passed.
@@ -1159,6 +1163,8 @@ bool CGUIWindowVideoBase::OnPlayMedia(int iItem, const std::string &player)
     item.SetProperty("original_listitem_url", pItem->GetPath());
   }
   CLog::Log(LOGDEBUG, "%s %s", __FUNCTION__, CURL::GetRedacted(item.GetPath()).c_str());
+
+  item.SetProperty("playlist_type_hint", PLAYLIST_VIDEO);
 
   PlayMovie(&item, player);
 

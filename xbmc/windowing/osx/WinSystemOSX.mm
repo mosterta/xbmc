@@ -997,6 +997,7 @@ bool CWinSystemOSX::SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool bl
     backing:NSBackingStoreBuffered
     defer:NO
     screen:pScreen];
+    windowedFullScreenwindow.releasedWhenClosed = NO;
 
     [windowedFullScreenwindow setBackgroundColor:[NSColor blackColor]];
     [windowedFullScreenwindow makeKeyAndOrderFront:nil];
@@ -1027,7 +1028,7 @@ bool CWinSystemOSX::SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool bl
       {
         if (w == windowedFullScreenwindow)
           continue;
-        [w setFrameOrigin:NSZeroPoint];
+        [w setFrameOrigin:w.screen.frame.origin];
         break;
       }
     });

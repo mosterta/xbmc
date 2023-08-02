@@ -73,3 +73,6 @@ public:
 private:
   std::string m_path;
 };
+
+template<>
+std::string CSysfsPath::Get<std::string>();

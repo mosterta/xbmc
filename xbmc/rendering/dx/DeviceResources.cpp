@@ -133,6 +133,11 @@ void DX::DeviceResources::GetAdapterDesc(DXGI_ADAPTER_DESC* desc) const
 {
   if (m_adapter)
     m_adapter->GetDesc(desc);
+
+  // GetDesc() returns VendorId == 0 in Xbox however, we need to know that
+  // GPU is AMD to apply workarounds in DXVA.cpp CheckCompatibility() same as desktop
+  if (CSysInfo::GetWindowsDeviceFamily() == CSysInfo::Xbox)
+    desc->VendorId = PCIV_ATI;
 }
 
 void DX::DeviceResources::GetDisplayMode(DXGI_MODE_DESC* mode) const
@@ -600,7 +605,18 @@ void DX::DeviceResources::ResizeBuffers()
   {
     HDR_STATUS hdrStatus = CWIN32Util::GetWindowsHDRStatus();
     const bool isHdrEnabled = (hdrStatus == HDR_STATUS::HDR_ON);
-    const bool is10bitSafe = (hdrStatus != HDR_STATUS::HDR_UNSUPPORTED);
+    bool is10bitSafe = (hdrStatus != HDR_STATUS::HDR_UNSUPPORTED);
+
+// Xbox needs 10 bit swapchain to output true 4K resolution
+#ifdef TARGET_WINDOWS_DESKTOP
+    DXGI_ADAPTER_DESC ad = {};
+    GetAdapterDesc(&ad);
+
+    // Some AMD graphics has issues with 10 bit in SDR.
+    // Enabled by default only in Intel and NVIDIA with latest drivers/hardware
+    if (m_d3dFeatureLevel < D3D_FEATURE_LEVEL_12_1 || ad.VendorId == PCIV_ATI)
+      is10bitSafe = false;
+#endif
 
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.Width = lround(m_outputSize.Width);
@@ -1221,9 +1237,10 @@ HDR_STATUS DX::DeviceResources::ToggleHDR()
   DXGI_MODE_DESC md = {};
   GetDisplayMode(&md);
 
-  // Toggle display HDR
+  DX::Windowing()->SetTogglingHDR(true);
   DX::Windowing()->SetAlteringWindow(true);
 
+  // Toggle display HDR
   HDR_STATUS hdrStatus = CWIN32Util::ToggleWindowsHDR(md);
 
   // Kill swapchain
