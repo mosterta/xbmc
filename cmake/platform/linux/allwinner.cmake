@@ -1,0 +1,6 @@
+if(NOT APP_RENDER_SYSTEM OR APP_RENDER_SYSTEM STREQUAL "gl")
+   set(APP_RENDER_SYSTEM gles)
+endif()
+
+set(PLATFORM_REQUIRED_DEPS OpenGLES EGL CedarDisplay VdpauSunxi CedarAccess UMP)
+set(PLATFORM_OPTIONAL_DEPS CedarJpeg)

@@ -1850,20 +1850,21 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
   {
     m_skipGuiRender = false;
 
-    /*! @todo look into the possibility to use this for GBM
+    /*! @todo look into the possibility to use this for GBM */
     int fps = 0;
 
     // This code reduces rendering fps of the GUI layer when playing videos in fullscreen mode
     // it makes only sense on architectures with multiple layers
-    if (CServiceBroker::GetWinSystem()->GetGfxContext().IsFullScreenVideo() && !m_appPlayer.IsPausedPlayback() && m_appPlayer.IsRenderingVideoLayer())
-      fps = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_LIMITGUIUPDATE);
+    if (CServiceBroker::GetWinSystem()->GetGfxContext().IsFullScreenVideo() && 
+        !appPlayer->IsPausedPlayback() && 
+        appPlayer->IsRenderingVideoLayer())
+      fps = 10; //CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_LIMITGUIUPDATE);
 
     auto now = std::chrono::steady_clock::now();
 
     auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastRenderTime).count();
     if (fps > 0 && frameTime * fps < 1000)
       m_skipGuiRender = true;
-    */
 
     if (CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_guiSmartRedraw && m_guiRefreshTimer.IsTimePast())
     {

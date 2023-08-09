@@ -31,7 +31,6 @@
 #include "utils/Variant.h"
 #include "utils/log.h"
 
-#include <charconv>
 #include <cmath>
 
 using namespace KODI::GUILIB::GUIINFO;
@@ -495,10 +494,9 @@ bool CPlayerGUIInfo::GetBool(bool& value, const CGUIListItem *gitem, int context
     case PLAYER_HASPERFORMEDSEEK:
     {
       int requestedLastSecondInterval{0};
-      std::from_chars_result result =
-          std::from_chars(info.GetData3().data(), info.GetData3().data() + info.GetData3().size(),
-                          requestedLastSecondInterval);
-      if (result.ec == std::errc::invalid_argument)
+      char *endPtr = (char*)(info.GetData3().data() + info.GetData3().size());
+      requestedLastSecondInterval = strtol(info.GetData3().data(), &endPtr, 10);
+      if(endPtr != NULL)
       {
         value = false;
         return false;

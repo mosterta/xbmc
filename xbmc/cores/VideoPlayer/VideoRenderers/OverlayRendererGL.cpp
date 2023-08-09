@@ -63,6 +63,7 @@ static void LoadTexture(GLenum target
   bool bgraSupported = false;
   CRenderSystemGLES* renderSystem = dynamic_cast<CRenderSystemGLES*>(CServiceBroker::GetRenderSystem());
 
+#if not defined (ALLWINNERA10)
   if (!alpha)
   {
     if (renderSystem->IsExtSupported("GL_EXT_texture_format_BGRA8888") ||
@@ -79,6 +80,7 @@ static void LoadTexture(GLenum target
       externalFormat = GL_BGRA_EXT;
     }
   }
+#endif
 
   int bytesPerLine = bytesPerPixel * width;
 

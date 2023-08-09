@@ -14,8 +14,10 @@
 
 #include <memory>
 
+extern "C" {
 #include <ass/ass.h>
 #include <ass/ass_types.h>
+}
 
 /** Wrapper for Libass **/
 

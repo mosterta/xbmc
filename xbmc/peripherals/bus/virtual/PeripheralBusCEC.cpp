@@ -7,6 +7,7 @@
  */
 
 #include "PeripheralBusCEC.h"
+#include "peripherals/Peripherals.h"
 
 #include <libcec/cec.h>
 
@@ -17,6 +18,7 @@ CPeripheralBusCEC::CPeripheralBusCEC(CPeripherals& manager)
   : CPeripheralBus("PeripBusCEC", manager, PERIPHERAL_BUS_CEC)
 {
   m_cecAdapter = CECInitialise(&m_configuration);
+  m_iRescanTime = std::chrono::milliseconds(300000);
 }
 
 CPeripheralBusCEC::~CPeripheralBusCEC(void)
@@ -24,6 +26,9 @@ CPeripheralBusCEC::~CPeripheralBusCEC(void)
   if (m_cecAdapter)
     CECDestroy(m_cecAdapter);
 }
+#ifndef ADAPTERTYPE_LINUX
+#define ADAPTERTYPE_LINUX 0x400
+#endif
 
 bool CPeripheralBusCEC::PerformDeviceScan(PeripheralScanResults& results)
 {

@@ -12,7 +12,6 @@
 #include "utils/XBMCTinyXML.h"
 #include "utils/log.h"
 
-#include <charconv>
 #include <cstring>
 #include <sstream>
 
@@ -70,9 +69,10 @@ bool CBlurayStateSerializer::XMLToBlurayState(BlurayState& state, const std::str
     const std::string property = childElement->Value();
     if (property == "playlistId")
     {
-      std::from_chars(childElement->GetText(),
-                      childElement->GetText() + std::strlen(childElement->GetText()),
-                      state.playlistId);
+      char *endPtr = (char*)(childElement->GetText() + std::strlen(childElement->GetText()));
+      state.playlistId = strtol(childElement->GetText(),
+                                &endPtr,
+                                10);
     }
     else
     {
