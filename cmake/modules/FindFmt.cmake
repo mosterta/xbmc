@@ -30,6 +30,7 @@ if(NOT TARGET fmt::fmt)
                    -DFMT_DOC=OFF
                    -DFMT_TEST=OFF
                    -DFMT_INSTALL=ON
+		   -DFMT_STATIC_THOUSANDS_SEPARATOR=','
                    "${EXTRA_ARGS}")
 
     BUILD_DEP_TARGET()

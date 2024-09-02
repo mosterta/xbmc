@@ -12,7 +12,7 @@ if(NOT TARGET ASS::ASS)
   find_package(PkgConfig)
   # Do not use pkgconfig on windows
   if(PKG_CONFIG_FOUND AND NOT WIN32)
-    pkg_check_modules(PC_ASS libass QUIET IMPORTED_TARGET)
+	  pkg_check_modules(PC_ASS libass QUIET GLOBAL IMPORTED_TARGET)
 
     # INTERFACE_LINK_OPTIONS is incorrectly populated when cmake generation is executed
     # when an existing build generation is already done. Just set this to blank
@@ -42,7 +42,7 @@ if(NOT TARGET ASS::ASS)
 
   if(ASS_FOUND)
     if(TARGET PkgConfig::PC_ASS)
-      add_library(ASS::ASS ALIAS PkgConfig::PC_ASS)
+	    add_library(ASS::ASS ALIAS PkgConfig::PC_ASS)
     elseif(TARGET libass::libass)
       # Kodi custom libass target used for windows platforms
       add_library(ASS::ASS ALIAS libass::libass)

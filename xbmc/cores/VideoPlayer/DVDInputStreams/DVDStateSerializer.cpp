@@ -12,7 +12,6 @@
 #include "utils/XBMCTinyXML2.h"
 #include "utils/log.h"
 
-#include <charconv>
 #include <cstring>
 #include <sstream>
 
@@ -72,39 +71,31 @@ bool CDVDStateSerializer::XMLToDVDState(DVDState& state, const std::string& xmls
   const auto* childElement = hRoot.ToElement()->FirstChildElement();
   while (childElement != nullptr)
   {
+    char *endPtr;
     const std::string property = childElement->Value();
     if (property == "title")
     {
-      std::from_chars(childElement->GetText(),
-                      childElement->GetText() + std::strlen(childElement->GetText()), state.title);
+      state.title = strtol(childElement->GetText(), &endPtr, 0);
     }
     else if (property == "pgn")
     {
-      std::from_chars(childElement->GetText(),
-                      childElement->GetText() + std::strlen(childElement->GetText()), state.pgn);
+      state.pgn = strtol(childElement->GetText(), &endPtr, 0);
     }
     else if (property == "pgcn")
     {
-      std::from_chars(childElement->GetText(),
-                      childElement->GetText() + std::strlen(childElement->GetText()), state.pgcn);
+      state.pgcn = strtol(childElement->GetText(), &endPtr, 0);
     }
     else if (property == "current_angle")
     {
-      std::from_chars(childElement->GetText(),
-                      childElement->GetText() + std::strlen(childElement->GetText()),
-                      state.current_angle);
+      state.current_angle = strtol(childElement->GetText(), &endPtr, 0);
     }
     else if (property == "subp_num")
     {
-      std::from_chars(childElement->GetText(),
-                      childElement->GetText() + std::strlen(childElement->GetText()),
-                      state.subp_num);
+      state.subp_num = strtol(childElement->GetText(), &endPtr, 0);
     }
     else if (property == "audio_num")
     {
-      std::from_chars(childElement->GetText(),
-                      childElement->GetText() + std::strlen(childElement->GetText()),
-                      state.audio_num);
+      state.audio_num = strtol(childElement->GetText(), &endPtr, 0);
     }
     else if (property == "sub_enabled")
     {

@@ -1,0 +1,48 @@
+#.rst:
+# FindCedarJpeg
+# -------
+# Finds the cedarJpeg library
+#
+# This will will define the following variables::
+#
+# CEDARDISPLAY_FOUND - system has cedarJpeg
+# CEDARDISPLAY_INCLUDE_DIRS - the cedarJpeg include directory
+# CEDARDISPLAY_LIBRARIES - the cedarJpeg libraries
+# CEDARDISPLAY_DEFINITIONS - the cedarJpeg definitions
+#
+# and the following imported targets::
+#
+#   CEDARDISPLAY::CEDARDISPLAY   - The cedarJpeg library
+
+if(PKG_CONFIG_FOUND)
+	pkg_check_modules(PC_CEDARJPEG cedarJpeg QUIET)
+endif()
+
+find_path(CEDARJPEG_INCLUDE_DIR libcedarJpeg.h
+	PATHS ${PC_CEDARJPEG_INCLUDEDIR})
+
+find_library(CEDARJPEG_LIBRARY NAMES CEDARJPEG cedarJpeg
+	PATHS ${PC_CEDARJPEG_LIBDIR})
+
+set(CEDARJPEG_VERSION ${PC_CEDARJPEG_VERSION})
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(CEDARJPEG
+	REQUIRED_VARS CEDARJPEG_LIBRARY CEDARJPEG_INCLUDE_DIR
+	VERSION_VAR CEDARJPEG_VERSION)
+
+if(CEDARJPEG_FOUND)
+	set(CEDARJPEG_LIBRARIES ${CEDARJPEG_LIBRARY})
+	set(CEDARJPEG_INCLUDE_DIRS ${CEDARJPEG_INCLUDE_DIR})
+	set(CEDARJPEG_DEFINITIONS -DHAVE_LIBCEDARJPEG=1)
+
+	if(NOT TARGET CEDARJPEG::CEDARJPEG)
+		add_library(CEDARJPEG::CEDARJPEG UNKNOWN IMPORTED)
+		set_target_properties(CEDARJPEG::CEDARJPEG PROPERTIES
+			IMPORTED_LOCATION "${CEDARJPEG_LIBRARY}"
+			INTERFACE_INCLUDE_DIRECTORIES "${CEDARJPEG_INCLUDE_DIR}"
+			INTERFACE_COMPILE_DEFINITIONS HAVE_LIBCEDARJPEG=1)
+  endif()
+endif()
+
+mark_as_advanced(CEDARJPEG_INCLUDE_DIR CEDARJPEG_LIBRARY)

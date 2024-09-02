@@ -14,7 +14,7 @@
 #include <memory>
 #include <vector>
 
-#include <libinput.h>
+#include <libinput/libinput.h>
 #include <libudev.h>
 
 class CLibInputKeyboard;

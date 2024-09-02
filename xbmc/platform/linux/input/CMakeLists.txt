@@ -6,7 +6,10 @@ if(TARGET LIRCCLIENT::LIRCCLIENT)
   list(APPEND HEADERS LIRC.h)
 endif()
 
-if("gbm" IN_LIST CORE_PLATFORM_NAME_LC)
+message("libinput ${CORE_PLATFORM_NAME_LC} start, LIBINPUT_FOUND ${LIBINPUT_FOUND}")
+
+if(("gbm" IN_LIST CORE_PLATFORM_NAME_LC) OR
+   ("allwinner" IN_LIST CORE_PLATFORM_NAME_LC))
   if(LIBINPUT_FOUND)
     list(APPEND SOURCES LibInputHandler.cpp
                         LibInputKeyboard.cpp
@@ -19,6 +22,7 @@ if("gbm" IN_LIST CORE_PLATFORM_NAME_LC)
                         LibInputPointer.h
                         LibInputSettings.h
                         LibInputTouch.h)
+    message("including libinput")
   endif()
 endif()
 

@@ -42,10 +42,15 @@ macro(buildFFMPEG)
 
   SETUP_BUILD_VARS()
 
+  if(ENABLE_VDPAU OR ENABLE_VDPAU_SUNXI)
+    list(APPEND FFMPEG_OPTIONS -DENABLE_VDAPU=ON)
+  else()
+    list(APPEND FFMPEG_OPTIONS -DENABLE_VDPAU=OFF)
+  endif()
+
   list(APPEND FFMPEG_OPTIONS -DENABLE_CCACHE=${ENABLE_CCACHE}
                              -DCCACHE_PROGRAM=${CCACHE_PROGRAM}
                              -DENABLE_VAAPI=${ENABLE_VAAPI}
-                             -DENABLE_VDPAU=${ENABLE_VDPAU}
                              -DEXTRA_FLAGS=${FFMPEG_EXTRA_FLAGS})
 
   if(KODI_DEPENDSBUILD)
@@ -80,7 +85,10 @@ macro(buildFFMPEG)
                  -DPKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/lib/pkgconfig)
   set(PATCH_COMMAND ${CMAKE_COMMAND} -E copy
                     ${CMAKE_SOURCE_DIR}/tools/depends/target/ffmpeg/CMakeLists.txt
-                    <SOURCE_DIR>)
+                    <SOURCE_DIR> &&
+		    ${CMAKE_COMMAND} -E copy
+		    ${CMAKE_SOURCE_DIR}/tools/depends/target/ffmpeg/0001-MPEG4-vdpau-${FFMPEG_VER}.patch
+                   <SOURCE_DIR> )
 
   if(CMAKE_GENERATOR STREQUAL Xcode)
     set(FFMPEG_GENERATOR CMAKE_GENERATOR "Unix Makefiles")

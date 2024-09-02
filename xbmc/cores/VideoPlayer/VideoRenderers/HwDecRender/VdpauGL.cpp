@@ -11,7 +11,9 @@
 #include "cores/VideoPlayer/DVDCodecs/Video/VDPAU.h"
 #include "utils/log.h"
 
+#ifndef ALLWINNERA10
 #include <GL/glx.h>
+#endif
 
 using namespace VDPAU;
 

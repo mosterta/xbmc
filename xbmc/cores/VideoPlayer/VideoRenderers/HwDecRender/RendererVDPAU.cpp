@@ -245,7 +245,7 @@ void CRendererVDPAU::AfterRenderHook(int idx)
   if (glIsSync(m_fences[idx]))
   {
     glDeleteSync(m_fences[idx]);
-    m_fences[idx] = None;
+    m_fences[idx] = {};
   }
   m_fences[idx] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 }
@@ -374,7 +374,7 @@ bool CRendererVDPAU::CreateVDPAUTexture420(int index)
 
   for(int p=0; p<3; p++)
   {
-    pbo[p] = None;
+    pbo[p] = {};
   }
 
   planes[0].id = 1;

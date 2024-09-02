@@ -34,7 +34,6 @@
 
 #include <algorithm>
 #include <array>
-#include <charconv>
 #include <cmath>
 #include <functional>
 #include <iterator>
@@ -10072,7 +10071,8 @@ int CGUIInfoManager::TranslateSingleString(const std::string &strCondition, bool
       if (prop.name == "valueof")
       {
         int value = -1;
-        std::from_chars(prop.param(0).data(), prop.param(0).data() + prop.param(0).size(), value);
+        char *endPtr;
+        value = strtol(prop.param(0).data(), &endPtr, 0);
         return AddMultiInfo(CGUIInfo(INTEGER_VALUEOF, value));
       }
 
@@ -10083,9 +10083,8 @@ int CGUIInfoManager::TranslateSingleString(const std::string &strCondition, bool
           std::array<int, 2> data = {-1, -1};
           for (size_t i = 0; i < data.size(); i++)
           {
-            std::from_chars_result result = std::from_chars(
-                prop.param(i).data(), prop.param(i).data() + prop.param(i).size(), data.at(i));
-            if (result.ec == std::errc::invalid_argument)
+            if(!prop.param(i).empty() && 
+                prop.param(i).find_first_not_of("-0123456789") == std::string::npos)
             {
               // could not translate provided value to int, translate the info string
               data.at(i) = TranslateSingleString(prop.param(i), listItemDependent);
@@ -11013,8 +11012,10 @@ bool CGUIInfoManager::GetMultiInfoBool(const CGUIInfo &info, int contextWindow, 
               // useful for Player.Time* members without adding a separate set of members returning time in seconds
               if (value.find_first_of(':') != value.npos)
                 intValue = StringUtils::TimeStringToSeconds(value);
-              else
-                std::from_chars(value.data(), value.data() + value.size(), intValue);
+              else {
+                char *endPtr;
+                intValue = strtol(value.data(), &endPtr, 0);
+              }
             }
             return intValue;
           };
