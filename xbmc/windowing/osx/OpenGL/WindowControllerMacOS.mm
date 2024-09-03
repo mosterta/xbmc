@@ -77,6 +77,24 @@
   }
 }
 
+- (void)windowWillStartLiveResize:(NSNotification*)notification
+{
+  std::shared_ptr<CAppInboundProtocol> appPort = CServiceBroker::GetAppPort();
+  if (appPort)
+  {
+    appPort->SetRenderGUI(false);
+  }
+}
+
+- (void)windowDidEndLiveResize:(NSNotification*)notification
+{
+  std::shared_ptr<CAppInboundProtocol> appPort = CServiceBroker::GetAppPort();
+  if (appPort)
+  {
+    appPort->SetRenderGUI(true);
+  }
+}
+
 - (void)windowDidMiniaturize:(NSNotification*)aNotification
 {
   g_application.m_AppFocused = false;

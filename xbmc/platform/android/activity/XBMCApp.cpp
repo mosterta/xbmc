@@ -91,6 +91,7 @@
 #include <androidjni/MediaStore.h>
 #include <androidjni/NetworkInfo.h>
 #include <androidjni/PackageManager.h>
+#include <androidjni/Resources.h>
 #include <androidjni/StatFs.h>
 #include <androidjni/System.h>
 #include <androidjni/SystemClock.h>
@@ -214,14 +215,23 @@ void CXBMCApp::Announce(ANNOUNCEMENT::AnnouncementFlag flag,
     else if (message == "OnStop")
       OnPlayBackStopped();
     else if (message == "OnSeek")
+    {
+      m_mediaSessionUpdated = false;
       UpdateSessionState();
+    }
     else if (message == "OnSpeedChanged")
+    {
+      m_mediaSessionUpdated = false;
       UpdateSessionState();
+    }
   }
   else if (flag & Info)
   {
     if (message == "OnChanged")
+    {
+      m_mediaSessionUpdated = false;
       UpdateSessionMetadata();
+    }
   }
 }
 
@@ -885,6 +895,7 @@ void CXBMCApp::UpdateSessionState()
   float speed = 0.0;
   const auto& components = CServiceBroker::GetAppComponents();
   const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+  uint32_t oldPlayState = m_playback_state;
   if (m_playback_state != PLAYBACK_STATE_STOPPED)
   {
     if (appPlayer->HasVideo())
@@ -908,9 +919,13 @@ void CXBMCApp::UpdateSessionState()
   else
     state = CJNIPlaybackState::STATE_STOPPED;
 
-  builder.setState(state, pos, speed, CJNISystemClock::elapsedRealtime())
-      .setActions(CJNIPlaybackState::PLAYBACK_POSITION_UNKNOWN);
-  m_mediaSession->updatePlaybackState(builder.build());
+  if ((oldPlayState != m_playback_state) || !m_mediaSessionUpdated)
+  {
+    builder.setState(state, pos, speed, CJNISystemClock::elapsedRealtime())
+        .setActions(CJNIPlaybackState::PLAYBACK_POSITION_UNKNOWN);
+    m_mediaSession->updatePlaybackState(builder.build());
+    m_mediaSessionUpdated = true;
+  }
 }
 
 void CXBMCApp::OnPlayBackStarted()
@@ -928,6 +943,7 @@ void CXBMCApp::OnPlayBackStarted()
     m_playback_state |= PLAYBACK_STATE_CANNOT_PAUSE;
 
   m_mediaSession->activate(true);
+  m_mediaSessionUpdated = false;
   UpdateSessionState();
 
   CJNIIntent intent(ACTION_XBMC_RESUME, CJNIURI::EMPTY, *this, get_class(CJNIContext::get_raw()));
@@ -944,6 +960,7 @@ void CXBMCApp::OnPlayBackPaused()
   CLog::Log(LOGDEBUG, "{}", __PRETTY_FUNCTION__);
 
   m_playback_state &= ~PLAYBACK_STATE_PLAYING;
+  m_mediaSessionUpdated = false;
   UpdateSessionState();
 
   RequestVisibleBehind(false);
@@ -957,6 +974,7 @@ void CXBMCApp::OnPlayBackStopped()
   m_playback_state = PLAYBACK_STATE_STOPPED;
   UpdateSessionState();
   m_mediaSession->activate(false);
+  m_mediaSessionUpdated = false;
 
   RequestVisibleBehind(false);
   CAndroidKey::SetHandleMediaKeys(true);
@@ -977,7 +995,8 @@ std::vector<int> CXBMCApp::GetInputDeviceIds()
 
 void CXBMCApp::ProcessSlow()
 {
-  if ((m_playback_state & PLAYBACK_STATE_PLAYING) && m_mediaSession->isActive())
+  if ((m_playback_state & PLAYBACK_STATE_PLAYING) && !m_mediaSessionUpdated &&
+      m_mediaSession->isActive())
     UpdateSessionState();
 }
 
@@ -1333,22 +1352,21 @@ void CXBMCApp::onReceive(CJNIIntent intent)
   }
   else if (action == CJNIAudioManager::ACTION_HDMI_AUDIO_PLUG)
   {
-    m_supportsHdmiAudioPlug = true;
-    const bool hdmiPlugged = (intent.getIntExtra(CJNIAudioManager::EXTRA_AUDIO_PLUG_STATE, 0) != 0);
-    android_printf("-- HDMI is plugged in: %s", hdmiPlugged ? "yes" : "no");
+    m_hdmiPlugged = (intent.getIntExtra(CJNIAudioManager::EXTRA_AUDIO_PLUG_STATE, 0) != 0);
+    android_printf("-- HDMI is plugged in: %s", m_hdmiPlugged ? "yes" : "no");
     if (g_application.IsInitialized())
     {
       CWinSystemBase* winSystem = CServiceBroker::GetWinSystem();
       if (winSystem && dynamic_cast<CWinSystemAndroid*>(winSystem))
-        dynamic_cast<CWinSystemAndroid*>(winSystem)->SetHdmiState(hdmiPlugged);
+        dynamic_cast<CWinSystemAndroid*>(winSystem)->SetHdmiState(m_hdmiPlugged);
     }
-    if (hdmiPlugged && m_aeReset)
+    if (m_hdmiPlugged && m_aeReset)
     {
       android_printf("CXBMCApp::onReceive: Reset audio engine");
       CServiceBroker::GetActiveAE()->DeviceChange();
       m_aeReset = false;
     }
-    if (hdmiPlugged && m_wakeUp)
+    if (m_hdmiPlugged && m_wakeUp)
     {
       OnWakeup();
       m_wakeUp = false;
@@ -1362,11 +1380,11 @@ void CXBMCApp::onReceive(CJNIIntent intent)
     // screen but it is actually sent in response to changes in the overall interactive state of
     // the device.
     CLog::Log(LOGINFO, "Got device wakeup intent");
-    if (m_supportsHdmiAudioPlug)
+    if (m_hdmiPlugged)
+      OnWakeup();
+    else
       // wake-up sequence continues in ACTION_HDMI_AUDIO_PLUG intent
       m_wakeUp = true;
-    else
-      OnWakeup();
   }
   else if (action == CJNIIntent::ACTION_SCREEN_OFF)
   {
@@ -1708,6 +1726,40 @@ std::shared_ptr<CNativeWindow> CXBMCApp::GetNativeWindow(int timeout) const
     m_mainView->waitForSurface(timeout);
 
   return m_window;
+}
+
+// The map must contain keys "id" and "color", both are integers
+void CXBMCApp::SetViewBackgroundColorCallback(void* mapVariant)
+{
+  CVariant* mapV = static_cast<CVariant*>(mapVariant);
+  int viewId = (*mapV)["id"].asInteger();
+  int color = (*mapV)["color"].asInteger();
+
+  delete mapV;
+
+  CJNIView view = findViewById(viewId);
+  if (view)
+  {
+    view.setBackgroundColor(color);
+  }
+}
+
+void CXBMCApp::SetVideoLayoutBackgroundColor(const int color)
+{
+  CJNIResources resources = CJNIContext::getResources();
+  if (resources)
+  {
+    int id = resources.getIdentifier("VideoLayout", "id", CJNIContext::getPackageName());
+    if (id > 0)
+    {
+      // this object is deallocated in the callback
+      CVariant* msg = new CVariant(CVariant::VariantTypeObject);
+      (*msg)["id"] = id;
+      (*msg)["color"] = color;
+
+      runNativeOnUiThread(SetViewBackgroundColorCallback, msg);
+    }
+  }
 }
 
 void CXBMCApp::RegisterInputDeviceCallbacks(IInputDeviceCallbacks* handler)

@@ -120,7 +120,7 @@ void CGUIDialogPVRTimerSettings::SetTimer(const std::shared_ptr<CPVRTimerInfoTag
   m_firstDayLocalTime = m_timerInfoTag->FirstDayAsLocalTime();
 
   m_strEpgSearchString = m_timerInfoTag->m_strEpgSearchString;
-  if ((m_bIsNewTimer || !m_timerType->SupportsEpgTitleMatch()) && m_strEpgSearchString.empty())
+  if (!m_bIsNewTimer && m_strEpgSearchString.empty())
     m_strEpgSearchString = m_strTitle;
 
   m_bFullTextEpgSearch = m_timerInfoTag->m_bFullTextEpgSearch;
@@ -981,6 +981,31 @@ void CGUIDialogPVRTimerSettings::ChannelsFiller(const SettingConstPtr& setting,
       {
         current = channelEntry.first;
         foundCurrent = true;
+      }
+    }
+
+    if (foundCurrent)
+    {
+      // Verify m_channel is still valid. Update if not.
+      if (std::find_if(list.cbegin(), list.cend(),
+                       [&current](const auto& channel)
+                       { return channel.value == current; }) == list.cend())
+      {
+        // Set m_channel and current to first valid channel in list
+        const int first{list.front().value};
+        const auto it =
+            std::find_if(pThis->m_channelEntries.cbegin(), pThis->m_channelEntries.cend(),
+                         [first](const auto& channel) { return channel.first == first; });
+
+        if (it != pThis->m_channelEntries.cend())
+        {
+          current = (*it).first;
+          pThis->m_channel = (*it).second;
+        }
+        else
+        {
+          CLog::LogF(LOGERROR, "Unable to find channel to select");
+        }
       }
     }
   }

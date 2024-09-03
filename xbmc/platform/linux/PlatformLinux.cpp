@@ -107,7 +107,7 @@ bool CPlatformLinux::InitStageOne()
   }
   else if (sink == "pulseaudio")
   {
-    OPTIONALS::PulseAudioRegister();
+    OPTIONALS::PulseAudioRegister(true);
   }
   else if (sink == "pipewire")
   {
@@ -120,13 +120,13 @@ bool CPlatformLinux::InitStageOne()
   else if (sink == "alsa+pulseaudio")
   {
     OPTIONALS::ALSARegister();
-    OPTIONALS::PulseAudioRegister();
+    OPTIONALS::PulseAudioRegister(true);
   }
   else
   {
-    if (!OPTIONALS::PipewireRegister())
+    if (!OPTIONALS::PulseAudioRegister(false))
     {
-      if (!OPTIONALS::PulseAudioRegister())
+      if (!OPTIONALS::PipewireRegister())
       {
         if (!OPTIONALS::ALSARegister())
         {

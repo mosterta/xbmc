@@ -17,6 +17,7 @@
 
 #include "platform/posix/filesystem/SMBWSDiscovery.h"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <mutex>
@@ -27,6 +28,7 @@
 #include <arpa/inet.h>
 #include <fmt/format.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 using namespace WSDiscovery;

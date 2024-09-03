@@ -1801,7 +1801,10 @@ void CFileItem::UpdateInfo(const CFileItem &item, bool replaceLabels /*=true*/)
   if (!item.GetArt().empty())
     SetArt(item.GetArt());
   AppendProperties(item);
-  UpdateMimeType();
+
+  SetContentLookup(item.m_doContentLookup);
+  SetMimeType(item.m_mimetype);
+  UpdateMimeType(m_doContentLookup);
 }
 
 void CFileItem::MergeInfo(const CFileItem& item)
@@ -1871,7 +1874,10 @@ void CFileItem::MergeInfo(const CFileItem& item)
       SetArt(item.GetArt());
   }
   AppendProperties(item);
-  UpdateMimeType();
+
+  SetContentLookup(item.m_doContentLookup);
+  SetMimeType(item.m_mimetype);
+  UpdateMimeType(m_doContentLookup);
 }
 
 void CFileItem::SetFromVideoInfoTag(const CVideoInfoTag &video)
@@ -3797,12 +3803,12 @@ bool CFileItem::LoadDetails()
     bool ret{false};
     auto tag{std::make_unique<CVideoInfoTag>()};
     if (params.GetMovieId() >= 0)
-      ret = db.GetMovieInfo(GetPath(), *tag, static_cast<int>(params.GetMovieId()),
+      ret = db.GetMovieInfo({}, *tag, static_cast<int>(params.GetMovieId()),
                             static_cast<int>(params.GetVideoVersionId()));
     else if (params.GetMVideoId() >= 0)
-      ret = db.GetMusicVideoInfo(GetPath(), *tag, static_cast<int>(params.GetMVideoId()));
+      ret = db.GetMusicVideoInfo({}, *tag, static_cast<int>(params.GetMVideoId()));
     else if (params.GetEpisodeId() >= 0)
-      ret = db.GetEpisodeInfo(GetPath(), *tag, static_cast<int>(params.GetEpisodeId()));
+      ret = db.GetEpisodeInfo({}, *tag, static_cast<int>(params.GetEpisodeId()));
     else if (params.GetSetId() >= 0) // movie set
       ret = db.GetSetInfo(static_cast<int>(params.GetSetId()), *tag, this);
     else if (params.GetTvShowId() >= 0)
@@ -3815,7 +3821,7 @@ bool CFileItem::LoadDetails()
           ret = db.GetSeasonInfo(idSeason, *tag, this);
       }
       else
-        ret = db.GetTvShowInfo(GetPath(), *tag, static_cast<int>(params.GetTvShowId()), this);
+        ret = db.GetTvShowInfo({}, *tag, static_cast<int>(params.GetTvShowId()), this);
     }
 
     if (ret)
