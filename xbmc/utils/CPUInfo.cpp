@@ -17,7 +17,6 @@ bool CCPUInfo::HasCoreId(int coreId) const
     if (core.m_id == coreId)
       return true;
   }
-
   return false;
 }
 

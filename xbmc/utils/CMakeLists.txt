@@ -193,9 +193,14 @@ if(TARGET XSLT::XSLT)
 endif()
 if(TARGET EGL::EGL)
   list(APPEND SOURCES EGLUtils.cpp
-                      EGLFence.cpp)
+  )
   list(APPEND HEADERS EGLUtils.h
-                      EGLFence.h)
+  )
+
+  if(NOT ("allwinner" IN_LIST CORE_PLATFORM_NAME_LC))
+    list(APPEND SOURCES EGLFence.cpp)
+    list(APPEND HEADERS EGLFence.h)
+  endif()
 endif()
 
 # The large map trips the clang optimizer

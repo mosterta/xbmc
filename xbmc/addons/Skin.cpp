@@ -33,7 +33,6 @@
 #include "utils/XMLUtils.h"
 #include "utils/log.h"
 
-#include <charconv>
 #include <memory>
 
 #define XML_SETTINGS      "settings"
@@ -657,7 +656,8 @@ int CSkinInfo::GetInt(int setting) const
     return -1;
   }
   int settingValueInt{-1};
-  std::from_chars(settingValue.data(), settingValue.data() + settingValue.size(), settingValueInt);
+  char *endPtr;
+  settingValueInt = strtol(settingValue.data(), &endPtr, 0);
   return settingValueInt;
 }
 

@@ -10,4 +10,9 @@ if("gbm" IN_LIST CORE_PLATFORM_NAME_LC OR "wayland" IN_LIST CORE_PLATFORM_NAME_L
                       VideoBufferPoolDMA.h)
 endif()
 
+if("allwinner" IN_LIST CORE_PLATFORM_NAME_LC)
+  list(APPEND SOURCES VideoBufferSunxi.cpp)
+  list(APPEND HEADERS VideoBufferSunxi.h)
+endif()
+
 core_add_library(videoplayer-buffers)

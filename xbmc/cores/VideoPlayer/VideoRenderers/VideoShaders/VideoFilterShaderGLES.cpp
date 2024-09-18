@@ -63,6 +63,7 @@ ConvolutionFilterShader::ConvolutionFilterShader(ESCALINGMETHOD method)
   std::string shadername;
   std::string defines;
 
+#if defined (GL_RGBA16F_EXT)
   if (CServiceBroker::GetRenderSystem()->IsExtSupported("GL_EXT_color_buffer_float"))
   {
     m_floattex = true;
@@ -71,6 +72,7 @@ ConvolutionFilterShader::ConvolutionFilterShader(ESCALINGMETHOD method)
   {
     m_floattex = false;
   }
+#endif
 
   if (m_method == VS_SCALINGMETHOD_CUBIC_B_SPLINE ||
       m_method == VS_SCALINGMETHOD_CUBIC_MITCHELL ||
@@ -89,12 +91,14 @@ ConvolutionFilterShader::ConvolutionFilterShader(ESCALINGMETHOD method)
     shadername = "gles_convolution-6x6.frag";
   }
 
+#if defined(GL_RGBA16F_EXT)
   if (m_floattex)
   {
     m_internalformat = GL_RGBA16F_EXT;
     defines = "#define HAS_FLOAT_TEXTURE\n";
   }
   else
+#endif
   {
     m_internalformat = GL_RGBA;
   }

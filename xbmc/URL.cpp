@@ -20,7 +20,6 @@
 #include <sys\stat.h>
 #endif
 
-#include <charconv>
 #include <iterator>
 #include <string>
 #include <system_error>
@@ -667,9 +666,21 @@ std::string CURL::Decode(std::string_view strURLData)
     {
       if (std::distance(iter, iterEnd) >= 3)
       {
-        uint8_t dec_num{};
+        long dec_num{};
+	char string[3];
+	memset(string, 0, sizeof(string));
+#if 0
         const std::from_chars_result res = std::from_chars(iter + 1, iter + 3, dec_num, 16);
         if (res.ec != std::errc() || res.ptr != iter + 3)
+          strResult += *iter;
+#endif
+	errno = 0;
+	memcpy(string, iter + 1, 2);
+	char *endPtr;
+	dec_num = strtol(string, &endPtr, 16);
+	if((((errno == ERANGE) && (dec_num == LONG_MAX || dec_num == LONG_MIN)) 
+				|| (errno != 0 && dec_num == 0))
+				|| (endPtr != string + 2))
           strResult += *iter;
         else
         {
@@ -698,7 +709,7 @@ std::string CURL::Encode(std::string_view strURLData)
   {
     // Don't URL encode "-_.!()" according to RFC1738
     //! @todo Update it to "-_.~" after Gotham according to RFC3986
-    if (StringUtils::isasciialphanum(kar) || kar == '-' || kar == '.' || kar == '_' || kar == '!' || kar == '(' || kar == ')')
+    if (StringUtils::isasciialphanum(kar) || kar == '-' || kar == '.' || kar == '_' || kar == '!' || kar == '(' || kar == ')' )
       strResult.push_back(kar);
     else
       fmt::format_to(std::back_insert_iterator(strResult), "%{:02x}",

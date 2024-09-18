@@ -27,6 +27,13 @@ if(TARGET VDPAU::VDPAU)
                       VdpauGL.h)
 endif()
 
+if("allwinner" IN_LIST CORE_PLATFORM_NAME_LC)
+  list(APPEND SOURCES RendererVDPAUSunxi.cpp
+                      VdpauCedar.cpp)
+  list(APPEND HEADERS RendererVDPAUSunxi.h
+                      VdpauCedar.h)
+endif()
+
 if(CORE_SYSTEM_NAME STREQUAL osx)
   if(TARGET OpenGL::GL)
     list(APPEND SOURCES RendererVTBGL.cpp)

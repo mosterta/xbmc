@@ -35,7 +35,8 @@ if(TARGET OpenGL::GLES AND ("android" IN_LIST CORE_PLATFORM_NAME_LC OR
                             "tvos" IN_LIST CORE_PLATFORM_NAME_LC OR
                             "gbm" IN_LIST CORE_PLATFORM_NAME_LC OR
                             "x11" IN_LIST CORE_PLATFORM_NAME_LC OR
-                            "wayland" IN_LIST CORE_PLATFORM_NAME_LC))
+			    "wayland" IN_LIST CORE_PLATFORM_NAME_LC OR
+			    "allwinner" IN_LIST CORE_PLATFORM_NAME_LC))
   list(APPEND SOURCES VideoFilterShaderGLES.cpp
                       YUV2RGBShaderGLES.cpp)
   list(APPEND HEADERS VideoFilterShaderGLES.h
