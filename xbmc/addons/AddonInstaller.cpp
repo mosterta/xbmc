@@ -429,7 +429,7 @@ bool CAddonInstaller::InstallFromZip(const std::string &path)
     CLog::Log(
         LOGERROR,
         "CAddonInstaller: installing addon failed '{}' - itemsize: {}, first item is folder: {}",
-        CURL::GetRedacted(path), items.Size(), items[0]->m_bIsFolder);
+        CURL::GetRedacted(path), items.Size(), items.Size() > 0 ? items[0]->m_bIsFolder : false);
     return false;
   }
 

@@ -27,7 +27,9 @@
 
 using namespace std::chrono_literals;
 
+#if defined(TARGET_WINDOWS_DESKTOP)
 extern HWND g_hWnd;
+#endif
 
 CZeroconfBrowserMDNS::CZeroconfBrowserMDNS()
 {

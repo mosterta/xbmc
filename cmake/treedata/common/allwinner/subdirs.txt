@@ -1,0 +1,2 @@
+xbmc/cores/RetroPlayer/process/sunxi  cores/RetroPlayer/process/sunxi
+xbmc/cores/VideoPlayer/Process/allwinner  cores/VideoPlayer/Process/allwinner

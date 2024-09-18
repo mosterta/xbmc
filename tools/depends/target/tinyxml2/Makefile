@@ -2,6 +2,7 @@ include ../../Makefile.include TINYXML2-VERSION ../../download-files.include
 DEPS = ../../Makefile.include Makefile TINYXML2-VERSION ../../download-files.include \
                                        001-debug-pdb.patch \
                                        002-multiconfig-gen-pkgconfig.patch
+RETRIEVE_TOOL_FLAGS := -LsS --create-dirs --retry 10 --retry-connrefused -o
 
 LIBDYLIB=$(PLATFORM)/build/$(BYPRODUCT)
 
@@ -9,6 +10,7 @@ all: .installed-$(PLATFORM)
 
 $(PLATFORM): $(TARBALLS_LOCATION)/$(ARCHIVE).$(HASH_TYPE) $(DEPS)
 	rm -rf $(PLATFORM); mkdir -p $(PLATFORM)/build
+	echo "$(ARCHIVE_TOOL) $(ARCHIVE_TOOL_FLAGS) $(TARBALLS_LOCATION)/$(ARCHIVE)"
 	cd $(PLATFORM); $(ARCHIVE_TOOL) $(ARCHIVE_TOOL_FLAGS) $(TARBALLS_LOCATION)/$(ARCHIVE)
 	cd $(PLATFORM); sed -ie 's|\r$$||' CMakeLists.txt
 	cd $(PLATFORM); patch -p1 -i ../001-debug-pdb.patch

@@ -31,7 +31,6 @@
 #include "utils/Variant.h"
 #include "utils/log.h"
 
-#include <charconv>
 #include <cmath>
 #include <memory>
 
@@ -502,10 +501,9 @@ bool CPlayerGUIInfo::GetBool(bool& value, const CGUIListItem *gitem, int context
     case PLAYER_HASPERFORMEDSEEK:
     {
       int requestedLastSecondInterval{0};
-      std::from_chars_result result =
-          std::from_chars(info.GetData3().data(), info.GetData3().data() + info.GetData3().size(),
-                          requestedLastSecondInterval);
-      if (result.ec == std::errc::invalid_argument)
+      char *endPtr;
+      requestedLastSecondInterval = strtol(info.GetData3().data(), &endPtr, 0);
+      if(endPtr != NULL)
       {
         value = false;
         return false;

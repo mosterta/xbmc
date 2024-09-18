@@ -1,0 +1,471 @@
+diff -r -c ffmpeg-6.0.1/libavcodec/arm/aac.h ffmpeg/libavcodec/arm/aac.h
+*** ffmpeg-6.0.1/libavcodec/arm/aac.h	2020-04-27 23:48:15.000000000 +0200
+--- ffmpeg/libavcodec/arm/aac.h	2024-04-22 18:16:39.788775732 +0200
+***************
+*** 93,99 ****
+               : "d0", "d1", "d2");
+      return dst;
+  }
+! 
+  #define VMUL4S VMUL4S
+  static inline float *VMUL4S(float *dst, const float *v, unsigned idx,
+                              unsigned sign, const float *scale)
+--- 93,99 ----
+               : "d0", "d1", "d2");
+      return dst;
+  }
+! /*
+  #define VMUL4S VMUL4S
+  static inline float *VMUL4S(float *dst, const float *v, unsigned idx,
+                              unsigned sign, const float *scale)
+***************
+*** 137,143 ****
+               : "cc", "d0", "d1", "d2", "d3", "d4", "d5");
+      return dst;
+  }
+! 
+  #endif /* HAVE_NEON_INLINE */
+  
+  #endif /* AVCODEC_ARM_AAC_H */
+--- 137,143 ----
+               : "cc", "d0", "d1", "d2", "d3", "d4", "d5");
+      return dst;
+  }
+! */
+  #endif /* HAVE_NEON_INLINE */
+  
+  #endif /* AVCODEC_ARM_AAC_H */
+diff -r -c ffmpeg-6.0.1/libavcodec/avcodec.h ffmpeg/libavcodec/avcodec.h
+*** ffmpeg-6.0.1/libavcodec/avcodec.h	2023-11-10 01:30:15.000000000 +0100
+--- ffmpeg/libavcodec/avcodec.h	2024-04-23 10:50:50.960506889 +0200
+***************
+*** 1550,1555 ****
+--- 1550,1557 ----
+       */
+      int (*execute2)(struct AVCodecContext *c, int (*func)(struct AVCodecContext *c2, void *arg, int jobnr, int threadnr), void *arg2, int *ret, int count);
+  
++     int (*set_video_header)(struct AVCodecContext *avctx, const uint32_t id);
++ 
+      /**
+       * noise vs. sse weight for the nsse comparison function
+       * - encoding: Set by user.
+diff -r -c ffmpeg-6.0.1/libavcodec/codec_id.h ffmpeg/libavcodec/codec_id.h
+*** ffmpeg-6.0.1/libavcodec/codec_id.h	2023-11-10 01:30:15.000000000 +0100
+--- ffmpeg/libavcodec/codec_id.h	2024-04-22 18:16:39.798775380 +0200
+***************
+*** 66,71 ****
+--- 66,72 ----
+      AV_CODEC_ID_MSMPEG4V1,
+      AV_CODEC_ID_MSMPEG4V2,
+      AV_CODEC_ID_MSMPEG4V3,
++     AV_CODEC_ID_MSMPEG4V4,
+      AV_CODEC_ID_WMV1,
+      AV_CODEC_ID_WMV2,
+      AV_CODEC_ID_H263P,
+diff -r -c ffmpeg-6.0.1/libavcodec/Makefile ffmpeg/libavcodec/Makefile
+*** ffmpeg-6.0.1/libavcodec/Makefile	2023-11-10 01:30:15.000000000 +0100
+--- ffmpeg/libavcodec/Makefile	2024-04-22 18:16:39.798775380 +0200
+***************
+*** 1013,1018 ****
+--- 1013,1019 ----
+  OBJS-$(CONFIG_MPEG4_NVDEC_HWACCEL)        += nvdec_mpeg4.o
+  OBJS-$(CONFIG_MPEG4_VAAPI_HWACCEL)        += vaapi_mpeg4.o
+  OBJS-$(CONFIG_MPEG4_VDPAU_HWACCEL)        += vdpau_mpeg4.o
++ OBJS-$(CONFIG_MSMPEG4V3_VDPAU_HWACCEL)    += vdpau_msmpeg4.o
+  OBJS-$(CONFIG_MPEG4_VIDEOTOOLBOX_HWACCEL) += videotoolbox.o
+  OBJS-$(CONFIG_VC1_D3D11VA_HWACCEL)        += dxva2_vc1.o
+  OBJS-$(CONFIG_VC1_DXVA2_HWACCEL)          += dxva2_vc1.o
+diff -r -c ffmpeg-6.0.1/libavcodec/mpeg4videodec.c ffmpeg/libavcodec/mpeg4videodec.c
+*** ffmpeg-6.0.1/libavcodec/mpeg4videodec.c	2023-11-10 01:30:25.000000000 +0100
+--- ffmpeg/libavcodec/mpeg4videodec.c	2024-04-22 18:16:39.808775028 +0200
+***************
+*** 47,52 ****
+--- 47,53 ----
+  #include "threadframe.h"
+  #include "xvididct.h"
+  #include "unary.h"
++ #include "vdpau.h"
+  
+  /* The defines below define the number of bits that are read at once for
+   * reading vlc values. Changing these may improve speed and data cache needs
+***************
+*** 3598,3603 ****
+--- 3599,3608 ----
+              vol++;
+              if ((ret = decode_vol_header(ctx, gb)) < 0)
+                  return ret;
++             if(s->avctx->set_video_header) {
++                 s->avctx->set_video_header(s->avctx, VDP_MPEG4_VOL_HEADER);
++             }
++ 
+          } else if (startcode == USER_DATA_STARTCODE) {
+              decode_user_data(ctx, gb);
+          } else if (startcode == GOP_STARTCODE) {
+***************
+*** 3861,3867 ****
+      .p.capabilities        = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1 |
+                               AV_CODEC_CAP_DELAY | AV_CODEC_CAP_FRAME_THREADS,
+      .caps_internal         = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM |
+!                              FF_CODEC_CAP_ALLOCATE_PROGRESS,
+      .flush                 = ff_mpeg_flush,
+      .p.max_lowres          = 3,
+      .p.pix_fmts            = ff_h263_hwaccel_pixfmt_list_420,
+--- 3866,3872 ----
+      .p.capabilities        = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1 |
+                               AV_CODEC_CAP_DELAY | AV_CODEC_CAP_FRAME_THREADS,
+      .caps_internal         = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM |
+!                              FF_CODEC_CAP_ALLOCATE_PROGRESS | FF_CODEC_CAP_SETS_PKT_DTS,
+      .flush                 = ff_mpeg_flush,
+      .p.max_lowres          = 3,
+      .p.pix_fmts            = ff_h263_hwaccel_pixfmt_list_420,
+diff -r -c ffmpeg-6.0.1/libavcodec/msmpeg4dec.c ffmpeg/libavcodec/msmpeg4dec.c
+*** ffmpeg-6.0.1/libavcodec/msmpeg4dec.c	2023-11-10 01:30:15.000000000 +0100
+--- ffmpeg/libavcodec/msmpeg4dec.c	2024-04-22 18:16:39.808775028 +0200
+***************
+*** 853,861 ****
+      .close          = ff_h263_decode_end,
+      FF_CODEC_DECODE_CB(ff_h263_decode_frame),
+      .p.capabilities = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+!     .caps_internal  = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM,
+      .p.max_lowres   = 3,
+      .p.pix_fmts     = (const enum AVPixelFormat[]) {
+          AV_PIX_FMT_YUV420P,
+          AV_PIX_FMT_NONE
+      },
+--- 853,862 ----
+      .close          = ff_h263_decode_end,
+      FF_CODEC_DECODE_CB(ff_h263_decode_frame),
+      .p.capabilities = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+!     .caps_internal  = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM | FF_CODEC_CAP_SETS_PKT_DTS,
+      .p.max_lowres   = 3,
+      .p.pix_fmts     = (const enum AVPixelFormat[]) {
++ 	AV_PIX_FMT_VDPAU,
+          AV_PIX_FMT_YUV420P,
+          AV_PIX_FMT_NONE
+      },
+***************
+*** 871,879 ****
+      .close          = ff_h263_decode_end,
+      FF_CODEC_DECODE_CB(ff_h263_decode_frame),
+      .p.capabilities = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+!     .caps_internal  = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM,
+      .p.max_lowres   = 3,
+      .p.pix_fmts     = (const enum AVPixelFormat[]) {
+          AV_PIX_FMT_YUV420P,
+          AV_PIX_FMT_NONE
+      },
+--- 872,881 ----
+      .close          = ff_h263_decode_end,
+      FF_CODEC_DECODE_CB(ff_h263_decode_frame),
+      .p.capabilities = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+!     .caps_internal  = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM | FF_CODEC_CAP_SETS_PKT_DTS,
+      .p.max_lowres   = 3,
+      .p.pix_fmts     = (const enum AVPixelFormat[]) {
++ 	AV_PIX_FMT_VDPAU,
+          AV_PIX_FMT_YUV420P,
+          AV_PIX_FMT_NONE
+      },
+***************
+*** 889,897 ****
+      .close          = ff_h263_decode_end,
+      FF_CODEC_DECODE_CB(ff_h263_decode_frame),
+      .p.capabilities = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+!     .caps_internal  = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM,
+      .p.max_lowres   = 3,
+      .p.pix_fmts     = (const enum AVPixelFormat[]) {
+          AV_PIX_FMT_YUV420P,
+          AV_PIX_FMT_NONE
+      },
+--- 891,900 ----
+      .close          = ff_h263_decode_end,
+      FF_CODEC_DECODE_CB(ff_h263_decode_frame),
+      .p.capabilities = AV_CODEC_CAP_DRAW_HORIZ_BAND | AV_CODEC_CAP_DR1,
+!     .caps_internal  = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM | FF_CODEC_CAP_SETS_PKT_DTS,
+      .p.max_lowres   = 3,
+      .p.pix_fmts     = (const enum AVPixelFormat[]) {
++ 	AV_PIX_FMT_VDPAU,
+          AV_PIX_FMT_YUV420P,
+          AV_PIX_FMT_NONE
+      },
+diff -r -c ffmpeg-6.0.1/libavcodec/vdpau.h ffmpeg/libavcodec/vdpau.h
+*** ffmpeg-6.0.1/libavcodec/vdpau.h	2023-11-10 01:30:15.000000000 +0100
+--- ffmpeg/libavcodec/vdpau.h	2024-04-22 18:16:39.818774676 +0200
+***************
+*** 91,97 ****
+       * Set by the user.
+       */
+      VdpDecoderRender *render;
+! 
+      AVVDPAU_Render2 render2;
+  } AVVDPAUContext;
+  
+--- 91,97 ----
+       * Set by the user.
+       */
+      VdpDecoderRender *render;
+!     VdpDecoderSetControlData *set_video_header;
+      AVVDPAU_Render2 render2;
+  } AVVDPAUContext;
+  
+diff -r -c ffmpeg-6.0.1/libavcodec/vdpau_internal.h ffmpeg/libavcodec/vdpau_internal.h
+*** ffmpeg-6.0.1/libavcodec/vdpau_internal.h	2023-11-10 00:38:51.000000000 +0100
+--- ffmpeg/libavcodec/vdpau_internal.h	2024-04-22 18:16:39.818774676 +0200
+***************
+*** 126,131 ****
+--- 126,133 ----
+  int ff_vdpau_common_end_frame(AVCodecContext *avctx, AVFrame *frame,
+                                struct vdpau_picture_context *pic);
+  int ff_vdpau_mpeg_end_frame(AVCodecContext *avctx);
++ int ff_vdpau_msmpeg_end_frame(AVCodecContext *avctx);
++ 
+  int ff_vdpau_add_buffer(struct vdpau_picture_context *pic, const uint8_t *buf,
+                          uint32_t buf_size);
+  int ff_vdpau_common_frame_params(AVCodecContext *avctx,
+diff -r -c ffmpeg-6.0.1/libavcodec/vdpau_mpeg4.c ffmpeg/libavcodec/vdpau_mpeg4.c
+*** ffmpeg-6.0.1/libavcodec/vdpau_mpeg4.c	2023-11-10 01:30:25.000000000 +0100
+--- ffmpeg/libavcodec/vdpau_mpeg4.c	2024-04-22 18:16:39.818774676 +0200
+***************
+*** 29,34 ****
+--- 29,36 ----
+  #include "vdpau.h"
+  #include "vdpau_internal.h"
+  
++ int vdpau_mpeg4_create_video_headers(AVCodecContext *avctx, uint32_t id, VdpDecoderControlData *data);
++ 
+  static int vdpau_mpeg4_start_frame(AVCodecContext *avctx,
+                                     const uint8_t *buffer, uint32_t size)
+  {
+***************
+*** 47,56 ****
+  
+      switch (s->pict_type) {
+      case AV_PICTURE_TYPE_B:
+          ref = ff_vdpau_get_surface_id(s->next_picture.f);
+          assert(ref != VDP_INVALID_HANDLE);
+          info->backward_reference = ref;
+!         info->vop_coding_type    = 2;
+          /* fall-through */
+      case AV_PICTURE_TYPE_P:
+          ref = ff_vdpau_get_surface_id(s->last_picture.f);
+--- 49,60 ----
+  
+      switch (s->pict_type) {
+      case AV_PICTURE_TYPE_B:
++     case AV_PICTURE_TYPE_S:
+          ref = ff_vdpau_get_surface_id(s->next_picture.f);
+          assert(ref != VDP_INVALID_HANDLE);
+          info->backward_reference = ref;
+!         if( s->pict_type != AV_PICTURE_TYPE_S)
+!           info->vop_coding_type    = 2;
+          /* fall-through */
+      case AV_PICTURE_TYPE_P:
+          ref = ff_vdpau_get_surface_id(s->last_picture.f);
+***************
+*** 80,85 ****
+--- 84,91 ----
+      }
+  
+      ff_vdpau_common_start_frame(pic_ctx, buffer, size);
++     if(avctx->extradata_size && s->picture_number==1)
++         ff_vdpau_add_buffer(pic_ctx, avctx->extradata, avctx->extradata_size);
+      return ff_vdpau_add_buffer(pic_ctx, buffer, size);
+  }
+  
+***************
+*** 90,95 ****
+--- 96,159 ----
+       return 0;
+  }
+  
++ int vdpau_mpeg4_create_video_headers(AVCodecContext *avctx, uint32_t id, VdpDecoderControlData *data)
++ {
++     Mpeg4DecContext * const s = avctx->priv_data;
++     memset(data, 0x0, sizeof(*data));
++ 
++     if(id == VDP_MPEG4_VOL_HEADER)
++     {
++        VdpDecoderMpeg4VolHeader *vol = &(data->mpeg4VolHdr);
++ 
++        vol->struct_version               = VDP_MPEG4_STRUCT_VERSION;
++        vol->video_object_type_indication = s->m.vo_type;
++        vol->aspect_ratio_info            = s->m.aspect_ratio_info;
++        vol->par_width                    = s->m.avctx->sample_aspect_ratio.num;
++        vol->par_height                   = s->m.avctx->sample_aspect_ratio.den;
++        vol->vol_control_parameters       = s->vol_control_parameters;
++        vol->low_delay                    = s->m.low_delay;
++        vol->video_object_layer_shape     = s->shape;
++        vol->vop_time_increment_resolution = s->m.avctx->framerate.num;
++        vol->video_object_layer_width     = s->m.width;
++        vol->video_object_layer_height    = s->m.height;
++        vol->interlaced                   = !s->m.progressive_sequence;
++        vol->sprite_enable                = s->vol_sprite_usage;
++        vol->no_of_sprite_warping_points  = s->num_sprite_warping_points;
++        vol->sprite_warping_accuracy      = s->m.sprite_warping_accuracy;
++        vol->sprite_brightness_change     = s->sprite_brightness_change;
++        vol->quant_precision              = s->m.quant_precision;
++        vol->quant_type                   = s->m.mpeg_quant;
++        for(int i=0; i < 64; ++i)
++        {
++              //to be done matrices
++        }
++        vol->quarter_sample               = s->m.quarter_sample;
++        vol->resync_marker_disable        = !s->resync_marker;
++        vol->data_partitioned             = s->m.data_partitioning;
++        vol->reversible_vlc               = s->rvlc;
++        vol->newpred_enable               = s->new_pred;
++        vol->scalability                  = s->scalability;
++        vol->enhancement_type             = s->enhancement_type;
++ 
++        return 1;
++     }
++     return 0;
++ }
++ 
++ static int vdpau_mpeg4_set_video_header (AVCodecContext *avctx, uint32_t id)
++ {
++     AVVDPAUContext *hwctx = avctx->hwaccel_context;
++     VdpDecoderControlData data;
++ 
++     if(!hwctx->set_video_header)
++        return 0;
++ 
++     if(vdpau_mpeg4_create_video_headers(avctx, id, &data))
++        return hwctx->set_video_header(hwctx->decoder, id, &data);
++ 
++     return 0;
++ }
++ 
+  static int vdpau_mpeg4_init(AVCodecContext *avctx)
+  {
+      VdpDecoderProfile profile;
+diff -r -c ffmpeg-6.0.1/libavformat/mov.c ffmpeg/libavformat/mov.c
+*** ffmpeg-6.0.1/libavformat/mov.c	2023-11-10 01:30:25.000000000 +0100
+--- ffmpeg/libavformat/mov.c	2024-04-22 18:16:39.828774325 +0200
+***************
+*** 4582,4587 ****
+--- 4582,4588 ----
+              return ret;
+      }
+  
++ #if 0
+      switch (st->codecpar->codec_id) {
+  #if CONFIG_H261_DECODER
+      case AV_CODEC_ID_H261:
+***************
+*** 4596,4601 ****
+--- 4597,4603 ----
+          st->codecpar->height= 0;
+          break;
+      }
++ #endif
+  
+      // If the duration of the mp3 packets is not constant, then they could need a parser
+      if (st->codecpar->codec_id == AV_CODEC_ID_MP3
+diff -r -c ffmpeg-6.0.1/libavutil/arm/intmath.h ffmpeg/libavutil/arm/intmath.h
+*** ffmpeg-6.0.1/libavutil/arm/intmath.h	2023-11-10 01:30:16.000000000 +0100
+--- ffmpeg/libavutil/arm/intmath.h	2024-04-22 18:16:39.838773974 +0200
+***************
+*** 61,67 ****
+      __asm__ ("ssat %0, #16, %1" : "=r"(x) : "r"(a));
+      return x;
+  }
+! 
+  #define av_clip_intp2 av_clip_intp2_arm
+  static av_always_inline av_const int av_clip_intp2_arm(int a, int p)
+  {
+--- 61,67 ----
+      __asm__ ("ssat %0, #16, %1" : "=r"(x) : "r"(a));
+      return x;
+  }
+! /*
+  #define av_clip_intp2 av_clip_intp2_arm
+  static av_always_inline av_const int av_clip_intp2_arm(int a, int p)
+  {
+***************
+*** 76,82 ****
+              return a;
+      }
+  }
+! 
+  #define av_clip_uintp2 av_clip_uintp2_arm
+  static av_always_inline av_const unsigned av_clip_uintp2_arm(int a, int p)
+  {
+--- 76,83 ----
+              return a;
+      }
+  }
+! */
+! /*
+  #define av_clip_uintp2 av_clip_uintp2_arm
+  static av_always_inline av_const unsigned av_clip_uintp2_arm(int a, int p)
+  {
+***************
+*** 89,94 ****
+--- 90,96 ----
+          else                   return  a;
+      }
+  }
++ */
+  
+  #define av_sat_add32 av_sat_add32_arm
+  static av_always_inline int av_sat_add32_arm(int a, int b)
+diff -r -c ffmpeg-6.0.1/libavutil/pixdesc.c ffmpeg/libavutil/pixdesc.c
+*** ffmpeg-6.0.1/libavutil/pixdesc.c	2023-11-10 01:30:16.000000000 +0100
+--- ffmpeg/libavutil/pixdesc.c	2024-04-22 18:16:39.838773974 +0200
+***************
+*** 465,470 ****
+--- 465,518 ----
+          .name = "xvmc",
+          .flags = AV_PIX_FMT_FLAG_HWACCEL,
+      },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V1] = {
++         .name = "vdpau_msmpegv1",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V2] = {
++         .name = "vdpau_msmpegv2",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V3] = {
++         .name = "vdpau_msmpegv3",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V4] = {
++         .name = "vdpau_msmpegv4",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V1] = {
++         .name = "vdpau_msmpegv1",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V2] = {
++         .name = "vdpau_msmpegv2",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V3] = {
++         .name = "vdpau_msmpegv3",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
++     [AV_PIX_FMT_VDPAU_MSMPEG4V4] = {
++         .name = "vdpau_msmpegv4",
++         .log2_chroma_w = 1,
++         .log2_chroma_h = 1,
++         .flags = AV_PIX_FMT_FLAG_HWACCEL,
++     },
+  #endif
+      [AV_PIX_FMT_UYVY422] = {
+          .name = "uyvy422",

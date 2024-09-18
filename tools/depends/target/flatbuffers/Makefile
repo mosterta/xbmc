@@ -1,6 +1,7 @@
 -include ../../Makefile.include
 include FLATBUFFERS-VERSION
 DEPS = Makefile FLATBUFFERS-VERSION ../../download-files.include
+RETRIEVE_TOOL_FLAGS := -LsS --create-dirs --retry 10 --retry-connrefused -o
 
 ifeq ($(PLATFORM),)
 	# Building stand-alone

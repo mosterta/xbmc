@@ -42,7 +42,7 @@ std::map<GLenum, const char*> glErrors =
 };
 
 std::map<GLenum, const char*> glErrorSource = {
-#if defined(HAS_GLES) && defined(TARGET_LINUX)
+#if defined(HAS_GLES) && defined(TARGET_LINUX) && !defined(ALLWINNERA10)
     X(GL_DEBUG_SOURCE_API_KHR),
     X(GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR),
     X(GL_DEBUG_SOURCE_SHADER_COMPILER_KHR),
@@ -50,7 +50,7 @@ std::map<GLenum, const char*> glErrorSource = {
     X(GL_DEBUG_SOURCE_APPLICATION_KHR),
     X(GL_DEBUG_SOURCE_OTHER_KHR),
 #endif
-#if defined(HAS_GL) && defined(TARGET_LINUX)
+#if defined(HAS_GL) && defined(TARGET_LINUX) && !defined(ALLWINNERA10)
     X(GL_DEBUG_SOURCE_API),
     X(GL_DEBUG_SOURCE_WINDOW_SYSTEM),
     X(GL_DEBUG_SOURCE_SHADER_COMPILER),
@@ -61,7 +61,7 @@ std::map<GLenum, const char*> glErrorSource = {
 };
 
 std::map<GLenum, const char*> glErrorType = {
-#if defined(HAS_GLES) && defined(TARGET_LINUX)
+#if defined(HAS_GLES) && defined(TARGET_LINUX) && !defined(ALLWINNERA10)
     X(GL_DEBUG_TYPE_ERROR_KHR),
     X(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR),
     X(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR),
@@ -70,7 +70,7 @@ std::map<GLenum, const char*> glErrorType = {
     X(GL_DEBUG_TYPE_OTHER_KHR),
     X(GL_DEBUG_TYPE_MARKER_KHR),
 #endif
-#if defined(HAS_GL) && defined(TARGET_LINUX)
+#if defined(HAS_GL) && defined(TARGET_LINUX) && !defined(ALLWINNERA10)
     X(GL_DEBUG_TYPE_ERROR),
     X(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR),
     X(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR),
@@ -82,13 +82,13 @@ std::map<GLenum, const char*> glErrorType = {
 };
 
 std::map<GLenum, const char*> glErrorSeverity = {
-#if defined(HAS_GLES) && defined(TARGET_LINUX)
+#if defined(HAS_GLES) && defined(TARGET_LINUX) && !defined(ALLWINNERA10)
     X(GL_DEBUG_SEVERITY_HIGH_KHR),
     X(GL_DEBUG_SEVERITY_MEDIUM_KHR),
     X(GL_DEBUG_SEVERITY_LOW_KHR),
     X(GL_DEBUG_SEVERITY_NOTIFICATION_KHR),
 #endif
-#if defined(HAS_GL) && defined(TARGET_LINUX)
+#if defined(HAS_GL) && defined(TARGET_LINUX) && !defined(ALLWINNERA10)
     X(GL_DEBUG_SEVERITY_HIGH),
     X(GL_DEBUG_SEVERITY_MEDIUM),
     X(GL_DEBUG_SEVERITY_LOW),

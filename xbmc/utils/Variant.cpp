@@ -10,12 +10,12 @@
 
 #include "Variant.h"
 
-#include <charconv>
 #include <cstdlib>
 #include <cstring>
 #include <string>
 #include <utility>
 #include <variant>
+#include <limits.h>
 
 #ifndef strtoll
 #ifdef TARGET_WINDOWS
@@ -59,10 +59,18 @@ std::wstring_view trim(std::wstring_view str)
 
 int64_t str2int64(std::string_view str, int64_t fallback /* = 0 */)
 {
-  std::string_view tmp = trim(str);
+  std::string tmp(trim(str));
+  char *end = NULL;
   int64_t result{};
+#if 0
   const std::from_chars_result res = std::from_chars(tmp.data(), tmp.data() + tmp.size(), result);
   if (res.ec == std::errc())
+    return result;
+#endif
+  errno = 0;
+  result = strtoll(tmp.c_str(), &end, 0);
+  if(!((errno = ERANGE && (result == LLONG_MAX || result == LLONG_MIN)) ||
+			  (errno != 0 && result == 0)))
     return result;
 
   return fallback;
@@ -72,8 +80,10 @@ int64_t str2int64(std::wstring_view str, int64_t fallback /* = 0 */)
 {
   wchar_t *end = NULL;
   std::wstring tmp(trim(str));
+  errno=0;
   int64_t result = wcstoll(tmp.c_str(), &end, 0);
-  if (end == NULL || *end == '\0')
+  if(!((errno = ERANGE && (result == LLONG_MAX || result == LLONG_MIN)) ||
+                           (errno != 0 && result == 0)))
     return result;
 
   return fallback;
@@ -81,10 +91,18 @@ int64_t str2int64(std::wstring_view str, int64_t fallback /* = 0 */)
 
 uint64_t str2uint64(std::string_view str, uint64_t fallback /* = 0 */)
 {
-  std::string_view tmp = trim(str);
+  std::string tmp(trim(str));
+  char *end = NULL;
   uint64_t result{};
+#if 0
   const std::from_chars_result res = std::from_chars(tmp.data(), tmp.data() + tmp.size(), result);
   if (res.ec == std::errc())
+    return result;
+#endif
+  errno=0;
+  result = strtoull(tmp.c_str(), &end, 0);
+  if(!((errno = ERANGE && (result == ULLONG_MAX)) ||
+                           (errno != 0 && result == 0)))
     return result;
 
   return fallback;
@@ -94,8 +112,10 @@ uint64_t str2uint64(std::wstring_view str, uint64_t fallback /* = 0 */)
 {
   wchar_t *end = NULL;
   std::wstring tmp(trim(str));
+  errno=0;
   uint64_t result = wcstoull(tmp.c_str(), &end, 0);
-  if (end == NULL || *end == '\0')
+  if(!((errno = ERANGE && (result == ULLONG_MAX)) ||
+                         (errno != 0 && result == 0)))
     return result;
 
   return fallback;
