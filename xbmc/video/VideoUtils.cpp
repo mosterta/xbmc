@@ -26,6 +26,7 @@
 #include "playlists/PlayList.h"
 #include "playlists/PlayListFactory.h"
 #include "profiles/ProfileManager.h"
+#include "pvr/filesystem/PVRGUIDirectory.h"
 #include "settings/MediaSettings.h"
 #include "settings/SettingUtils.h"
 #include "settings/Settings.h"
@@ -523,6 +524,11 @@ bool IsNonExistingUserPartyModePlaylist(const CFileItem& item)
   return ((profileManager->GetUserDataItem("PartyMode-Video.xsp") == path) &&
           !CFileUtils::Exists(path));
 }
+
+bool IsEmptyVideoItem(const CFileItem& item)
+{
+  return item.HasVideoInfoTag() && item.GetVideoInfoTag()->IsEmpty();
+}
 } // unnamed namespace
 
 bool IsItemPlayable(const CFileItem& item)
@@ -545,8 +551,8 @@ bool IsItemPlayable(const CFileItem& item)
   if (item.IsMusicDb() || StringUtils::StartsWithNoCase(item.GetPath(), "library://music/"))
     return false;
 
-  // Exclude other components
-  if (item.IsPlugin() || item.IsScript() || item.IsAddonsPath())
+  // Exclude add-ons
+  if (item.IsAddonsPath())
     return false;
 
   // Exclude special items
@@ -599,15 +605,21 @@ bool IsItemPlayable(const CFileItem& item)
     return true;
   }
 
-  if (item.HasVideoInfoTag() && item.CanQueue())
+  if (item.IsPlugin() && item.IsVideo() && !IsEmptyVideoItem(item) &&
+      item.GetProperty("isplayable").asBoolean(false))
   {
     return true;
   }
-  else if ((!item.m_bIsFolder && item.IsVideo()) || item.IsDVD() || item.IsCDDA())
+  else if (item.HasVideoInfoTag() && item.CanQueue() && !item.IsPlugin() && !item.IsScript())
   {
     return true;
   }
-  else if (item.m_bIsFolder)
+  else if ((!item.m_bIsFolder && item.IsVideo() && !IsEmptyVideoItem(item)) || item.IsDVD() ||
+           item.IsCDDA())
+  {
+    return true;
+  }
+  else if (item.m_bIsFolder && !item.IsPlugin() && !item.IsScript())
   {
     // Not a video-specific folder (like file:// or nfs://). Allow play if context is Video window.
     if (CServiceBroker::GetGUI()->GetWindowManager().GetActiveWindow() == WINDOW_VIDEO_NAV &&
@@ -640,15 +652,17 @@ ResumeInformation GetFolderItemResumeInformation(const CFileItem& item)
     return {};
 
   CFileItem folderItem(item);
-  if ((!folderItem.HasProperty("inprogressepisodes") || // season/show
-       (folderItem.GetProperty("inprogressepisodes").asInteger() == 0)) &&
-      (!folderItem.HasProperty("inprogress") || // movie set
-       (folderItem.GetProperty("inprogress").asInteger() == 0)))
+  if (!folderItem.HasProperty("inprogressepisodes") && // season/show/recordings
+      !folderItem.HasProperty("inprogress")) // movie set
   {
-    CVideoDatabase db;
-    if (db.Open())
+    if (URIUtils::IsPVRRecordingFileOrFolder(folderItem.GetPath()))
     {
-      if (!folderItem.HasProperty("inprogressepisodes") && !folderItem.HasProperty("inprogress"))
+      PVR::CPVRGUIDirectory::GetRecordingsDirectoryInfo(folderItem);
+    }
+    else
+    {
+      CVideoDatabase db;
+      if (db.Open())
       {
         XFILE::VIDEODATABASEDIRECTORY::CQueryParams params;
         XFILE::VIDEODATABASEDIRECTORY::CDirectoryNode::GetDatabaseInfo(item.GetPath(), params);
@@ -678,7 +692,6 @@ ResumeInformation GetFolderItemResumeInformation(const CFileItem& item)
           db.GetSetInfo(static_cast<int>(params.GetSetId()), details, &folderItem);
         }
       }
-      db.Close();
     }
   }
 

@@ -678,7 +678,9 @@ public:
   void AddBookMarkToFile(const std::string& strFilenameAndPath, const CBookmark &bookmark, CBookmark::EType type = CBookmark::STANDARD);
   bool GetResumeBookMark(const std::string& strFilenameAndPath, CBookmark &bookmark);
   void DeleteResumeBookMark(const CFileItem& item);
-  void ClearBookMarkOfFile(const std::string& strFilenameAndPath, CBookmark& bookmark, CBookmark::EType type = CBookmark::STANDARD);
+  void ClearBookMarkOfFile(const std::string& strFilenameAndPath,
+                           const CBookmark& bookmark,
+                           CBookmark::EType type = CBookmark::STANDARD);
   void ClearBookMarksOfFile(const std::string& strFilenameAndPath, CBookmark::EType type = CBookmark::STANDARD);
   void ClearBookMarksOfFile(int idFile, CBookmark::EType type = CBookmark::STANDARD);
   bool GetBookMarkForEpisode(const CVideoInfoTag& tag, CBookmark& bookmark);
@@ -902,7 +904,11 @@ public:
   void UpdateFileDateAdded(CVideoInfoTag& details);
 
   void ExportToXML(const std::string &path, bool singleFile = true, bool images=false, bool actorThumbs=false, bool overwrite=false);
-  void ExportActorThumbs(const std::string &path, const CVideoInfoTag& tag, bool singleFiles, bool overwrite=false);
+  void ExportActorThumbs(const std::string& path,
+                         const CVideoInfoTag& tag,
+                         bool singleFiles,
+                         bool overwrite = false,
+                         const std::string& tvshowDir = "") const;
   void ImportFromXML(const std::string &path);
   void DumpToDummyFiles(const std::string &path);
   bool ImportArtFromXML(const TiXmlNode *node, std::map<std::string, std::string> &artwork);

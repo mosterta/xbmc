@@ -13,6 +13,8 @@
 #include "input/keyboard/XBMC_keysym.h"
 #include "windowing/android/WinSystemAndroid.h"
 
+#include "platform/android/peripherals/AndroidJoystickTranslator.h"
+
 #include <androidjni/KeyCharacterMap.h>
 
 typedef struct {
@@ -261,38 +263,46 @@ bool CAndroidKey::onKeyboardEvent(AInputEvent *event)
   switch (action)
   {
     case AKEY_EVENT_ACTION_DOWN:
-      CXBMCApp::android_printf(
-          "CAndroidKey: key down (dev: %d; src: %d; code: %d; repeat: %d; flags: 0x%0X; alt: %s; "
-          "shift: %s; sym: %s)",
-          deviceId, source, keycode, repeat, flags, (state & AMETA_ALT_ON) ? "yes" : "no",
-          (state & AMETA_SHIFT_ON) ? "yes" : "no", (state & AMETA_SYM_ON) ? "yes" : "no");
-      XBMC_Key((uint8_t)keycode, sym, modifiers, unicode, false);
+      CXBMCApp::android_printf("CAndroidKey: key down (dev: %d; src: %d; code: %d (%s); repeat: "
+                               "%d; flags: 0x%0X; alt: %s; shift: %s; sym: %s)",
+                               deviceId, source, keycode,
+                               PERIPHERALS::CAndroidJoystickTranslator::TranslateKeyCode(keycode),
+                               repeat, flags, (state & AMETA_ALT_ON) ? "yes" : "no",
+                               (state & AMETA_SHIFT_ON) ? "yes" : "no",
+                               (state & AMETA_SYM_ON) ? "yes" : "no");
+      XBMC_Key(static_cast<uint32_t>(keycode), sym, modifiers, unicode, false);
       break;
 
     case AKEY_EVENT_ACTION_UP:
-      CXBMCApp::android_printf(
-          "CAndroidKey: key up (dev: %d; src: %d; code: %d; repeat: %d; flags: 0x%0X; alt: %s; "
-          "shift: %s; sym: %s)",
-          deviceId, source, keycode, repeat, flags, (state & AMETA_ALT_ON) ? "yes" : "no",
-          (state & AMETA_SHIFT_ON) ? "yes" : "no", (state & AMETA_SYM_ON) ? "yes" : "no");
-      XBMC_Key((uint8_t)keycode, sym, modifiers, unicode, true);
+      CXBMCApp::android_printf("CAndroidKey: key up (dev: %d; src: %d; code: %d (%s); repeat: %d; "
+                               "flags: 0x%0X; alt: %s; shift: %s; sym: %s)",
+                               deviceId, source, keycode,
+                               PERIPHERALS::CAndroidJoystickTranslator::TranslateKeyCode(keycode),
+                               repeat, flags, (state & AMETA_ALT_ON) ? "yes" : "no",
+                               (state & AMETA_SHIFT_ON) ? "yes" : "no",
+                               (state & AMETA_SYM_ON) ? "yes" : "no");
+      XBMC_Key(static_cast<uint32_t>(keycode), sym, modifiers, unicode, true);
       break;
 
     case AKEY_EVENT_ACTION_MULTIPLE:
-      CXBMCApp::android_printf(
-          "CAndroidKey: key multiple (dev: %d; src: %d; code: %d; repeat: %d; flags: 0x%0X; alt: "
-          "%s; shift: %s; sym: %s)",
-          deviceId, source, keycode, repeat, flags, (state & AMETA_ALT_ON) ? "yes" : "no",
-          (state & AMETA_SHIFT_ON) ? "yes" : "no", (state & AMETA_SYM_ON) ? "yes" : "no");
+      CXBMCApp::android_printf("CAndroidKey: key multiple (dev: %d; src: %d; code: %d (%s); "
+                               "repeat: %d; flags: 0x%0X; alt: %s; shift: %s; sym: %s)",
+                               deviceId, source, keycode,
+                               PERIPHERALS::CAndroidJoystickTranslator::TranslateKeyCode(keycode),
+                               repeat, flags, (state & AMETA_ALT_ON) ? "yes" : "no",
+                               (state & AMETA_SHIFT_ON) ? "yes" : "no",
+                               (state & AMETA_SYM_ON) ? "yes" : "no");
       return false;
       break;
 
     default:
-      CXBMCApp::android_printf(
-          "CAndroidKey: unknown key (dev: %d; src: %d; code: %d; repeat: %d; flags: 0x%0X; alt: "
-          "%s; shift: %s; sym: %s)",
-          deviceId, source, keycode, repeat, flags, (state & AMETA_ALT_ON) ? "yes" : "no",
-          (state & AMETA_SHIFT_ON) ? "yes" : "no", (state & AMETA_SYM_ON) ? "yes" : "no");
+      CXBMCApp::android_printf("CAndroidKey: unknown key (dev: %d; src: %d; code: %d (%s); repeat: "
+                               "%d; flags: 0x%0X; alt: %s; shift: %s; sym: %s)",
+                               deviceId, source, keycode,
+                               PERIPHERALS::CAndroidJoystickTranslator::TranslateKeyCode(keycode),
+                               repeat, flags, (state & AMETA_ALT_ON) ? "yes" : "no",
+                               (state & AMETA_SHIFT_ON) ? "yes" : "no",
+                               (state & AMETA_SYM_ON) ? "yes" : "no");
       return false;
       break;
   }
@@ -300,7 +310,8 @@ bool CAndroidKey::onKeyboardEvent(AInputEvent *event)
   return ret;
 }
 
-void CAndroidKey::XBMC_Key(uint8_t code, uint16_t key, uint16_t modifiers, uint16_t unicode, bool up)
+void CAndroidKey::XBMC_Key(
+    uint32_t code, uint16_t key, uint16_t modifiers, uint16_t unicode, bool up)
 {
   CWinSystemAndroid* winSystem(dynamic_cast<CWinSystemAndroid*>(CServiceBroker::GetWinSystem()));
   if (!winSystem)
