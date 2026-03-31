@@ -25,8 +25,11 @@
 #include "cores/VideoPlayer/Process/allwinner/ProcessInfoSunxi.h" 
 
 #include <dlfcn.h>
+#include <atomic>
 
 using namespace VDPAU;
+
+static std::atomic_int g_mapped_surfaces{0};
 
 //-----------------------------------------------------------------------------
 // interop state
@@ -90,6 +93,9 @@ bool CInteropStateCedar::Init(void *device, void *procFunc, int64_t ident)
 
 void CInteropStateCedar::Finish()
 {
+  if (g_mapped_surfaces.load() > 0)
+    CLog::Log(LOGWARNING, "CInteropStateCedar::Finish - {} surfaces still mapped, this may leak native resources", g_mapped_surfaces.load());
+
   m_interop.glVDPAUFiniCedar();
   m_device = nullptr;
   m_procFunc = nullptr;
@@ -211,29 +217,66 @@ bool CVdpauTextureCedar::MapNV12(int surface)
 {
   const void *videoSurface = reinterpret_cast<void*>(surface);
   m_glSurface.glVdpauSurface = m_interop.glVDPAURegisterVideoSurfaceCedar(videoSurface);
+
+  if (m_glSurface.glVdpauSurface == (vdpauSurfaceCedar)VDP_INVALID_HANDLE)
+  {
+    CLog::Log(LOGERROR, "CVdpauTextureCedar::MapNV12 - glVDPAURegisterVideoSurfaceCedar failed for surface {}", videoSurface);
+    return false;
+  }
+
   m_interop.glVDPAUMapSurfacesCedar(1, &m_glSurface.glVdpauSurface);
 
+  
+  if (m_interop.glVDPAUIsSurfaceCedar && m_interop.glVDPAUIsSurfaceCedar(m_glSurface.glVdpauSurface) != VDP_STATUS_OK)
+  {
+    CLog::Log(LOGERROR, "CVdpauTextureCedar::MapNV12 - glVDPAUIsSurfaceCedar reports invalid surface {}", m_glSurface.glVdpauSurface);
+    m_interop.glVDPAUUnregisterSurfaceCedar(m_glSurface.glVdpauSurface);
+    m_glSurface.glVdpauSurface = VDP_INVALID_HANDLE;
+    return false;
+  }
+  
+  g_mapped_surfaces.fetch_add(1);
   return true;
 }
 
 void CVdpauTextureCedar::UnmapNV12()
 {
-  m_interop.glVDPAUUnmapSurfacesCedar(1, &m_glSurface.glVdpauSurface);
-  m_interop.glVDPAUUnregisterSurfaceCedar(m_glSurface.glVdpauSurface);
+  if (m_glSurface.glVdpauSurface != VDP_INVALID_HANDLE)
+  {
+    m_interop.glVDPAUUnmapSurfacesCedar(1, &m_glSurface.glVdpauSurface);
+    m_interop.glVDPAUUnregisterSurfaceCedar(m_glSurface.glVdpauSurface);
+    if (g_mapped_surfaces.load() > 0)
+      g_mapped_surfaces.fetch_sub(1);
+    m_glSurface.glVdpauSurface = VDP_INVALID_HANDLE;
+  }
 }
 
 bool CVdpauTextureCedar::MapRGB(int surface)
 {
   const void *outSurface = reinterpret_cast<void*>(surface);
   m_glSurface.glVdpauSurface = m_interop.glVDPAURegisterOutputSurfaceCedar(outSurface);
+
+  if (m_glSurface.glVdpauSurface == (vdpauSurfaceCedar)VDP_INVALID_HANDLE)
+  {
+    CLog::Log(LOGERROR, "CVdpauTextureCedar::MapRGB - glVDPAURegisterOutputSurfaceCedar failed for surface {}", outSurface);
+    return false;
+  }
+
   m_interop.glVDPAUMapSurfacesCedar(1, &m_glSurface.glVdpauSurface);
-  return true;
+
+    return true;
 }
 
 void CVdpauTextureCedar::UnmapRGB()
 {
-  m_interop.glVDPAUUnmapSurfacesCedar(1, &m_glSurface.glVdpauSurface);
-  m_interop.glVDPAUUnregisterSurfaceCedar(m_glSurface.glVdpauSurface);
+  if (m_glSurface.glVdpauSurface != VDP_INVALID_HANDLE)
+  {
+    m_interop.glVDPAUUnmapSurfacesCedar(1, &m_glSurface.glVdpauSurface);
+    m_interop.glVDPAUUnregisterSurfaceCedar(m_glSurface.glVdpauSurface);
+    if (g_mapped_surfaces.load() > 0)
+      g_mapped_surfaces.fetch_sub(1);
+    m_glSurface.glVdpauSurface = VDP_INVALID_HANDLE;
+  }
 }
 
 CInteropStateCedar::CInteropStateCedar(void) 
