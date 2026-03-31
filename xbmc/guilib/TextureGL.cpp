@@ -17,6 +17,27 @@
 #include "utils/log.h"
 
 #include <memory>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <cstdint>
+#include <thread>
+#include <vector>
+#include <atomic>
+
+#define USE_STB_IMAGE_RESIZE 1
+#define STB_IMAGE_RESIZE_IMPLEMENTATION 1
+#include "guilib/stb_image_resize.h"
+
+// Optional: use stb_image_resize for higher-quality and faster scaling when
+// available. Define `USE_STB_IMAGE_RESIZE` and add stb implementation to build.
+#ifdef USE_STB_IMAGE_RESIZE
+extern "C" {
+int stbir_resize_uint8(const unsigned char *input_pixels, int input_w, int input_h, int input_stride_in_bytes,
+                       unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+                       int num_channels);
+}
+#endif
 
 std::unique_ptr<CTexture> CTexture::CreateTexture(unsigned int width,
                                                   unsigned int height,
@@ -32,6 +53,108 @@ CGLTexture::CGLTexture(unsigned int width, unsigned int height, XB_FMT format)
   CServiceBroker::GetRenderSystem()->GetRenderVersion(major, minor);
   if (major >= 3)
     m_isOglVersion3orNewer = true;
+}
+
+// Simple bilinear scaler for RGB/RGBA images. Returns newly allocated buffer
+// (aligned) or nullptr on failure. Caller must free with KODI::MEMORY::AlignedFree.
+static uint8_t* ScalePixelsBilinear(const uint8_t* src, unsigned srcW, unsigned srcH,
+                                    unsigned dstW, unsigned dstH, unsigned bpp)
+{
+  if (!src || dstW == 0 || dstH == 0 || srcW == 0 || srcH == 0)
+    return nullptr;
+
+  const size_t dstPitch = static_cast<size_t>(dstW) * bpp;
+  uint8_t* dst = static_cast<uint8_t*>(KODI::MEMORY::AlignedMalloc(dstPitch * dstH, 16));
+  if (!dst)
+    return nullptr;
+
+#ifdef USE_STB_IMAGE_RESIZE
+  // Try stb_image_resize first (faster/higher quality on many platforms).
+  if (stbir_resize_uint8(reinterpret_cast<const unsigned char*>(src), static_cast<int>(srcW), static_cast<int>(srcH), 0,
+                         reinterpret_cast<unsigned char*>(dst), static_cast<int>(dstW), static_cast<int>(dstH), 0,
+                         static_cast<int>(bpp)) != 0)
+  {
+    return dst;
+  }
+  // fall through to CPU fallback if stb fails
+#endif
+
+  const float xRatio = static_cast<float>(srcW) / dstW;
+  const float yRatio = static_cast<float>(srcH) / dstH;
+
+  unsigned int threads = std::thread::hardware_concurrency();
+  if (threads == 0)
+    threads = 1;
+  threads = std::min<unsigned int>(threads, dstH);
+
+  std::vector<std::thread> workers;
+  workers.reserve(threads);
+  std::atomic<bool> failed(false);
+
+  auto worker = [&](unsigned yStart, unsigned yEnd)
+  {
+    try
+    {
+      for (unsigned y = yStart; y < yEnd && !failed.load(std::memory_order_relaxed); ++y)
+      {
+        const float sy = y * yRatio;
+        const int y0 = static_cast<int>(floorf(sy));
+        const int y1 = std::min<int>(y0 + 1, srcH - 1);
+        const float yf = sy - y0;
+
+        for (unsigned x = 0; x < dstW; ++x)
+        {
+          const float sx = x * xRatio;
+          const int x0 = static_cast<int>(floorf(sx));
+          const int x1 = std::min<int>(x0 + 1, srcW - 1);
+          const float xf = sx - x0;
+
+          for (unsigned c = 0; c < bpp; ++c)
+          {
+            const uint8_t p00 = src[(y0 * srcW + x0) * bpp + c];
+            const uint8_t p10 = src[(y0 * srcW + x1) * bpp + c];
+            const uint8_t p01 = src[(y1 * srcW + x0) * bpp + c];
+            const uint8_t p11 = src[(y1 * srcW + x1) * bpp + c];
+
+            const float a = p00 * (1.0f - xf) + p10 * xf;
+            const float b = p01 * (1.0f - xf) + p11 * xf;
+            const float v = a * (1.0f - yf) + b * yf;
+
+            dst[(y * dstW + x) * bpp + c] = static_cast<uint8_t>(v + 0.5f);
+          }
+        }
+      }
+    }
+    catch (...) {
+      failed.store(true, std::memory_order_relaxed);
+    }
+  };
+
+  // split rows among threads
+  unsigned base = dstH / threads;
+  unsigned rem = dstH % threads;
+  unsigned y = 0;
+  for (unsigned t = 0; t < threads; ++t)
+  {
+    unsigned yStart = y;
+    unsigned yCount = base + (t < rem ? 1u : 0u);
+    y += yCount;
+    unsigned yEnd = yStart + yCount;
+    if (yCount == 0)
+      continue;
+    workers.emplace_back(worker, yStart, yEnd);
+  }
+
+  for (auto &th : workers)
+    th.join();
+
+  if (failed.load(std::memory_order_relaxed))
+  {
+    KODI::MEMORY::AlignedFree(dst);
+    return nullptr;
+  }
+
+  return dst;
 }
 
 CGLTexture::~CGLTexture()
@@ -92,22 +215,53 @@ void CGLTexture::LoadToGPU()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
   unsigned int maxSize = CServiceBroker::GetRenderSystem()->GetMaxTextureSize();
-  if (m_textureHeight > maxSize)
+  if (m_textureWidth > maxSize || m_textureHeight > maxSize)
   {
-    CLog::Log(LOGERROR,
-              "GL: Image height {} too big to fit into single texture unit, truncating to {}",
-              m_textureHeight, maxSize);
-    m_textureHeight = maxSize;
-  }
-  if (m_textureWidth > maxSize)
-  {
-    CLog::Log(LOGERROR,
-              "GL: Image width {} too big to fit into single texture unit, truncating to {}",
-              m_textureWidth, maxSize);
+    // Prefer scaling down to fit into a single texture rather than truncating
+    if ((m_format & XB_FMT_DXT_MASK) != 0)
+    {
+      // Compressed formats are not handled here — fall back to truncation
+      CLog::Log(LOGERROR,
+                "GL: Compressed image {}x{} too big, truncating to {}",
+                m_textureWidth, m_textureHeight, maxSize);
+      if (m_textureWidth > maxSize)
+      {
 #ifndef HAS_GLES
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, m_textureWidth);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, m_textureWidth);
 #endif
-    m_textureWidth = maxSize;
+        m_textureWidth = maxSize;
+      }
+      if (m_textureHeight > maxSize)
+        m_textureHeight = maxSize;
+    }
+    else
+    {
+      unsigned int largest = std::max(m_textureWidth, m_textureHeight);
+      float scale = static_cast<float>(maxSize) / static_cast<float>(largest);
+      unsigned int newW = std::max(1u, static_cast<unsigned int>(m_textureWidth * scale));
+      unsigned int newH = std::max(1u, static_cast<unsigned int>(m_textureHeight * scale));
+
+      unsigned int bpp = (m_format == XB_FMT_RGB8) ? 3u : 4u;
+      uint8_t* scaled = ScalePixelsBilinear(m_pixels, m_textureWidth, m_textureHeight, newW, newH, bpp);
+      if (scaled)
+      {
+        CLog::Log(LOGINFO, "GL: Image {}x{} exceeds max {}; scaled to {}x{}",
+                  m_textureWidth, m_textureHeight, maxSize, newW, newH);
+        KODI::MEMORY::AlignedFree(m_pixels);
+        m_pixels = scaled;
+        m_textureWidth = newW;
+        m_textureHeight = newH;
+      }
+      else
+      {
+        CLog::Log(LOGERROR, "GL: Failed to scale image; falling back to truncation");
+#ifndef HAS_GLES
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, m_textureWidth);
+#endif
+        if (m_textureWidth > maxSize) m_textureWidth = maxSize;
+        if (m_textureHeight > maxSize) m_textureHeight = maxSize;
+      }
+    }
   }
 
 #ifndef HAS_GLES

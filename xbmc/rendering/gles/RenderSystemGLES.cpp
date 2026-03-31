@@ -39,6 +39,8 @@ bool CRenderSystemGLES::InitRenderSystem()
 
   glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
 
+  maxTextureSize = std::min(maxTextureSize, 3072); // Some drivers report 32768, but fail to create textures larger than 2048. See
+    //CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_maxTextureSize);
   m_maxTextureSize = maxTextureSize;
 
   // Get the GLES version number
