@@ -60,21 +60,22 @@ void CTexture::Allocate(unsigned int width, unsigned int height, XB_FMT format)
   m_textureWidth = m_imageWidth;
   m_textureHeight = m_imageHeight;
 
-  if (m_format & XB_FMT_DXT_MASK)
+  bool isBlockCompressed = ((m_format & XB_FMT_DXT_MASK) != 0) || (m_format == XB_FMT_ETC1);
+  if (isBlockCompressed)
   {
     while (GetPitch() < CServiceBroker::GetRenderSystem()->GetMinDXTPitch())
       m_textureWidth += GetBlockSize();
   }
 
-  if (!CServiceBroker::GetRenderSystem()->SupportsNPOT((m_format & XB_FMT_DXT_MASK) != 0))
+  if (!CServiceBroker::GetRenderSystem()->SupportsNPOT(isBlockCompressed))
   {
     m_textureWidth = PadPow2(m_textureWidth);
     m_textureHeight = PadPow2(m_textureHeight);
   }
 
-  if (m_format & XB_FMT_DXT_MASK)
+  if (isBlockCompressed)
   {
-    // DXT textures must be a multiple of 4 in width and height
+    // block-compressed textures must be a multiple of 4 in width and height
     m_textureWidth = ((m_textureWidth + 3) / 4) * 4;
     m_textureHeight = ((m_textureHeight + 3) / 4) * 4;
   }
@@ -264,6 +265,49 @@ bool CTexture::LoadFromFileInternal(const std::string& texturePath,
   if (file.LoadFile(texturePath, buf) <= 0)
     return false;
 
+  // Support PKM (ETC1) compressed texture files. PKM header is 16 bytes.
+  if (buf.size() >= 16)
+  {
+    const unsigned char* b = buf.data();
+    if (memcmp(b, "PKM ", 4) == 0)
+    {
+      // parse PKM header (big-endian)
+      unsigned int extWidth = (b[8] << 8) | b[9];
+      unsigned int extHeight = (b[10] << 8) | b[11];
+      unsigned int origWidth = (b[12] << 8) | b[13];
+      unsigned int origHeight = (b[14] << 8) | b[15];
+
+      size_t compSize = ((extWidth + 3) / 4) * ((extHeight + 3) / 4) * 8; // ETC1: 8 bytes per 4x4 block
+      if (buf.size() < 16 + compSize)
+      {
+        CLog::Log(LOGERROR, "PKM: file too small for declared size ({} < {})", buf.size(), 16 + compSize);
+        return false;
+      }
+
+      // Initialize texture fields for compressed upload
+      m_imageWidth = m_originalWidth = origWidth;
+      m_imageHeight = origHeight;
+      m_format = XB_FMT_ETC1;
+      m_textureWidth = extWidth;
+      m_textureHeight = extHeight;
+
+      // Allocate and copy compressed data
+      size_t size = compSize;
+      KODI::MEMORY::AlignedFree(m_pixels);
+      m_pixels = static_cast<unsigned char*>(KODI::MEMORY::AlignedMalloc(size, 32));
+      if (!m_pixels)
+      {
+        CLog::Log(LOGERROR, "PKM: failed to allocate {} bytes", size);
+        return false;
+      }
+      memcpy(m_pixels, buf.data() + 16, size);
+
+      // We keep compressed data until LoadToGPU is called
+      m_bCacheMemory = false;
+      return true;
+    }
+  }
+
   CURL url(texturePath);
   // make sure resource:// paths are properly resolved
   if (url.IsProtocol("resource"))
@@ -432,6 +476,8 @@ unsigned int CTexture::GetPitch(unsigned int width) const
   {
   case XB_FMT_DXT1:
     return ((width + 3) / 4) * 8;
+  case XB_FMT_ETC1:
+    return ((width + 3) / 4) * 8;
   case XB_FMT_DXT3:
   case XB_FMT_DXT5:
   case XB_FMT_DXT5_YCoCg:
@@ -453,6 +499,8 @@ unsigned int CTexture::GetRows(unsigned int height) const
   {
   case XB_FMT_DXT1:
     return (height + 3) / 4;
+  case XB_FMT_ETC1:
+    return (height + 3) / 4;
   case XB_FMT_DXT3:
   case XB_FMT_DXT5:
   case XB_FMT_DXT5_YCoCg:
@@ -467,6 +515,8 @@ unsigned int CTexture::GetBlockSize() const
   switch (m_format)
   {
   case XB_FMT_DXT1:
+    return 8;
+  case XB_FMT_ETC1:
     return 8;
   case XB_FMT_DXT3:
   case XB_FMT_DXT5:

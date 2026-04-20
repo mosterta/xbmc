@@ -39,6 +39,7 @@
 #include "XBTFWriter.h"
 #include "md5.h"
 #include "cmdlineargs.h"
+#include "ETC2Encoder.h"
 
 #ifdef TARGET_WINDOWS
 #define strncasecmp _strnicmp
@@ -48,8 +49,13 @@
 
 #include <lzo/lzo1x.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/wait.h>
 
 #define FLAGS_USE_LZO     1
+// pack textures with ETC1 (requires external packer, e.g. PVRTexToolCLI or etcpack)
+#define FLAGS_USE_ETC1    2
 
 #define DIR_SEPARATOR '/'
 
@@ -72,6 +78,8 @@ const char *GetFormatString(unsigned int format)
     return "ARGB ";
   case XB_FMT_A8:
     return "A8   ";
+  case XB_FMT_ETC1:
+    return "ETC1 ";
   default:
     return "?????";
   }
@@ -95,6 +103,7 @@ void Usage()
   puts("  -input <dir>     Input directory. Default: current dir");
   puts("  -output <dir>    Output directory/filename. Default: Textures.xbt");
   puts("  -dupecheck       Enable duplicate file detection. Reduces output file size. Default: off");
+  puts("  -etc1            Encode textures to ETC1 (high-quality internal encoder if available)");
 }
 
 } // namespace
@@ -204,6 +213,126 @@ CXBTFFrame TexturePacker::CreateXBTFFrame(DecodedFrame& decodedFrame, CXBTFWrite
 
   CXBTFFrame frame;
   lzo_uint packedSize = size;
+
+  // If ETC1 packing is requested, try to pack this frame using an external tool.
+  if ((m_flags & FLAGS_USE_ETC1) == FLAGS_USE_ETC1)
+  {
+    // Create temporary PPM (P6) file with RGB data (ETC1 doesn't support alpha)
+    char inTemplate[] = "/tmp/texturepack_in_XXXXXX.ppm";
+    int inFd = mkstemps(inTemplate, 4); // keeps .ppm
+    if (inFd != -1)
+    {
+      FILE* inF = fdopen(inFd, "wb");
+      if (inF)
+      {
+        fprintf(inF, "P6\n%d %d\n255\n", width, height);
+        // write RGB bytes
+        for (unsigned y = 0; y < (unsigned)height; ++y)
+        {
+          for (unsigned x = 0; x < (unsigned)width; ++x)
+          {
+            unsigned int idx = (y * width + x) * 4;
+            unsigned char rgb[3] = { data[idx+2], data[idx+1], data[idx+0] }; // store as RGB
+            fwrite(rgb, 1, 3, inF);
+          }
+        }
+        fclose(inF);
+
+        // Build output PKM temp name
+        char outTemplate[] = "/tmp/texturepack_out_XXXXXX.pkm";
+        int outFd = mkstemps(outTemplate, 4);
+        if (outFd != -1)
+        {
+          close(outFd);
+
+          // Try available packers in order: PVRTexToolCLI, etcpack, etc1tool
+          std::string cmd;
+          if (system("command -v PVRTexToolCLI >/dev/null 2>&1") == 0)
+            cmd = std::string("PVRTexToolCLI -i \"") + inTemplate + "\" -o \"" + outTemplate + "\" -f ETC1";
+          else if (system("command -v etcpack >/dev/null 2>&1") == 0)
+            cmd = std::string("etcpack -c etc1 \"") + inTemplate + "\" \"" + outTemplate + "\"";
+          else if (system("command -v etc1tool >/dev/null 2>&1") == 0)
+            cmd = std::string("etc1tool \"") + inTemplate + "\" -o \"" + outTemplate + "\"";
+          else
+            cmd.clear();
+
+          bool packed = false;
+          // First try internal vendor encoder if available
+          std::vector<uint8_t> pkm;
+          if (EncodeETC1ToPKM((const uint8_t*)data, width, height, pkm))
+          {
+            // append PKM skipping header
+            if (pkm.size() > 16)
+            {
+              writer.AppendContent(pkm.data() + 16, pkm.size() - 16);
+              packedSize = static_cast<lzo_uint>(pkm.size() - 16);
+              frame.SetPackedSize(packedSize);
+              frame.SetUnpackedSize(size);
+              frame.SetWidth(width);
+              frame.SetHeight(height);
+              frame.SetFormat(static_cast<XB_FMT>(XB_FMT_ETC1 | XB_FMT_OPAQUE));
+              frame.SetDuration(delay);
+              packed = true;
+            }
+          }
+          // Fall back to external packer if internal encoder not available or failed
+          if (!packed && !cmd.empty())
+          {
+            int ret = system(cmd.c_str());
+            if (ret == 0)
+            {
+              // read PKM and append compressed content (skip PKM header 16 bytes)
+              FILE* outF = fopen(outTemplate, "rb");
+              if (outF)
+              {
+                fseek(outF, 0, SEEK_END);
+                long outSize = ftell(outF);
+                fseek(outF, 16, SEEK_SET);
+                if (outSize > 16)
+                {
+                  long compSize = outSize - 16;
+                  std::vector<uint8_t> comp;
+                  comp.resize(compSize);
+                  if (fread(comp.data(), 1, compSize, outF) == (size_t)compSize)
+                  {
+                    // append compressed PKM blocks to writer
+                    writer.AppendContent(comp.data(), compSize);
+                    packedSize = compSize;
+                    frame.SetPackedSize(packedSize);
+                    frame.SetUnpackedSize(size);
+                    frame.SetWidth(width);
+                    frame.SetHeight(height);
+                    frame.SetFormat(static_cast<XB_FMT>(XB_FMT_ETC1 | XB_FMT_OPAQUE));
+                    frame.SetDuration(delay);
+                    fclose(outF);
+                    packed = true;
+                  }
+                }
+                fclose(outF);
+              }
+            }
+          }
+
+          // remove out file
+          unlink(outTemplate);
+          if (packed)
+          {
+            unlink(inTemplate);
+            return frame;
+          }
+        }
+        else
+        {
+          unlink(inTemplate);
+        }
+      }
+      else
+      {
+        close(inFd);
+      }
+    }
+    // if packing failed, fall through to regular handling
+  }
 
   if ((m_flags & FLAGS_USE_LZO) == FLAGS_USE_LZO)
   {
@@ -385,8 +514,7 @@ int main(int argc, char* argv[])
   std::string OutputFilename = "Textures.xbt";
 
   TexturePacker texturePacker;
-
-  texturePacker.SetFlags(FLAGS_USE_LZO);
+  unsigned int flags = FLAGS_USE_LZO;
 
   for (unsigned int i = 1; i < args.size(); ++i)
   {
@@ -408,6 +536,10 @@ int main(int argc, char* argv[])
     {
       texturePacker.EnableVerboseOutput();
     }
+    else if (!strcmp(args[i], "-etc1"))
+    {
+      flags |= FLAGS_USE_ETC1;
+    }
     else if (!platform_stricmp(args[i], "-output") || !platform_stricmp(args[i], "-o"))
     {
       OutputFilename = args[++i];
@@ -428,6 +560,8 @@ int main(int argc, char* argv[])
     Usage();
     return 1;
   }
+
+  texturePacker.SetFlags(flags);
 
   size_t pos = InputDir.find_last_of(DIR_SEPARATOR);
   if (pos != InputDir.length() - 1)

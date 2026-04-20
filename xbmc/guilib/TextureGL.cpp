@@ -25,6 +25,11 @@
 #include <vector>
 #include <atomic>
 
+// Define ETC1 token if headers don't provide it
+#ifndef GL_ETC1_RGB8_OES
+#define GL_ETC1_RGB8_OES 0x8D64
+#endif
+
 #define USE_STB_IMAGE_RESIZE 1
 #define STB_IMAGE_RESIZE_IMPLEMENTATION 1
 #include "guilib/stb_image_resize.h"
@@ -332,6 +337,10 @@ void CGLTexture::LoadToGPU()
     case XB_FMT_RGB8:
       internalformat = pixelformat = GL_RGB;
       break;
+    case XB_FMT_ETC1:
+      internalformat = GL_ETC1_RGB8_OES; // compressed ETC1 format
+      pixelformat = 0;
+      break;
     case XB_FMT_A8R8G8B8:
       if (CServiceBroker::GetRenderSystem()->IsExtSupported("GL_EXT_texture_format_BGRA8888") ||
           CServiceBroker::GetRenderSystem()->IsExtSupported("GL_IMG_texture_format_BGRA8888"))
@@ -352,8 +361,27 @@ void CGLTexture::LoadToGPU()
       }
       break;
   }
-  glTexImage2D(GL_TEXTURE_2D, 0, internalformat, m_textureWidth, m_textureHeight, 0,
-    pixelformat, GL_UNSIGNED_BYTE, m_pixels);
+  if (m_format == XB_FMT_ETC1)
+  {
+    // Ensure hardware supports ETC1 compressed textures
+    if (!CServiceBroker::GetRenderSystem()->IsExtSupported("GL_OES_compressed_ETC1_RGB8_texture"))
+    {
+      CLog::Log(LOGERROR, "GL: ETC1 compressed textures not supported on this device");
+      // fall back to uploading a blank texture to avoid GL errors
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_textureWidth, m_textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    }
+    else
+    {
+      // Upload compressed ETC1 data
+      GLsizei size = static_cast<GLsizei>(GetPitch() * GetRows());
+      glCompressedTexImage2D(GL_TEXTURE_2D, 0, internalformat, m_textureWidth, m_textureHeight, 0, size, m_pixels);
+    }
+  }
+  else
+  {
+    glTexImage2D(GL_TEXTURE_2D, 0, internalformat, m_textureWidth, m_textureHeight, 0,
+      pixelformat, GL_UNSIGNED_BYTE, m_pixels);
+  }
 
   if (IsMipmapped())
   {

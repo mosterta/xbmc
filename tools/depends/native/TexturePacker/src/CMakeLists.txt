@@ -17,6 +17,7 @@ find_package(Lzo2 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(GIF REQUIRED)
 find_package(JPEG REQUIRED)
+find_package(Threads REQUIRED)
 
 if(GIF_VERSION LESS 4)
   message(FATAL_ERROR "giflib < 4 not supported")
@@ -42,7 +43,25 @@ set(SOURCES md5.cpp
             decoder/GifHelper.cpp
             decoder/JPGDecoder.cpp
             decoder/PNGDecoder.cpp
-            ${KODI_SOURCE_DIR}/xbmc/guilib/XBTF.cpp)
+            ${KODI_SOURCE_DIR}/xbmc/guilib/XBTF.cpp
+            ETC2Encoder.cpp
+            pack_etc1_shim.cpp)
+
+option(USE_VENDOR_ETC2COMP "Use bundled vendor/etc2comp sources for ETC1/ETC2 encoding" OFF)
+set(VENDOR_ETC2COMP_INCLUDE_DIRS "")
+if(USE_VENDOR_ETC2COMP)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vendor/etc2comp/CMakeLists.txt")
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/etc2comp)
+    # upstream defines an EtcLib target; we'll link against it and expose includes
+    set(VENDOR_ETC2COMP_INCLUDE_DIRS
+      ${CMAKE_CURRENT_SOURCE_DIR}/vendor/etc2comp
+      ${CMAKE_CURRENT_SOURCE_DIR}/vendor/etc2comp/EtcLib
+      ${CMAKE_CURRENT_SOURCE_DIR}/vendor/etc2comp/EtcLib/Etc
+      ${CMAKE_CURRENT_SOURCE_DIR}/vendor/etc2comp/EtcLib/EtcCodec)
+  else()
+    message(WARNING "USE_VENDOR_ETC2COMP enabled but vendor/etc2comp/CMakeLists.txt not found")
+  endif()
+endif()
 
 if(WIN32)
   list(APPEND SOURCES Win32/dirent.c)
@@ -58,6 +77,11 @@ target_include_directories(TexturePacker
                                    ${KODI_SOURCE_DIR}/xbmc
                                    ${CMAKE_CURRENT_SOURCE_DIR}
                                    ${CMAKE_CURRENT_SOURCE_DIR}/decoder)
+if(USE_VENDOR_ETC2COMP AND VENDOR_ETC2COMP_INCLUDE_DIRS)
+  target_include_directories(TexturePacker PRIVATE ${VENDOR_ETC2COMP_INCLUDE_DIRS})
+  target_link_libraries(TexturePacker PRIVATE EtcLib)
+  target_compile_definitions(TexturePacker PRIVATE ETC2COMP_AVAILABLE)
+endif()
 if(WIN32)
   target_include_directories(TexturePacker SYSTEM
                                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Win32)
@@ -68,7 +92,8 @@ target_link_libraries(TexturePacker
                               ${GIF_LIBRARIES}
                               ${PNG_LIBRARIES}
                               ${JPEG_LIBRARIES}
-                              ${LZO2_LIBRARIES})
+                              ${LZO2_LIBRARIES}
+                              Threads::Threads)
 
 target_compile_definitions(TexturePacker PRIVATE ${ARCH_DEFINES} ${SYSTEM_DEFINES})
 target_compile_features(TexturePacker PUBLIC cxx_std_17)
