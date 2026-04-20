@@ -19,7 +19,7 @@ function(pack_xbt input output)
 
   file(APPEND ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/GeneratedPackSkins.cmake
 "execute_process(COMMAND \"${CMAKE_COMMAND}\" -E make_directory ${dir})
-execute_process(COMMAND \$\{TEXTUREPACKER_EXECUTABLE\} -input ${input} -output ${output} -dupecheck)\n")
+execute_process(COMMAND \$\{TEXTUREPACKER_EXECUTABLE\} -input ${input} -output ${output} -dupecheck -etc1)\n")
 
     list(APPEND XBT_FILES ${output})
     set(XBT_FILES ${XBT_FILES} PARENT_SCOPE)
