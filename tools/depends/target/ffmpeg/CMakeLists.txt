@@ -54,6 +54,7 @@ endif()
 
 if(ENABLE_NEON)
   list(APPEND ffmpeg_conf --enable-neon)
+  list(APPEND ffmpeg_conf --enable-asm)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL Release)
