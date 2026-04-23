@@ -276,7 +276,7 @@ std::vector<uint8_t> CTextureBundleXBT::UnpackFrame(const CXBTFReader& reader,
   }
 
   // if the frame isn't packed there's nothing else to be done
-  if (!frame.IsPacked())
+  if (!frame.IsPacked() || (frame.GetFormat() & XB_FMT_ETC1) == XB_FMT_ETC1)
     return packedBuffer;
 
   // make sure lzo is initialized

@@ -259,20 +259,46 @@ CXBTFFrame TexturePacker::CreateXBTFFrame(DecodedFrame& decodedFrame, CXBTFWrite
           bool packed = false;
           // First try internal vendor encoder if available
           std::vector<uint8_t> pkm;
-          if (EncodeETC1ToPKM((const uint8_t*)data, width, height, pkm))
+          // The decoded frame buffer is in BGRA byte order. Convert to RGBA
+          // before feeding the internal ETC1 encoder.
+          std::vector<uint8_t> rgba;
+          rgba.resize(static_cast<size_t>(width) * static_cast<size_t>(height) * 4);
+          for (unsigned int y = 0; y < height; ++y)
+          {
+            for (unsigned int x = 0; x < width; ++x)
+            {
+              const size_t src = (static_cast<size_t>(y) * width + x) * 4;
+              const size_t dst = src;
+              rgba[dst + 0] = data[src + 2]; // R
+              rgba[dst + 1] = data[src + 1]; // G
+              rgba[dst + 2] = data[src + 0]; // B
+              rgba[dst + 3] = data[src + 3]; // A
+            }
+          }
+
+          if (EncodeETC1ToPKM(rgba.data(), width, height, pkm))
           {
             // append PKM skipping header
             if (pkm.size() > 16)
             {
-              writer.AppendContent(pkm.data() + 16, pkm.size() - 16);
-              packedSize = static_cast<lzo_uint>(pkm.size() - 16);
-              frame.SetPackedSize(packedSize);
-              frame.SetUnpackedSize(size);
-              frame.SetWidth(width);
-              frame.SetHeight(height);
-              frame.SetFormat(static_cast<XB_FMT>(XB_FMT_ETC1 | XB_FMT_OPAQUE));
-              frame.SetDuration(delay);
-              packed = true;
+              const size_t expectedSize =
+                  static_cast<size_t>(((width + 3) / 4) * ((height + 3) / 4) * 8);
+              const size_t etc1Size = pkm.size() - 16;
+
+              if (etc1Size == expectedSize)
+              {
+                writer.AppendContent(pkm.data() + 16, etc1Size);
+                packedSize = static_cast<lzo_uint>(etc1Size);
+                frame.SetPackedSize(packedSize);
+                // ETC1 data is already in final GPU-compressed form.
+                // Use equal sizes so readers do not attempt LZO decompression.
+                frame.SetUnpackedSize(packedSize);
+                frame.SetWidth(width);
+                frame.SetHeight(height);
+                frame.SetFormat(static_cast<XB_FMT>(XB_FMT_ETC1 | XB_FMT_OPAQUE));
+                frame.SetDuration(delay);
+                packed = true;
+              }
             }
           }
           // Fall back to external packer if internal encoder not available or failed
@@ -291,15 +317,19 @@ CXBTFFrame TexturePacker::CreateXBTFFrame(DecodedFrame& decodedFrame, CXBTFWrite
                 if (outSize > 16)
                 {
                   long compSize = outSize - 16;
+                  const long expectedSize = ((width + 3) / 4) * ((height + 3) / 4) * 8;
                   std::vector<uint8_t> comp;
                   comp.resize(compSize);
-                  if (fread(comp.data(), 1, compSize, outF) == (size_t)compSize)
+                  if (compSize == expectedSize &&
+                      fread(comp.data(), 1, compSize, outF) == (size_t)compSize)
                   {
                     // append compressed PKM blocks to writer
                     writer.AppendContent(comp.data(), compSize);
                     packedSize = compSize;
                     frame.SetPackedSize(packedSize);
-                    frame.SetUnpackedSize(size);
+                    // ETC1 data is already in final GPU-compressed form.
+                    // Use equal sizes so readers do not attempt LZO decompression.
+                    frame.SetUnpackedSize(packedSize);
                     frame.SetWidth(width);
                     frame.SetHeight(height);
                     frame.SetFormat(static_cast<XB_FMT>(XB_FMT_ETC1 | XB_FMT_OPAQUE));
