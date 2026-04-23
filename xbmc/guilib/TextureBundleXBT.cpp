@@ -220,14 +220,19 @@ std::unique_ptr<CTexture> CTextureBundleXBT::ConvertFrameToTexture(const std::st
     return {};
   }
 
+  CLog::Log(LOGERROR, "Frame: packed {}: format: {} size packed: {}, size unpacked: {}", frame.IsPacked() ? "yes" : "no", 
+              frame.GetFormat(), frame.GetPackedSize(), frame.GetUnpackedSize());
+
   // check if it's packed with lzo
-  if (frame.IsPacked())
+  if (frame.IsPacked() && (frame.GetFormat() & XB_FMT_ETC1) == 0)
   { // unpack
+    int ret;
     std::vector<unsigned char> unpacked(static_cast<size_t>(frame.GetUnpackedSize()));
     lzo_uint s = (lzo_uint)frame.GetUnpackedSize();
-    if (lzo1x_decompress_safe(buffer.data(), static_cast<lzo_uint>(buffer.size()), unpacked.data(),
-                              &s, NULL) != LZO_E_OK ||
-        s != frame.GetUnpackedSize())
+    ret = lzo1x_decompress_safe(buffer.data(), static_cast<lzo_uint>(buffer.size()), unpacked.data(),
+                              &s, NULL);
+    CLog::Log(LOGERROR, "Decompression result: {}, expected unpacked size: {}, actual unpacked size: {}", ret, frame.GetUnpackedSize(), s);
+    if (ret != LZO_E_OK || s != frame.GetUnpackedSize())
     {
       CLog::Log(LOGERROR, "Error loading texture: {}: Decompression error", name);
       return {};

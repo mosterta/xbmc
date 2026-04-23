@@ -285,6 +285,9 @@ void CGLTexture::LoadToGPU()
   case XB_FMT_DXT5_YCoCg:
     format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
     break;
+  case XB_FMT_ETC1:
+    format = GL_ETC1_RGB_OES;
+    break;
   case XB_FMT_RGB8:
     format = GL_RGB;
     numcomponents = GL_RGB;
@@ -374,7 +377,14 @@ void CGLTexture::LoadToGPU()
     {
       // Upload compressed ETC1 data
       GLsizei size = static_cast<GLsizei>(GetPitch() * GetRows());
+      CLog::Log(LOGERROR, "GL: ETC1 upload: {}x{}, size: {}", m_textureWidth, m_textureHeight, size);
       glCompressedTexImage2D(GL_TEXTURE_2D, 0, internalformat, m_textureWidth, m_textureHeight, 0, size, m_pixels);
+      GLenum err;
+      err = glGetError();
+      if (err != GL_NO_ERROR)
+        CLog::Log(LOGERROR, "GL: Error uploading ETC1 texture: 0x{:X}", err);
+      else
+        CLog::Log(LOGERROR, "GL: ETC1 texture uploaded successfully");
     }
   }
   else
