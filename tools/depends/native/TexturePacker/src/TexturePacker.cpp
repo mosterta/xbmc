@@ -214,8 +214,8 @@ CXBTFFrame TexturePacker::CreateXBTFFrame(DecodedFrame& decodedFrame, CXBTFWrite
   CXBTFFrame frame;
   lzo_uint packedSize = size;
 
-  // If ETC1 packing is requested, try to pack this frame using an external tool.
-  if ((m_flags & FLAGS_USE_ETC1) == FLAGS_USE_ETC1)
+  // ETC1 does not support alpha. Only compress fully opaque frames.
+  if ((m_flags & FLAGS_USE_ETC1) == FLAGS_USE_ETC1 && !hasAlpha)
   {
     // Create temporary PPM (P6) file with RGB data (ETC1 doesn't support alpha)
     char inTemplate[] = "/tmp/texturepack_in_XXXXXX.ppm";
