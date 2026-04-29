@@ -36,6 +36,25 @@ namespace
 constexpr float MAX_CACHE_LEVEL = 0.4f; // total cache time of stream in seconds;
 constexpr float MAX_WATER_LEVEL = 0.2f; // buffered time after stream stages in seconds;
 constexpr double MAX_BUFFER_TIME = 0.1; // max time of a buffer in seconds;
+
+bool IsSoftwareDecodedAc3Stream(const AEAudioFormat& format)
+{
+  if (format.m_dataFormat == AE_FMT_RAW)
+    return false;
+
+  return format.m_streamInfo.m_type == CAEStreamInfo::STREAM_TYPE_AC3 ||
+         format.m_streamInfo.m_type == CAEStreamInfo::STREAM_TYPE_EAC3;
+}
+
+float GetStreamCacheLevel(const AEAudioFormat& format)
+{
+  return IsSoftwareDecodedAc3Stream(format) ? 0.8f : MAX_CACHE_LEVEL;
+}
+
+unsigned int GetStreamFrames(const AEAudioFormat& format)
+{
+  return IsSoftwareDecodedAc3Stream(format) ? format.m_sampleRate / 5 : format.m_sampleRate / 10;
+}
 } // unnamed namespace
 
 void CEngineStats::Reset(unsigned int sampleRate, bool pcm)
@@ -1348,9 +1367,11 @@ void CActiveAE::Configure(AEAudioFormat *desiredFmt)
         // align input buffers with period of sink or encoder
         (*it)->m_format.m_frames = m_internalFormat.m_frames * ((float)(*it)->m_format.m_sampleRate / m_internalFormat.m_sampleRate);
 
+        const float streamCacheLevel = GetStreamCacheLevel((*it)->m_format);
+
         // create buffer pool
         (*it)->m_inputBuffers = std::make_unique<CActiveAEBufferPool>((*it)->m_format);
-        (*it)->m_inputBuffers->Create(MAX_CACHE_LEVEL*1000);
+        (*it)->m_inputBuffers->Create(streamCacheLevel * 1000);
         (*it)->m_streamSpace = (*it)->m_format.m_frameSize * (*it)->m_format.m_frames;
 
         // if input format does not follow ffmpeg channel mask, we may need to remap channels
@@ -1365,11 +1386,15 @@ void CActiveAE::Configure(AEAudioFormat *desiredFmt)
       }
       if (!(*it)->m_processingBuffers)
       {
+        const float streamCacheLevel = GetStreamCacheLevel((*it)->m_inputBuffers->m_format);
+
         (*it)->m_processingBuffers = std::make_unique<CActiveAEStreamBuffers>(
             (*it)->m_inputBuffers->m_format, outputFormat, m_settings.resampleQuality);
         (*it)->m_processingBuffers->ForceResampler((*it)->m_forceResampler);
 
-        (*it)->m_processingBuffers->Create(MAX_CACHE_LEVEL*1000, false, m_settings.stereoupmix, m_settings.normalizelevels);
+        (*it)->m_processingBuffers->Create(streamCacheLevel * 1000, false,
+                                           m_settings.stereoupmix,
+                                           m_settings.normalizelevels);
       }
       if (m_mode == MODE_TRANSCODE || m_streams.size() > 1)
         (*it)->m_processingBuffers->FillBuffer();
@@ -1910,10 +1935,11 @@ bool CActiveAE::RunStages()
     CSampleBuffer *buffer;
     if (!(*it)->m_drain)
     {
+      const float streamCacheLevel = GetStreamCacheLevel((*it)->m_inputBuffers->m_format);
       float buftime = (float)(*it)->m_inputBuffers->m_format.m_frames / (*it)->m_inputBuffers->m_format.m_sampleRate;
       if ((*it)->m_inputBuffers->m_format.m_dataFormat == AE_FMT_RAW)
         buftime = (*it)->m_inputBuffers->m_format.m_streamInfo.GetDuration() / 1000;
-      while ((time < MAX_CACHE_LEVEL || (*it)->m_streamIsBuffering) &&
+      while ((time < streamCacheLevel || (*it)->m_streamIsBuffering) &&
              !(*it)->m_inputBuffers->m_freeSamples.empty())
       {
         buffer = (*it)->m_inputBuffers->GetFreeBuffer();
@@ -3356,7 +3382,7 @@ IAE::StreamPtr CActiveAE::MakeStream(AEAudioFormat& audioFormat,
   //! @todo pass number of samples in audio packet
 
   AEAudioFormat format = audioFormat;
-  format.m_frames = format.m_sampleRate / 10;
+  format.m_frames = GetStreamFrames(format);
 
   if (format.m_dataFormat != AE_FMT_RAW)
   {

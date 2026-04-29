@@ -730,6 +730,11 @@ bool CAESinkALSA::InitializeHW(const ALSAConfig &inconfig, ALSAConfig &outconfig
   snd_pcm_hw_params_get_buffer_size_max(hw_params, &bufferSize);
   snd_pcm_hw_params_get_period_size_max(hw_params, &periodSize, NULL);
 
+  const bool isAc3Passthrough =
+      m_passthrough &&
+      (m_initFormat.m_streamInfo.m_type == CAEStreamInfo::STREAM_TYPE_AC3 ||
+       m_initFormat.m_streamInfo.m_type == CAEStreamInfo::STREAM_TYPE_EAC3);
+
   /*
    We want to make sure, that we have max 200 ms Buffer with
    a periodSize of approx 50 ms. Choosing a higher bufferSize
@@ -737,7 +742,9 @@ bool CAESinkALSA::InitializeHW(const ALSAConfig &inconfig, ALSAConfig &outconfig
    after those are fixed.
   */
   periodSize  = std::min(periodSize, (snd_pcm_uframes_t) sampleRate / 20);
-  bufferSize  = std::min(bufferSize, (snd_pcm_uframes_t) sampleRate / 5);
+  bufferSize  = std::min(bufferSize,
+                         isAc3Passthrough ? (snd_pcm_uframes_t)sampleRate / 2
+                                          : (snd_pcm_uframes_t)sampleRate / 5);
 
   /*
    According to upstream we should set buffer size first - so make sure it is always at least
